@@ -3,8 +3,8 @@ pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "./interfaces/ComptrollerInterface.sol";
-import "./interfaces/PoolRegistryInterface.sol";
+import "../Interfaces/ComptrollerInterface.sol";
+import "../Interfaces/PoolRegistryInterface.sol";
 
 contract ReserveHelpers {
     using SafeERC20Upgradeable for IERC20Upgradeable;

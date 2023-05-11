@@ -4,11 +4,10 @@ env:
   DOTENV_CONFIG_PATH: "./.env.example"
 
 on:
-  workflow_dispatch:
-  pull_request:
   push:
-    branches:
-      - main
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
 
 jobs:
   lint:
@@ -42,7 +41,7 @@ jobs:
         uses: "actions/setup-node@v3"
         with:
           cache: "yarn"
-          node-version: "lts/*"
+          node-version: 16
 
       - name: "Install the dependencies"
         run: "yarn install --immutable"
@@ -51,11 +50,6 @@ jobs:
 
       - name: "Test the contracts and generate the coverage report"
         run: "npx hardhat coverage"
-
-      - name: "Add test summary"
-        run: |
-          echo "## Test results" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
 
   docgen:
     name: Docgen

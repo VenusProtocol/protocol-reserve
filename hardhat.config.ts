@@ -22,6 +22,27 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   }
 });
 
+function isFork() {
+  return process.env.FORK_MAINNET === "true"
+    ? {
+        allowUnlimitedContractSize: false,
+        loggingEnabled: false,
+        forking: {
+          url: `${process.env.BSC_ARCHIVE_NODE}`,
+          blockNumber: 21068448,
+        },
+        accounts: {
+          accountsBalance: "1000000000000000000",
+        },
+        live: false,
+      }
+    : {
+        allowUnlimitedContractSize: true,
+        loggingEnabled: false,
+        live: false,
+      };
+}
+
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   solidity: {
@@ -108,26 +129,5 @@ const config: HardhatUserConfig = {
     templates: "docgen-templates",
   },
 };
-
-function isFork() {
-  return process.env.FORK_MAINNET === "true"
-    ? {
-        allowUnlimitedContractSize: false,
-        loggingEnabled: false,
-        forking: {
-          url: `${process.env.BSC_ARCHIVE_NODE}`,
-          blockNumber: 21068448,
-        },
-        accounts: {
-          accountsBalance: "1000000000000000000",
-        },
-        live: false,
-      }
-    : {
-        allowUnlimitedContractSize: true,
-        loggingEnabled: false,
-        live: false,
-      };
-}
 
 export default config;
