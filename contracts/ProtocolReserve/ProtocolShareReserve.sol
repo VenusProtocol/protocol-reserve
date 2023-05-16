@@ -83,14 +83,12 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, IP
      * @param xvsVaultSwapper The address of XVSVaultSwapper contract
      * @param dao The address to send DAO funds to
      * @param prime The address of Prime contract
-     * @param poolRegistry The address of PoolRegistry contract
      */
     function initialize(
         address riskFundSwapper, 
         address xvsVaultSwapper,
         address dao,
         address prime,
-        address poolRegistry,
         address corePoolComptroller
     ) external initializer {
         require(riskFundSwapper != address(0), "ProtocolShareReserve: RiskFundSwapper address invalid");
@@ -104,8 +102,18 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, IP
         XVS_VAULT_SWAPPER = xvsVaultSwapper;
         DAO = dao;
         PRIME = prime;
-        POOL_REGISTRY = poolRegistry;
         CORE_POOL_COMPTROLLER = corePoolComptroller;
+    }
+
+     /**
+     * @dev Pool registry setter.
+     * @param _poolRegistry Address of the pool registry
+     */
+    function setPoolRegistry(address _poolRegistry) external onlyOwner {
+        require(_poolRegistry != address(0), "ProtocolShareReserve: Pool registry address invalid");
+        address oldPoolRegistry = POOL_REGISTRY;
+        POOL_REGISTRY = _poolRegistry;
+        emit PoolRegistryUpdated(oldPoolRegistry, _poolRegistry);
     }
 
     /**
