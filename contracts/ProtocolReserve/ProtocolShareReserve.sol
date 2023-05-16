@@ -8,16 +8,12 @@ import { ExponentialNoError } from "../Utils/ExponentialNoError.sol";
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
 import { ReserveHelpers } from "../Helpers/ReserveHelpers.sol";
 import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
+import "../Interfaces/ComptrollerInterface.sol";
+import "../Interfaces/PoolRegistryInterface.sol";
+
 
 contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-
-    /// @notice it represents the type of vToken income
-    enum IncomeType {
-        SPREAD,
-        LIQUIDATION,
-        UNDEFINED
-    }
 
     /// @notice address of RiskFundSwapper contract
     address public RISK_FUND_SWAPPER;
@@ -30,6 +26,12 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
     /// @notice address of DAO destination
     address public DAO;
+
+    /// @notice address of pool registry contract
+    address public POOL_REGISTRY;
+
+    /// @notice address of core pool comptroller contract
+    address public CORE_POOL_COMPTROLLER;
 
     /// @notice income distribution percentage to risk fund for income from non-prime market
     uint256 public constant SCHEMA_TWO_MARKET_RISK_FIND_PERCENT = 48;
@@ -71,12 +73,15 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
      * @param xvsVaultSwapper The address of XVSVaultSwapper contract
      * @param dao The address to send DAO funds to
      * @param prime The address of Prime contract
+     * @param poolRegistry The address of PoolRegistry contract
      */
     function initialize(
         address riskFundSwapper, 
         address xvsVaultSwapper,
         address dao,
-        address prime
+        address prime,
+        address poolRegistry,
+        address corePoolComptroller
     ) external initializer {
         require(riskFundSwapper != address(0), "ProtocolShareReserve: RiskFundSwapper address invalid");
         require(xvsVaultSwapper != address(0), "ProtocolShareReserve: XVSVaultSwapper address invalid");
@@ -89,17 +94,8 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         XVS_VAULT_SWAPPER = xvsVaultSwapper;
         DAO = dao;
         PRIME = prime;
-    }
-
-    /**
-     * @dev Pool registry setter.
-     * @param _poolRegistry Address of the pool registry
-     */
-    function setPoolRegistry(address _poolRegistry) external onlyOwner {
-        require(_poolRegistry != address(0), "ProtocolShareReserve: Pool registry address invalid");
-        address oldPoolRegistry = poolRegistry;
-        poolRegistry = _poolRegistry;
-        emit PoolRegistryUpdated(oldPoolRegistry, _poolRegistry);
+        POOL_REGISTRY = poolRegistry;
+        CORE_POOL_COMPTROLLER = corePoolComptroller;
     }
 
     /**
@@ -137,8 +133,17 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
      */
     function updateAssetsState(
         address comptroller,
-        address asset
+        address asset,
+        IncomeType incomeType
     ) public override(IProtocolShareReserve, ReserveHelpers) {
-        super.updateAssetsState(comptroller, asset);
+        require(ComptrollerInterface(comptroller).isComptroller(), "ProtocolShareReserve: Comptroller address invalid");
+        require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
+        require(
+            (comptroller != CORE_POOL_COMPTROLLER &&
+            PoolRegistryInterface(POOL_REGISTRY).getVTokenForAsset(comptroller, asset) != address(0)) || (comptroller == CORE_POOL_COMPTROLLER),
+            "ProtocolShareReserve: The pool doesn't support the asset"
+        );
+
+        super.updateAssetsState(comptroller, asset, incomeType);
     }
 }
