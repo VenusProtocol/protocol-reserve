@@ -6,14 +6,18 @@ import { SafeERC20Upgradeable, IERC20Upgradeable } from "@openzeppelin/contracts
 
 import { ExponentialNoError } from "../Utils/ExponentialNoError.sol";
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
-import { ReserveHelpers } from "../Helpers/ReserveHelpers.sol";
 import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
 import "../Interfaces/ComptrollerInterface.sol";
 import "../Interfaces/PoolRegistryInterface.sol";
+import "../Interfaces/IPrime.sol";
 
-
-contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers, IProtocolShareReserve {
+contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
+
+    enum Schema {
+        ONE,
+        TWO
+    }
 
     /// @notice address of RiskFundSwapper contract
     address public RISK_FUND_SWAPPER;
@@ -54,11 +58,17 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     /// @notice income distribution percentage to prime for income from market spread in prime market
     uint256 public constant PRIME_PERCENT = 20;
 
+    mapping (address => mapping ( Schema => uint256 )) public assetsReserves;
+
     /// @notice Emitted when funds are released
     event FundsReleased(address comptroller, address asset, uint256 amount);
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
+
+    // Event emitted after the updation of the assets reserves.
+    // amount -> reserve increased by amount.
+    event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount, IncomeType incomeType);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -100,31 +110,22 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
     /**
      * @dev Release funds
-     * @param asset  Asset to be released
-     * @param amount Amount to release
-     * @return Number of total released tokens
-     */
-    // function releaseFunds(address comptroller, address asset, uint256 amount) external returns (uint256) {
-    //     require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
-    //     require(amount <= poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
+     * @param assets assets to be released
+    */
+    function releaseFunds(address[] memory assets) external {
+        for (uint i = 0; i < assets.length; i++) {
+            _releaseFund(assets[i]);
+        }
+    }
 
-    //     assetsReserves[asset] -= amount;
-    //     poolsAssetsReserves[comptroller][asset] -= amount;
-    //     uint256 protocolIncomeAmount = mul_(
-    //         Exp({ mantissa: amount }),
-    //         div_(Exp({ mantissa: protocolSharePercentage * expScale }), baseUnit)
-    //     ).mantissa;
+    function _releaseFund(address asset) internal {
+        uint256 schemaOneBalance = assetsReserves[asset][Schema.ONE];
+        uint256 schemaTwoBalance = assetsReserves[asset][Schema.ONE];
 
-    //     IERC20Upgradeable(asset).safeTransfer(protocolIncome, protocolIncomeAmount);
-    //     IERC20Upgradeable(asset).safeTransfer(riskFund, amount - protocolIncomeAmount);
+        // Distribute schemaOneBalance based on SCHEMA_ONE_RISK_FIND_PERCENT, SCHEMA_ONE_XVS_VAULT_PERCENT, SCHEMA_ONE_DAO_VAULT_PERCENT and PRIME_PERCENT
 
-    //     // Update the pool asset's state in the risk fund for the above transfer.
-    //     IRiskFund(riskFund).updateAssetsState(comptroller, asset);
-
-    //     emit FundsReleased(comptroller, asset, amount);
-
-    //     return amount;
-    // }
+        // Distribute schemaTwoBalance based on SCHEMA_TWO_XVS_VAULT_PERCENT, SCHEMA_TWO_MARKET_RISK_FIND_PERCENT and SCHEMA_TWO_DAO_VAULT_PERCENT
+    }
 
     /**
      * @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
@@ -135,7 +136,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         address comptroller,
         address asset,
         IncomeType incomeType
-    ) public override(IProtocolShareReserve, ReserveHelpers) {
+    ) public override(IProtocolShareReserve) {
         require(ComptrollerInterface(comptroller).isComptroller(), "ProtocolShareReserve: Comptroller address invalid");
         require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
         require(
@@ -144,6 +145,24 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
             "ProtocolShareReserve: The pool doesn't support the asset"
         );
 
-        super.updateAssetsState(comptroller, asset, incomeType);
+        Schema schema = Schema.TWO;
+        bool isPrime = IPrime(PRIME).isPrime(asset);
+
+        if (isPrime && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
+            schema = Schema.ONE;
+        }
+
+        uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
+        uint256 assetReserve = assetsReserves[asset][schema];
+
+        if (currentBalance > assetReserve) {
+            uint256 balanceDifference;
+            unchecked {
+                balanceDifference = currentBalance - assetReserve;
+            }
+            
+            assetsReserves[asset][schema] += balanceDifference;
+            emit AssetsReservesUpdated(comptroller, asset, balanceDifference, incomeType);
+        }
     }
 }
