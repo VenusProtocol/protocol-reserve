@@ -10,10 +10,14 @@ import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
 import "../Interfaces/ComptrollerInterface.sol";
 import "../Interfaces/PoolRegistryInterface.sol";
 import "../Interfaces/IPrime.sol";
+import "../Interfaces/IIncomeDestination.sol";
 
 contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    /// @notice protocol income is categorized into two schemas. 
+    /// The first schema is for spread income from prime markets in core protocol
+    /// The second schema is for all other sources and types of income
     enum Schema {
         ONE,
         TWO
@@ -34,10 +38,13 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, IP
     /// @notice address of core pool comptroller contract
     address public CORE_POOL_COMPTROLLER;
 
+    uint256 constant MAX_PERCENT = 100;
+
     /// @notice comptroller => asset => schema => balance
     mapping (address => mapping (address => mapping ( Schema => uint256 ))) public assetsReserves;
 
-   DistributionConfig[] public distributionTargets;
+    /// @notice configuration for different income distribution targers
+    DistributionConfig[] public distributionTargets;
 
     /// @notice Emitted when funds are released
     event FundsReleased(address comptroller, address asset, uint256 amount);
@@ -53,6 +60,12 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, IP
 
     /// @notice Event emitted after a income distribution target is configured
     event DestinationConfigured(address indexed destination, uint percent, Schema schema);
+
+    /// @notice Event emitted when asset is released to an target
+    event AssetReleased(address indexed destination, address indexed asset, Schema schema, uint256 percent, uint256 amount);
+
+    /// @notice Event emitted when asset reserves state is updated
+    event ReservesUpdated(address indexed comptroller, address indexed asset, Schema schema, uint256 oldBalance, uint256 newBalance);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -121,12 +134,12 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, IP
             distributionTargets.push(config);
         }
 
-        require(total <= 100, "ProtocolShareReserve: total percent cannot be more than 100");
+        require(total <= MAX_PERCENT, "ProtocolShareReserve: total percent cannot be more than 100");
     }
 
     /**
      * @dev Release funds
-     * @param assets assets to be released
+     * @param assets assets to be released to distribution targets
     */
     function releaseFunds(address comptroller, address[] memory assets) external {
         for (uint i = 0; i < assets.length; i++) {
@@ -137,10 +150,37 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, IP
     function _releaseFund(address comptroller, address asset) internal {
         uint256 schemaOneBalance = assetsReserves[comptroller][asset][Schema.ONE];
         uint256 schemaTwoBalance = assetsReserves[comptroller][asset][Schema.ONE];
+        uint256 schemaOneTotalTransferAmount;
+        uint256 schemaTwoTotalTransferAmount;
 
-        // Distribute schemaOneBalance based on SCHEMA_ONE_RISK_FIND_PERCENT, SCHEMA_ONE_XVS_VAULT_PERCENT, SCHEMA_ONE_DAO_VAULT_PERCENT and PRIME_PERCENT
+        for (uint i = 0; i < distributionTargets.length; i++) {
+            DistributionConfig storage _config = distributionTargets[i];
 
-        // Distribute schemaTwoBalance based on SCHEMA_TWO_XVS_VAULT_PERCENT, SCHEMA_TWO_MARKET_RISK_FIND_PERCENT and SCHEMA_TWO_DAO_VAULT_PERCENT
+            uint256 transferAmount;
+            if(_config.schema == Schema.ONE) {
+                transferAmount = (schemaOneBalance * _config.percentage) / MAX_PERCENT;
+                schemaOneTotalTransferAmount += transferAmount;
+            } else {
+                transferAmount = (schemaOneBalance * _config.percentage) / MAX_PERCENT;
+                schemaTwoTotalTransferAmount += transferAmount;
+            }
+
+            IERC20Upgradeable(asset).safeTransfer(_config.destination, transferAmount);
+            IIncomeDestination(_config.destination).updateAssetsState(comptroller, asset);
+
+            emit AssetReleased(_config.destination, asset, _config.schema, _config.percentage, transferAmount);
+        } 
+
+        uint oldSchemaOneBalance = schemaOneBalance;
+        uint oldSchemaTwoBalance = schemaTwoBalance;
+        uint newSchemaOneBalance = schemaOneBalance - schemaOneTotalTransferAmount;
+        uint newSchemaTwoBalance = schemaTwoBalance - schemaTwoTotalTransferAmount;
+
+        assetsReserves[comptroller][asset][Schema.ONE] = newSchemaOneBalance;
+        assetsReserves[comptroller][asset][Schema.TWO] =schemaTwoBalance;
+
+        emit ReservesUpdated(comptroller, asset, Schema.ONE, oldSchemaOneBalance, newSchemaOneBalance);
+        emit ReservesUpdated(comptroller, asset, Schema.TWO, oldSchemaTwoBalance, newSchemaTwoBalance);
     }
 
     /**
