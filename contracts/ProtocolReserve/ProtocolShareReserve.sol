@@ -4,15 +4,13 @@ pragma solidity 0.8.13;
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import { SafeERC20Upgradeable, IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import { ExponentialNoError } from "../Utils/ExponentialNoError.sol";
-import { IRiskFund } from "../Interfaces/IRiskFund.sol";
 import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
 import "../Interfaces/ComptrollerInterface.sol";
 import "../Interfaces/PoolRegistryInterface.sol";
 import "../Interfaces/IPrime.sol";
 import "../Interfaces/IIncomeDestination.sol";
 
-contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, IProtocolShareReserve {
+contract ProtocolShareReserve is Ownable2StepUpgradeable, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice protocol income is categorized into two schemas. 
