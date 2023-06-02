@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import { SafeERC20Upgradeable, IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 
 import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
 import "../Interfaces/ComptrollerInterface.sol";
@@ -10,7 +10,7 @@ import "../Interfaces/PoolRegistryInterface.sol";
 import "../Interfaces/IPrime.sol";
 import "../Interfaces/IIncomeDestination.sol";
 
-contract ProtocolShareReserve is Ownable2StepUpgradeable, IProtocolShareReserve {
+contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice protocol income is categorized into two schemas. 
@@ -75,12 +75,16 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, IProtocolShareReserve 
     /**
      * @dev Initializes the deployer to owner.
      * @param corePoolComptroller The address of core pool comptroller
+     * @param accessControlManager The address of ACM contract
      */
     function initialize(
-        address corePoolComptroller
+        address corePoolComptroller,
+        address accessControlManager
     ) external initializer {
         require(corePoolComptroller != address(0), "ProtocolShareReserve: Core pool comptroller address invalid");
         __Ownable2Step_init();
+        __AccessControlled_init(accessControlManager);
+
         CORE_POOL_COMPTROLLER = corePoolComptroller;
     }
 
@@ -88,7 +92,9 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, IProtocolShareReserve 
      * @dev Pool registry setter.
      * @param poolRegistry Address of the pool registry
      */
-    function setPoolRegistry(address poolRegistry) external onlyOwner {
+    function setPoolRegistry(address poolRegistry) external {
+        _checkAccessAllowed("setPoolRegistry(address)");
+
         require(poolRegistry != address(0), "ProtocolShareReserve: Pool registry address invalid");
         address oldPoolRegistry = POOL_REGISTRY;
         POOL_REGISTRY = poolRegistry;
@@ -99,7 +105,9 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, IProtocolShareReserve 
      * @dev Prime contract address setter.
      * @param prime Address of the prime contract
      */
-    function setPrime(address prime) external onlyOwner {
+    function setPrime(address prime) external {
+        _checkAccessAllowed("setPrime(address)");
+
         require(prime != address(0), "ProtocolShareReserve: Prime address invalid");
         address oldPrime = PRIME;
         PRIME = prime;
@@ -110,7 +118,9 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, IProtocolShareReserve 
      * @dev Add or update destination target based on destination address
      * @param config configuration of the destination. 
      */
-    function addOrUpdateDistributionConfig(DistributionConfig memory config) external onlyOwner {
+    function addOrUpdateDistributionConfig(DistributionConfig memory config) external {
+        _checkAccessAllowed("addOrUpdateDistributionConfig(DistributionConfig)");
+
         uint256 total = 0;
         bool updated = false;
         for (uint i = 0; i < distributionTargets.length; i++) {
