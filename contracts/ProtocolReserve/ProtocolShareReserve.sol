@@ -10,6 +10,8 @@ import "../Interfaces/PoolRegistryInterface.sol";
 import "../Interfaces/IPrime.sol";
 import "../Interfaces/IIncomeDestination.sol";
 
+import {console} from "hardhat/console.sol";
+
 contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -40,6 +42,9 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
     /// @notice comptroller => asset => schema => balance
     mapping (address => mapping (address => mapping ( Schema => uint256 ))) public assetsReserves;
+
+    /// @notice asset => balance
+    mapping (address => uint256) private totalAssetReserve;
 
     /// @notice configuration for different income distribution targers
     DistributionConfig[] public distributionTargets;
@@ -217,7 +222,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         }
 
         uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
-        uint256 assetReserve = assetsReserves[comptroller][asset][schema];
+        uint256 assetReserve = totalAssetReserve[asset];
 
         if (currentBalance > assetReserve) {
             uint256 balanceDifference;
@@ -226,6 +231,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             }
             
             assetsReserves[comptroller][asset][schema] += balanceDifference;
+            totalAssetReserve[asset] += balanceDifference;
             emit AssetsReservesUpdated(comptroller, asset, balanceDifference, incomeType, schema);
         }
     }
