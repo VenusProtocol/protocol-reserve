@@ -120,20 +120,20 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      */
     function addOrUpdateDistributionConfig(DistributionConfig memory config) external {
         _checkAccessAllowed("addOrUpdateDistributionConfig(DistributionConfig)");
+        require(config.destination != address(0), "ProtocolShareReserve: Destination address invalid");
 
         uint256 total = 0;
         bool updated = false;
         for (uint i = 0; i < distributionTargets.length; i++) {
             DistributionConfig storage _config = distributionTargets[i];
-            if (config.destination == _config.destination) {
-                total += config.percentage;
-
-                _config.destination = config.destination;
-                _config.percentage = config.percentage;
-                _config.schema = config.schema;
-                updated = true;
-            } else if (_config.schema == config.schema) {
-                total += _config.percentage;
+            if (_config.schema == config.schema) {
+                if (config.destination == _config.destination) {
+                    total += config.percentage;
+                    _config.percentage = config.percentage;
+                    updated = true;
+                } else {
+                    total += _config.percentage;
+                }
             }
         }
 
@@ -142,7 +142,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             distributionTargets.push(config);
         }
 
-        require(total <= MAX_PERCENT, "ProtocolShareReserve: total percent cannot be more than 100");
+        require(total <= MAX_PERCENT, "ProtocolShareReserve: Percentage must be between 0 and 100");
     }
 
     /**
