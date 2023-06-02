@@ -10,8 +10,6 @@ import "../Interfaces/PoolRegistryInterface.sol";
 import "../Interfaces/IPrime.sol";
 import "../Interfaces/IIncomeDestination.sol";
 
-import {console} from "hardhat/console.sol";
-
 contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -162,7 +160,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
     function _releaseFund(address comptroller, address asset) internal {
         uint256 schemaOneBalance = assetsReserves[comptroller][asset][Schema.ONE];
-        uint256 schemaTwoBalance = assetsReserves[comptroller][asset][Schema.ONE];
+        uint256 schemaTwoBalance = assetsReserves[comptroller][asset][Schema.TWO];
         uint256 schemaOneTotalTransferAmount;
         uint256 schemaTwoTotalTransferAmount;
 
@@ -174,7 +172,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
                 transferAmount = (schemaOneBalance * _config.percentage) / MAX_PERCENT;
                 schemaOneTotalTransferAmount += transferAmount;
             } else {
-                transferAmount = (schemaOneBalance * _config.percentage) / MAX_PERCENT;
+                transferAmount = (schemaTwoBalance * _config.percentage) / MAX_PERCENT;
                 schemaTwoTotalTransferAmount += transferAmount;
             }
 
@@ -190,7 +188,8 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         uint newSchemaTwoBalance = schemaTwoBalance - schemaTwoTotalTransferAmount;
 
         assetsReserves[comptroller][asset][Schema.ONE] = newSchemaOneBalance;
-        assetsReserves[comptroller][asset][Schema.TWO] =schemaTwoBalance;
+        assetsReserves[comptroller][asset][Schema.TWO] = newSchemaTwoBalance;
+        totalAssetReserve[asset] = totalAssetReserve[asset] - schemaOneTotalTransferAmount - schemaTwoTotalTransferAmount;
 
         emit ReservesUpdated(comptroller, asset, Schema.ONE, oldSchemaOneBalance, newSchemaOneBalance);
         emit ReservesUpdated(comptroller, asset, Schema.TWO, oldSchemaTwoBalance, newSchemaTwoBalance);

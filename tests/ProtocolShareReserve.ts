@@ -202,9 +202,12 @@ describe("ProtocolShareReserve: Tests", function () {
     const mockUSDC = setup.mockUSDC;
     const mockUSDT = setup.mockUSDT;
     const corePoolComptroller = setup.corePoolComptroller;
-    const prime = setup.prime;
     const isolatedPoolComptroller = setup.isolatedPoolComptroller;
     const poolRegistry = setup.poolRegistry;
+    const riskFundSwapper = setup.riskFundSwapper;
+    const xvsVaultSwapper = setup.xvsVaultSwapper;
+    const dao = setup.dao;
+    const prime = setup.prime;
 
     //Transfer liquidation and spread income from asset part of prime program
     await mockDAI.transfer(protocolShareReserve.address, 100);
@@ -259,5 +262,39 @@ describe("ProtocolShareReserve: Tests", function () {
       LIQUIDATION_INCOME
     )
     expect(await protocolShareReserve.assetsReserves(isolatedPoolComptroller.address, mockUSDT.address, SCHEMA_TWO)).to.equal(200);
+
+    //Release core comptroller income
+    await protocolShareReserve.releaseFunds(corePoolComptroller.address, [
+      mockDAI.address, 
+      mockUSDC.address, 
+    ]);
+
+    expect(await mockDAI.balanceOf(prime.address)).to.equal(20);
+    expect(await mockDAI.balanceOf(xvsVaultSwapper.address)).to.equal(46); // 20 + 26
+    expect(await mockDAI.balanceOf(riskFundSwapper.address)).to.equal(88); // 40 + 48
+    expect(await mockDAI.balanceOf(dao.address)).to.equal(46); // 20 + 26
+
+    expect(await mockUSDC.balanceOf(prime.address)).to.equal(0);
+    expect(await mockUSDC.balanceOf(xvsVaultSwapper.address)).to.equal(52); // 26 + 26
+    expect(await mockUSDC.balanceOf(riskFundSwapper.address)).to.equal(96); // 48 + 48
+    expect(await mockUSDC.balanceOf(dao.address)).to.equal(52); // 26 + 26
+
+    //Release isolated comptroller income
+    await protocolShareReserve.releaseFunds(isolatedPoolComptroller.address, [
+      mockUSDT.address,
+    ]);
+
+    expect(await mockUSDT.balanceOf(prime.address)).to.equal(0);
+    expect(await mockUSDT.balanceOf(xvsVaultSwapper.address)).to.equal(52); // 20 + 26
+    expect(await mockUSDT.balanceOf(riskFundSwapper.address)).to.equal(96); // 40 + 48
+    expect(await mockUSDT.balanceOf(dao.address)).to.equal(52); // 20 + 26
+
+    //Check if all funds are released
+    expect(await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockDAI.address, SCHEMA_ONE)).to.equal(0);
+    expect(await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockDAI.address, SCHEMA_TWO)).to.equal(0);
+    expect(await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockUSDC.address, SCHEMA_TWO)).to.equal(0);
+    expect(await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockUSDC.address, SCHEMA_TWO)).to.equal(0);
+    expect(await protocolShareReserve.assetsReserves(isolatedPoolComptroller.address, mockUSDT.address, SCHEMA_TWO)).to.equal(0);
+    expect(await protocolShareReserve.assetsReserves(isolatedPoolComptroller.address, mockUSDT.address, SCHEMA_TWO)).to.equal(0);
   });
 });
