@@ -5,15 +5,15 @@ import { SafeERC20Upgradeable, IERC20Upgradeable } from "@openzeppelin/contracts
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 
 import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
-import "../Interfaces/ComptrollerInterface.sol";
-import "../Interfaces/PoolRegistryInterface.sol";
-import "../Interfaces/IPrime.sol";
-import "../Interfaces/IIncomeDestination.sol";
+import { ComptrollerInterface } from "../Interfaces/ComptrollerInterface.sol";
+import { PoolRegistryInterface } from "../Interfaces/PoolRegistryInterface.sol";
+import { IPrime } from "../Interfaces/IPrime.sol";
+import { IIncomeDestination } from "../Interfaces/IIncomeDestination.sol";
 
 contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    /// @notice protocol income is categorized into two schemas. 
+    /// @notice protocol income is categorized into two schemas.
     /// The first schema is for spread income from prime markets in core protocol
     /// The second schema is for all other sources and types of income
     enum Schema {
@@ -36,13 +36,13 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     /// @notice address of core pool comptroller contract
     address public CORE_POOL_COMPTROLLER;
 
-    uint256 constant MAX_PERCENT = 100;
+    uint256 private constant MAX_PERCENT = 100;
 
     /// @notice comptroller => asset => schema => balance
-    mapping (address => mapping (address => mapping ( Schema => uint256 ))) public assetsReserves;
+    mapping(address => mapping(address => mapping(Schema => uint256))) public assetsReserves;
 
     /// @notice asset => balance
-    mapping (address => uint256) private totalAssetReserve;
+    mapping(address => uint256) private totalAssetReserve;
 
     /// @notice configuration for different income distribution targers
     DistributionConfig[] public distributionTargets;
@@ -57,16 +57,34 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     event PrimeUpdated(address indexed oldPrime, address indexed newPrime);
 
     /// @notice Event emitted after the updation of the assets reserves.
-    event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount, IncomeType incomeType, Schema schema);
+    event AssetsReservesUpdated(
+        address indexed comptroller,
+        address indexed asset,
+        uint256 amount,
+        IncomeType incomeType,
+        Schema schema
+    );
 
     /// @notice Event emitted after a income distribution target is configured
     event DestinationConfigured(address indexed destination, uint percent, Schema schema);
 
     /// @notice Event emitted when asset is released to an target
-    event AssetReleased(address indexed destination, address indexed asset, Schema schema, uint256 percent, uint256 amount);
+    event AssetReleased(
+        address indexed destination,
+        address indexed asset,
+        Schema schema,
+        uint256 percent,
+        uint256 amount
+    );
 
     /// @notice Event emitted when asset reserves state is updated
-    event ReservesUpdated(address indexed comptroller, address indexed asset, Schema schema, uint256 oldBalance, uint256 newBalance);
+    event ReservesUpdated(
+        address indexed comptroller,
+        address indexed asset,
+        Schema schema,
+        uint256 oldBalance,
+        uint256 newBalance
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -80,10 +98,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      * @param corePoolComptroller The address of core pool comptroller
      * @param accessControlManager The address of ACM contract
      */
-    function initialize(
-        address corePoolComptroller,
-        address accessControlManager
-    ) external initializer {
+    function initialize(address corePoolComptroller, address accessControlManager) external initializer {
         require(corePoolComptroller != address(0), "ProtocolShareReserve: Core pool comptroller address invalid");
         __Ownable2Step_init();
         __AccessControlled_init(accessControlManager);
@@ -119,7 +134,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
     /**
      * @dev Add or update destination target based on destination address
-     * @param config configuration of the destination. 
+     * @param config configuration of the destination.
      */
     function addOrUpdateDistributionConfig(DistributionConfig memory config) external {
         _checkAccessAllowed("addOrUpdateDistributionConfig(DistributionConfig)");
@@ -151,7 +166,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     /**
      * @dev Release funds
      * @param assets assets to be released to distribution targets
-    */
+     */
     function releaseFunds(address comptroller, address[] memory assets) external {
         for (uint i = 0; i < assets.length; i++) {
             _releaseFund(comptroller, assets[i]);
@@ -168,7 +183,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             DistributionConfig storage _config = distributionTargets[i];
 
             uint256 transferAmount;
-            if(_config.schema == Schema.ONE) {
+            if (_config.schema == Schema.ONE) {
                 transferAmount = (schemaOneBalance * _config.percentage) / MAX_PERCENT;
                 schemaOneTotalTransferAmount += transferAmount;
             } else {
@@ -180,7 +195,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             IIncomeDestination(_config.destination).updateAssetsState(comptroller, asset);
 
             emit AssetReleased(_config.destination, asset, _config.schema, _config.percentage, transferAmount);
-        } 
+        }
 
         uint oldSchemaOneBalance = schemaOneBalance;
         uint oldSchemaTwoBalance = schemaTwoBalance;
@@ -189,7 +204,10 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
         assetsReserves[comptroller][asset][Schema.ONE] = newSchemaOneBalance;
         assetsReserves[comptroller][asset][Schema.TWO] = newSchemaTwoBalance;
-        totalAssetReserve[asset] = totalAssetReserve[asset] - schemaOneTotalTransferAmount - schemaTwoTotalTransferAmount;
+        totalAssetReserve[asset] =
+            totalAssetReserve[asset] -
+            schemaOneTotalTransferAmount -
+            schemaTwoTotalTransferAmount;
 
         emit ReservesUpdated(comptroller, asset, Schema.ONE, oldSchemaOneBalance, newSchemaOneBalance);
         emit ReservesUpdated(comptroller, asset, Schema.TWO, oldSchemaTwoBalance, newSchemaTwoBalance);
@@ -209,7 +227,8 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
         require(
             (comptroller != CORE_POOL_COMPTROLLER &&
-            PoolRegistryInterface(POOL_REGISTRY).getVTokenForAsset(comptroller, asset) != address(0)) || (comptroller == CORE_POOL_COMPTROLLER),
+                PoolRegistryInterface(POOL_REGISTRY).getVTokenForAsset(comptroller, asset) != address(0)) ||
+                (comptroller == CORE_POOL_COMPTROLLER),
             "ProtocolShareReserve: The pool doesn't support the asset"
         );
 
@@ -228,7 +247,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             unchecked {
                 balanceDifference = currentBalance - assetReserve;
             }
-            
+
             assetsReserves[comptroller][asset][schema] += balanceDifference;
             totalAssetReserve[asset] += balanceDifference;
             emit AssetsReservesUpdated(comptroller, asset, balanceDifference, incomeType, schema);

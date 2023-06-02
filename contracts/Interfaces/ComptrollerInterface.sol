@@ -7,5 +7,6 @@ interface ComptrollerInterface {
     }
 
     function markets(address market) external view returns (Market memory);
+
     function isComptroller() external view returns (bool);
 }
