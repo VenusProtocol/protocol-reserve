@@ -233,9 +233,9 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         );
 
         Schema schema = Schema.TWO;
-        bool isPrime = IPrime(PRIME).isPrime(asset);
+        address vToken = IPrime(PRIME).vTokenForAsset(asset);
 
-        if (isPrime && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
+        if (vToken != address(0) && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
             schema = Schema.ONE;
         }
 

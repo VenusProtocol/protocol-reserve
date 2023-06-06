@@ -4,5 +4,5 @@ pragma solidity 0.8.13;
 import { IIncomeDestination } from "./IIncomeDestination.sol";
 
 interface IPrime is IIncomeDestination {
-    function isPrime(address asset) external view returns (bool);
+    function vTokenForAsset(address asset) external view returns (address);
 }

@@ -20,6 +20,8 @@ const SCHEMA_TWO = 1;
 const SPREAD_INCOME = 0;
 const LIQUIDATION_INCOME = 1;
 
+const ONE_ADDRESS = "0x0000000000000000000000000000000000000001";
+
 type SetupProtocolShareReserveFixture = {
   mockDAI: MockToken;
   mockUSDC: MockToken;
@@ -221,12 +223,12 @@ describe("ProtocolShareReserve: Tests", function () {
 
     //Transfer liquidation and spread income from asset part of prime program
     await mockDAI.transfer(protocolShareReserve.address, 100);
-    await prime.isPrime.returns(true);
+    await prime.vTokenForAsset.returns(ONE_ADDRESS);
     await protocolShareReserve.updateAssetsState(corePoolComptroller.address, mockDAI.address, SPREAD_INCOME);
     await mockDAI.transfer(protocolShareReserve.address, 100);
     await protocolShareReserve.updateAssetsState(corePoolComptroller.address, mockDAI.address, LIQUIDATION_INCOME);
 
-    await prime.isPrime.returns(false);
+    await prime.vTokenForAsset.returns(ethers.constants.AddressZero);
 
     expect(
       await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockDAI.address, SCHEMA_ONE),
@@ -249,7 +251,7 @@ describe("ProtocolShareReserve: Tests", function () {
     ).to.equal(200);
 
     //Transfer liquidation and spread income from asset part of IL
-    await poolRegistry.getVTokenForAsset.returns("0x0000000000000000000000000000000000000001");
+    await poolRegistry.getVTokenForAsset.returns(ONE_ADDRESS);
     await mockUSDT.transfer(protocolShareReserve.address, 100);
     await protocolShareReserve.updateAssetsState(isolatedPoolComptroller.address, mockUSDT.address, SPREAD_INCOME);
     expect(
