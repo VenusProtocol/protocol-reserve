@@ -276,6 +276,34 @@ describe("ProtocolShareReserve: Tests", function () {
     expect(await mockUSDC.balanceOf(riskFundSwapper.address)).to.equal(96); // 48 + 48
     expect(await mockUSDC.balanceOf(dao.address)).to.equal(52); // 26 + 26
 
+    expect(await protocolShareReserve.getUnreleasedFunds(
+      isolatedPoolComptroller.address,
+      SCHEMA_ONE,
+      prime.address,
+      mockUSDT.address,
+    )).to.be.equal(0);
+
+    expect(await protocolShareReserve.getUnreleasedFunds(
+      isolatedPoolComptroller.address,
+      SCHEMA_TWO,
+      xvsVaultSwapper.address,
+      mockUSDT.address,
+    )).to.be.equal(52);
+
+    expect(await protocolShareReserve.getUnreleasedFunds(
+      isolatedPoolComptroller.address,
+      SCHEMA_TWO,
+      riskFundSwapper.address,
+      mockUSDT.address,
+    )).to.be.equal(96);
+
+    expect(await protocolShareReserve.getUnreleasedFunds(
+      isolatedPoolComptroller.address,
+      SCHEMA_TWO,
+      dao.address,
+      mockUSDT.address,
+    )).to.be.equal(52);
+
     //Release isolated comptroller income
     await protocolShareReserve.releaseFunds(isolatedPoolComptroller.address, [mockUSDT.address]);
 

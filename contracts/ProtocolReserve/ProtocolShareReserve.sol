@@ -8,6 +8,7 @@ import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
 import { ComptrollerInterface } from "../Interfaces/ComptrollerInterface.sol";
 import { PoolRegistryInterface } from "../Interfaces/PoolRegistryInterface.sol";
 import { IPrime } from "../Interfaces/IPrime.sol";
+import { IVToken } from "../Interfaces/IVToken.sol";
 import { IIncomeDestination } from "../Interfaces/IIncomeDestination.sol";
 
 contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
@@ -133,12 +134,29 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     }
 
     /**
+     * @dev Fetches the list of prime markets and then accrues interest and 
+     * releases the funds to prime for each market 
+     */
+    function _accrueAndReleaseFundsToPrime() internal {
+        address[] memory markets = IPrime(PRIME).allMarkets();
+        for (uint i = 0; i < markets.length; i++) {
+            address market = markets[i];
+            IPrime(PRIME).accrueInterest(market);
+            _releaseFund(CORE_POOL_COMPTROLLER, IVToken(market).underlying());
+        }
+    }
+
+    /**
      * @dev Add or update destination target based on destination address
      * @param config configuration of the destination.
      */
     function addOrUpdateDistributionConfig(DistributionConfig memory config) external {
         _checkAccessAllowed("addOrUpdateDistributionConfig(DistributionConfig)");
         require(config.destination != address(0), "ProtocolShareReserve: Destination address invalid");
+
+        //we need to accrue and release funds to prime before updating the distribution condiguration
+        //because prime relies on getUnreleasedFunds and it's return value may change after config update
+        _accrueAndReleaseFundsToPrime();
 
         uint256 total = 0;
         bool updated = false;
@@ -161,6 +179,23 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         }
 
         require(total <= MAX_PERCENT, "ProtocolShareReserve: Percentage must be between 0 and 100");
+    }
+
+    /**
+     * @dev Used to find out the amount of funds that's going to be released when release funds is called.
+     * @param comptroller the comptroller address of the pool
+     * @param schema the schema of the distribution target
+     * @param destination the destination address of the distribution target
+     * @param asset the asset address which will be released
+     */
+    function getUnreleasedFunds(address comptroller, Schema schema, address destination, address asset) external view returns (uint256) {
+        for (uint i = 0; i < distributionTargets.length; i++) {
+            DistributionConfig storage _config = distributionTargets[i];
+            if (_config.schema == schema && _config.destination == destination) {
+                uint256 total = assetsReserves[comptroller][asset][schema];
+                return (total * _config.percentage) / MAX_PERCENT;
+            }
+        }
     }
 
     /**
