@@ -134,8 +134,8 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     }
 
     /**
-     * @dev Fetches the list of prime markets and then accrues interest and 
-     * releases the funds to prime for each market 
+     * @dev Fetches the list of prime markets and then accrues interest and
+     * releases the funds to prime for each market
      */
     function _accrueAndReleaseFundsToPrime() internal {
         address[] memory markets = IPrime(PRIME).allMarkets();
@@ -188,7 +188,12 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      * @param destination the destination address of the distribution target
      * @param asset the asset address which will be released
      */
-    function getUnreleasedFunds(address comptroller, Schema schema, address destination, address asset) external view returns (uint256) {
+    function getUnreleasedFunds(
+        address comptroller,
+        Schema schema,
+        address destination,
+        address asset
+    ) external view returns (uint256) {
         for (uint i = 0; i < distributionTargets.length; i++) {
             DistributionConfig storage _config = distributionTargets[i];
             if (_config.schema == schema && _config.destination == destination) {
