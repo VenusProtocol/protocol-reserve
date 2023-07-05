@@ -24,15 +24,16 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
     struct DistributionConfig {
         Schema schema;
+        /// @dev percenatge is represented without any scale
         uint256 percentage;
         address destination;
     }
 
     /// @notice address of Prime contract
-    address public PRIME;
+    address public prime;
 
     /// @notice address of pool registry contract
-    address public POOL_REGISTRY;
+    address public poolRegistry;
 
     /// @notice address of core pool comptroller contract
     address public CORE_POOL_COMPTROLLER;
@@ -101,7 +102,6 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      */
     function initialize(address corePoolComptroller, address accessControlManager) external initializer {
         require(corePoolComptroller != address(0), "ProtocolShareReserve: Core pool comptroller address invalid");
-        __Ownable2Step_init();
         __AccessControlled_init(accessControlManager);
 
         CORE_POOL_COMPTROLLER = corePoolComptroller;
@@ -109,27 +109,27 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
     /**
      * @dev Pool registry setter.
-     * @param poolRegistry Address of the pool registry
+     * @param _poolRegistry Address of the pool registry
      */
-    function setPoolRegistry(address poolRegistry) external {
+    function setPoolRegistry(address _poolRegistry) external {
         _checkAccessAllowed("setPoolRegistry(address)");
 
-        require(poolRegistry != address(0), "ProtocolShareReserve: Pool registry address invalid");
-        address oldPoolRegistry = POOL_REGISTRY;
-        POOL_REGISTRY = poolRegistry;
+        require(_poolRegistry != address(0), "ProtocolShareReserve: Pool registry address invalid");
+        address oldPoolRegistry = poolRegistry;
+        poolRegistry = _poolRegistry;
         emit PoolRegistryUpdated(oldPoolRegistry, poolRegistry);
     }
 
     /**
      * @dev Prime contract address setter.
-     * @param prime Address of the prime contract
+     * @param _prime Address of the prime contract
      */
-    function setPrime(address prime) external {
+    function setPrime(address _prime) external {
         _checkAccessAllowed("setPrime(address)");
 
-        require(prime != address(0), "ProtocolShareReserve: Prime address invalid");
-        address oldPrime = PRIME;
-        PRIME = prime;
+        require(_prime != address(0), "ProtocolShareReserve: Prime address invalid");
+        address oldPrime = prime;
+        prime = _prime;
         emit PrimeUpdated(oldPrime, prime);
     }
 
@@ -138,10 +138,10 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      * releases the funds to prime for each market
      */
     function _accrueAndReleaseFundsToPrime() internal {
-        address[] memory markets = IPrime(PRIME).allMarkets();
+        address[] memory markets = IPrime(prime).allMarkets();
         for (uint i = 0; i < markets.length; i++) {
             address market = markets[i];
-            IPrime(PRIME).accrueInterest(market);
+            IPrime(prime).accrueInterest(market);
             _releaseFund(CORE_POOL_COMPTROLLER, IVToken(market).underlying());
         }
     }
@@ -154,7 +154,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         _checkAccessAllowed("addOrUpdateDistributionConfig(DistributionConfig)");
         require(config.destination != address(0), "ProtocolShareReserve: Destination address invalid");
 
-        //we need to accrue and release funds to prime before updating the distribution condiguration
+        //we need to accrue and release funds to prime before updating the distribution configuration
         //because prime relies on getUnreleasedFunds and it's return value may change after config update
         _accrueAndReleaseFundsToPrime();
 
@@ -164,16 +164,14 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             DistributionConfig storage _config = distributionTargets[i];
             if (_config.schema == config.schema) {
                 if (config.destination == _config.destination) {
-                    total += config.percentage;
                     _config.percentage = config.percentage;
                     updated = true;
-                } else {
-                    total += _config.percentage;
                 }
+                total += _config.percentage;
             }
         }
 
-        if (updated == false) {
+        if (!updated) {
             total += config.percentage;
             distributionTargets.push(config);
         }
@@ -267,13 +265,13 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
         require(
             (comptroller != CORE_POOL_COMPTROLLER &&
-                PoolRegistryInterface(POOL_REGISTRY).getVTokenForAsset(comptroller, asset) != address(0)) ||
+                PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0)) ||
                 (comptroller == CORE_POOL_COMPTROLLER),
             "ProtocolShareReserve: The pool doesn't support the asset"
         );
 
         Schema schema = Schema.TWO;
-        address vToken = IPrime(PRIME).vTokenForAsset(asset);
+        address vToken = IPrime(prime).vTokenForAsset(asset);
 
         if (vToken != address(0) && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
             schema = Schema.ONE;
