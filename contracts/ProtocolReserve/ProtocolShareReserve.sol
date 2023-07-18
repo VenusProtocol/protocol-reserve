@@ -135,6 +135,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     /**
      * @dev Pool registry setter.
      * @param _poolRegistry Address of the pool registry
+     * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
      */
     function setPoolRegistry(address _poolRegistry) external {
         _checkAccessAllowed("setPoolRegistry(address)");

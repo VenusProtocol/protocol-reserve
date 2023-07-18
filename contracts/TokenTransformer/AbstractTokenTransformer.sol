@@ -111,7 +111,7 @@ abstract contract AbstractTokenTransformer is
         address accessControlManager_,
         ResilientOracle priceOracle_,
         address destinationAddress_
-    ) external initializer {
+    ) public virtual initializer {
         __AccessControlled_init(accessControlManager_);
         __ReentrancyGuard_init();
 
@@ -234,6 +234,8 @@ abstract contract AbstractTokenTransformer is
         }
 
         emit SwapExactTokensForTokens(actualAmountIn, actualAmountOut);
+
+        postSwapHook(tokenAddressIn, actualAmountIn, actualAmountOut);
     }
 
     /// @notice Swap tokens for tokenAddressIn for exact amount of tokenAddressOut
@@ -276,6 +278,8 @@ abstract contract AbstractTokenTransformer is
             );
         }
 
+        postSwapHook(tokenAddressIn, actualAmountIn, actualAmountOut);
+
         emit SwapTokensForExactTokens(actualAmountIn, actualAmountOut);
     }
 
@@ -307,6 +311,8 @@ abstract contract AbstractTokenTransformer is
             tokenAddressOut,
             to
         );
+
+        postSwapHook(tokenAddressIn, actualAmountIn, actualAmountOut);
 
         emit SwapExactTokensForTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
@@ -340,6 +346,8 @@ abstract contract AbstractTokenTransformer is
             to
         );
 
+        postSwapHook(tokenAddressIn, actualAmountIn, actualAmountOut);
+
         emit SwapTokensForExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
 
@@ -356,12 +364,8 @@ abstract contract AbstractTokenTransformer is
     }
 
     /// @notice Get the balance for specific token
-    /// @param token Address od the token
-    function balanceOf(address token) public virtual {}
-
-    /// @notice Operations to perform after sweepToken
-    /// @param token Address od the token
-    function postSwapHook(address token) public virtual {}
+    /// @param token Address of the token
+    function balanceOf(address token) external virtual returns (uint256 tokenBalance) {}
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @param amountInMantissa Amount of tokenAddressIn
@@ -551,6 +555,10 @@ abstract contract AbstractTokenTransformer is
 
         emit PriceOracleUpdated(oldPriceOracle, priceOracle);
     }
+
+    /// @notice Operations to perform after sweepToken
+    /// @param tokenInAddress Address of the token
+    function postSwapHook(address tokenInAddress, uint256 amountIn, uint256 amountOut) internal virtual {}
 
     /// @notice To check, is swapping paused
     function _checkSwapPaused() internal view {
