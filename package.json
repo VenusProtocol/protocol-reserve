@@ -74,7 +74,7 @@
     "@types/node": "^18.16.3",
     "@typescript-eslint/eslint-plugin": "^5.44.0",
     "@typescript-eslint/parser": "^5.44.0",
-    "@venusprotocol/oracle": "^1.6.11-dev.7",
+    "@venusprotocol/oracle": "^1.6.13",
     "@venusprotocol/venus-protocol": "^0.7.0",
     "bignumber.js": "^9.1.1",
     "chai": "^4.3.7",
