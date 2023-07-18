@@ -2,27 +2,38 @@
 pragma solidity 0.8.13;
 
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import { SafeERC20Upgradeable, IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import { ExponentialNoError } from "../Utils/ExponentialNoError.sol";
-import { IRiskFund } from "../Interfaces/IRiskFund.sol";
-import { ReserveHelpers } from "../Helpers/ReserveHelpers.sol";
 import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
+import { ExponentialNoError } from "../Utils/ExponentialNoError.sol";
+import { ReserveHelpers } from "../Helpers/ReserveHelpers.sol";
+import { IRiskFundSwapper } from "../Interfaces/IRiskFundSwapper.sol";
+import { ensureNonzeroAddress } from "../Helpers/validators.sol";
+import { EXP_SCALE } from "../Helpers/constants.sol";
 
+/**
+ * @title ProtocolShareReserve
+ * @author Venus
+ * @notice Contract used to store and distribute the reserves generated in the markets.
+ */
 contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address private protocolIncome;
-    address private riskFund;
+    address private riskFundSwapper;
     // Percentage of funds not sent to the RiskFund contract when the funds are released, following the project Tokenomics
-    uint256 private constant protocolSharePercentage = 70;
-    uint256 private constant baseUnit = 100;
+    uint256 private constant PROTOCOL_SHARE_PERCENTAGE = 70;
+    uint256 private constant BASE_UNIT = 100;
 
     /// @notice Emitted when funds are released
-    event FundsReleased(address comptroller, address asset, uint256 amount);
+    event FundsReleased(address indexed comptroller, address indexed asset, uint256 amount);
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
+
+    /// @notice Emitted whrn risk fund swappar address is updated
+    event RiskFundSwapperUpdated(address indexed oldRiskFundSwapper, address indexed newRiskFundSwapper);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -33,52 +44,67 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
     /**
      * @dev Initializes the deployer to owner.
-     * @param _protocolIncome The address protocol income will be sent to
-     * @param _riskFund Risk fund address
+     * @param protocolIncome_ The address protocol income will be sent to
+     * @custom:error ZeroAddressNotAllowed is thrown when protocol income address is zero
      */
-    function initialize(address _protocolIncome, address _riskFund) external initializer {
-        require(_protocolIncome != address(0), "ProtocolShareReserve: Protocol Income address invalid");
-        require(_riskFund != address(0), "ProtocolShareReserve: Risk Fund address invalid");
+    function initialize(address protocolIncome_) external initializer {
+        ensureNonzeroAddress(protocolIncome_);
 
         __Ownable2Step_init();
 
-        protocolIncome = _protocolIncome;
-        riskFund = _riskFund;
+        protocolIncome = protocolIncome_;
     }
 
     /**
      * @dev Pool registry setter.
-     * @param _poolRegistry Address of the pool registry
+     * @param poolRegistry_ Address of the pool registry
+     * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
      */
-    function setPoolRegistry(address _poolRegistry) external onlyOwner {
-        require(_poolRegistry != address(0), "ProtocolShareReserve: Pool registry address invalid");
+    function setPoolRegistry(address poolRegistry_) external onlyOwner {
+        ensureNonzeroAddress(poolRegistry_);
         address oldPoolRegistry = poolRegistry;
-        poolRegistry = _poolRegistry;
-        emit PoolRegistryUpdated(oldPoolRegistry, _poolRegistry);
+        poolRegistry = poolRegistry_;
+        emit PoolRegistryUpdated(oldPoolRegistry, poolRegistry_);
+    }
+
+    /**
+     * @dev Risk fund swapper setter
+     * @param riskFundSwapper_ Address of the Risk fund swapper
+     * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
+     */
+    function setRiskFundSwapper(address riskFundSwapper_) external onlyOwner {
+        ensureNonzeroAddress(riskFundSwapper_);
+        address oldRiskFundSwapper = riskFundSwapper;
+        riskFundSwapper = riskFundSwapper_;
+        emit RiskFundSwapperUpdated(oldRiskFundSwapper, riskFundSwapper_);
     }
 
     /**
      * @dev Release funds
+     * @param comptroller Pool's Comptroller
      * @param asset  Asset to be released
      * @param amount Amount to release
      * @return Number of total released tokens
+     * @custom:error ZeroAddressNotAllowed is thrown when asset address is zero
      */
     function releaseFunds(address comptroller, address asset, uint256 amount) external returns (uint256) {
-        require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
+        ensureNonzeroAddress(asset);
         require(amount <= poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
 
         assetsReserves[asset] -= amount;
         poolsAssetsReserves[comptroller][asset] -= amount;
         uint256 protocolIncomeAmount = mul_(
             Exp({ mantissa: amount }),
-            div_(Exp({ mantissa: protocolSharePercentage * expScale }), baseUnit)
+            div_(Exp({ mantissa: PROTOCOL_SHARE_PERCENTAGE * EXP_SCALE }), BASE_UNIT)
         ).mantissa;
 
+        address riskFundSwapper_ = riskFundSwapper;
+
         IERC20Upgradeable(asset).safeTransfer(protocolIncome, protocolIncomeAmount);
-        IERC20Upgradeable(asset).safeTransfer(riskFund, amount - protocolIncomeAmount);
+        IERC20Upgradeable(asset).safeTransfer(riskFundSwapper_, amount - protocolIncomeAmount);
 
         // Update the pool asset's state in the risk fund for the above transfer.
-        IRiskFund(riskFund).updateAssetsState(comptroller, asset);
+        IRiskFundSwapper(riskFundSwapper_).updateAssetsState(comptroller, asset);
 
         emit FundsReleased(comptroller, asset, amount);
 
