@@ -10,6 +10,7 @@ import { ReserveHelpers } from "../Helpers/ReserveHelpers.sol";
 import { ensureNonzeroAddress } from "../Helpers/validators.sol";
 import { PoolRegistryInterface } from "../Interfaces/PoolRegistryInterface.sol";
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
+import { EXP_SCALE } from "../Helpers/constants.sol";
 
 contract RiskFundTransformer is AbstractTokenTransformer, ReserveHelpers {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -50,21 +51,15 @@ contract RiskFundTransformer is AbstractTokenTransformer, ReserveHelpers {
     /// @notice Perform after swapping the assets
     /// @param tokenInAddress Address of the tokenIn
     /// @param amountIn Amount of tokenIn swapped
-    /// @param amountOut AMount of tokenOut swapped
+    /// @param amountOut Amount of tokenOut swapped
     function postSwapHook(address tokenInAddress, uint256 amountIn, uint256 amountOut) internal override {
-        uint256[] memory poolsBalances;
-        uint256 poolsBalancesSum;
         address[] memory pools = PoolRegistryInterface(poolRegistry).getPoolsSupportedByAsset(tokenInAddress);
 
         for (uint256 i; i < pools.length; ++i) {
-            poolsBalances[i] = IERC20Upgradeable(tokenInAddress).balanceOf(pools[i]);
-            poolsBalancesSum += poolsBalances[i];
-        }
-
-        for (uint256 i; i < pools.length; ++i) {
-            uint256 poolRatio = poolsBalances[i] / poolsBalancesSum;
-            uint256 poolAmountInShare = poolRatio * amountIn;
-            uint256 poolAmountOutShare = poolRatio * amountOut;
+            uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenInAddress] * EXP_SCALE) /
+                assetsReserves[tokenInAddress];
+            uint256 poolAmountInShare = (poolShare * amountIn) / EXP_SCALE;
+            uint256 poolAmountOutShare = (poolShare * amountOut) / EXP_SCALE;
 
             poolsAssetsReserves[pools[i]][tokenInAddress] -= poolAmountInShare;
             IRiskFund(destinationAddress).updatePoolState(pools[i], poolAmountOutShare);

@@ -4,7 +4,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 
-import { convertToUnit } from "../helpers/utils";
+import { convertToUnit } from "../../helpers/utils";
 import {
   ComptrollerInterface,
   IAccessControlManagerV8,
@@ -13,7 +13,7 @@ import {
   MockToken,
   PoolRegistryInterface,
   ProtocolShareReserve,
-} from "../typechain";
+} from "../../typechain";
 
 const SCHEMA_DEFAULT = 0;
 const SCHEMA_SPREAD_PRIME_CORE = 1;
