@@ -8,7 +8,7 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
 import { ExponentialNoError } from "../Utils/ExponentialNoError.sol";
 import { ReserveHelpers } from "../Helpers/ReserveHelpers.sol";
-import { IRiskFundSwapper } from "../Interfaces/IRiskFundSwapper.sol";
+import { IRiskFundTransformer } from "../Interfaces/IRiskFundTransformer.sol";
 import { ensureNonzeroAddress } from "../Helpers/validators.sol";
 import { EXP_SCALE } from "../Helpers/constants.sol";
 
@@ -72,7 +72,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
      * @param riskFundSwapper_ Address of the Risk fund swapper
      * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
      */
-    function setRiskFundSwapper(address riskFundSwapper_) external onlyOwner {
+    function setRiskFundTransformer(address riskFundSwapper_) external onlyOwner {
         ensureNonzeroAddress(riskFundSwapper_);
         address oldRiskFundSwapper = riskFundSwapper;
         riskFundSwapper = riskFundSwapper_;
@@ -104,7 +104,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         IERC20Upgradeable(asset).safeTransfer(riskFundSwapper_, amount - protocolIncomeAmount);
 
         // Update the pool asset's state in the risk fund for the above transfer.
-        IRiskFundSwapper(riskFundSwapper_).updateAssetsState(comptroller, asset);
+        IRiskFundTransformer(riskFundSwapper_).updateAssetsState(comptroller, asset);
 
         emit FundsReleased(comptroller, asset, amount);
 

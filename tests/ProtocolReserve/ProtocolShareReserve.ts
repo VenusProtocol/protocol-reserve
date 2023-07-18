@@ -3,13 +3,19 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 
-import { convertToUnit } from "../helpers/utils";
-import { ComptrollerInterface, IRiskFund, MockToken, PoolRegistryInterface, ProtocolShareReserve } from "../typechain";
+import { convertToUnit } from "../../helpers/utils";
+import {
+  ComptrollerInterface,
+  IRiskFundTransformer,
+  MockToken,
+  PoolRegistryInterface,
+  ProtocolShareReserve,
+} from "../../typechain";
 
 let mockDAI: MockToken;
-let fakeRiskFund: FakeContract<IRiskFund>;
+let fakeRiskFundSwapper: FakeContract<IRiskFundTransformer>;
 let poolRegistry: FakeContract<PoolRegistryInterface>;
-let fakeProtocolIncome: FakeContract<IRiskFund>;
+let fakeProtocolIncome: FakeContract<IRiskFundTransformer>;
 let fakeComptroller: FakeContract<ComptrollerInterface>;
 let protocolShareReserve: ProtocolShareReserve;
 
@@ -19,23 +25,20 @@ const fixture = async (): Promise<void> => {
   await mockDAI.faucet(convertToUnit(1000, 18));
 
   // Fake contracts
-  fakeRiskFund = await smock.fake<IRiskFund>("IRiskFund");
-  await fakeRiskFund.updateAssetsState.returns();
+  fakeRiskFundSwapper = await smock.fake<IRiskFundTransformer>("IRiskFundTransformer");
 
   poolRegistry = await smock.fake<PoolRegistryInterface>("PoolRegistryInterface");
   poolRegistry.getVTokenForAsset.returns("0x0000000000000000000000000000000000000001");
 
-  fakeProtocolIncome = await smock.fake<IRiskFund>("IRiskFund");
+  fakeProtocolIncome = await smock.fake<IRiskFundTransformer>("IRiskFundTransformer");
   fakeComptroller = await smock.fake<ComptrollerInterface>("ComptrollerInterface");
 
   // ProtocolShareReserve contract deployment
   const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
-  protocolShareReserve = await upgrades.deployProxy(ProtocolShareReserve, [
-    fakeProtocolIncome.address,
-    fakeRiskFund.address,
-  ]);
+  protocolShareReserve = await upgrades.deployProxy(ProtocolShareReserve, [fakeProtocolIncome.address]);
 
   await protocolShareReserve.setPoolRegistry(poolRegistry.address);
+  await protocolShareReserve.setRiskFundTransformer(fakeRiskFundSwapper.address);
 };
 
 describe("ProtocolShareReserve: Tests", function () {
@@ -50,7 +53,7 @@ describe("ProtocolShareReserve: Tests", function () {
   it("Revert on invalid asset address.", async function () {
     await expect(
       protocolShareReserve.releaseFunds(fakeComptroller.address, "0x0000000000000000000000000000000000000000", 10),
-    ).to.be.rejectedWith("ProtocolShareReserve: Asset address invalid");
+    ).to.be.revertedWithCustomError(protocolShareReserve, "ZeroAddressNotAllowed");
   });
 
   it("Revert on Insufficient balance.", async function () {
@@ -90,7 +93,7 @@ describe("ProtocolShareReserve: Tests", function () {
 
     expect(protocolUSDT).equal(convertToUnit(10, 18));
 
-    const riskFundBal = await mockDAI.balanceOf(fakeRiskFund.address);
+    const riskFundBal = await mockDAI.balanceOf(fakeRiskFundSwapper.address);
     const liquidatedShareBal = await mockDAI.balanceOf(fakeProtocolIncome.address);
     const protocolShareReserveBal = await mockDAI.balanceOf(protocolShareReserve.address);
 
