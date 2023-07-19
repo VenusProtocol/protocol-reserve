@@ -9,8 +9,8 @@ import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
 import { ExponentialNoError } from "../Utils/ExponentialNoError.sol";
 import { ReserveHelpers } from "../Helpers/ReserveHelpers.sol";
 import { IRiskFundTransformer } from "../Interfaces/IRiskFundTransformer.sol";
-import { ensureNonzeroAddress } from "../Helpers/validators.sol";
-import { EXP_SCALE } from "../Helpers/constants.sol";
+import { ensureNonzeroAddress } from "../Utils/Validators.sol";
+import { EXP_SCALE } from "../Utils/Constants.sol";
 
 /**
  * @title ProtocolShareReserve

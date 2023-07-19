@@ -7,10 +7,10 @@ import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle
 
 import { AbstractTokenTransformer } from "./AbstractTokenTransformer.sol";
 import { ReserveHelpers } from "../Helpers/ReserveHelpers.sol";
-import { ensureNonzeroAddress } from "../Helpers/validators.sol";
+import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 import { PoolRegistryInterface } from "../Interfaces/PoolRegistryInterface.sol";
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
-import { EXP_SCALE } from "../Helpers/constants.sol";
+import { EXP_SCALE } from "../Utils/Constants.sol";
 
 contract RiskFundTransformer is AbstractTokenTransformer, ReserveHelpers {
     using SafeERC20Upgradeable for IERC20Upgradeable;

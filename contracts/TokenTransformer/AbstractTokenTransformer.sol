@@ -7,8 +7,8 @@ import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contract
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
 
-import { MANTISSA_ONE, EXP_SCALE } from "../Helpers/constants.sol";
-import { ensureNonzeroAddress } from "../Helpers/validators.sol";
+import { MANTISSA_ONE, EXP_SCALE } from "../Utils/Constants.sol";
+import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 import { IAbstractTokenTransformer } from "./IAbstractTokenTransformer.sol";
 
 /// @title AbstractTokenTransformer
