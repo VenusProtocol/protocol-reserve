@@ -7,28 +7,19 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
-import { ReserveHelpers } from "../Helpers/ReserveHelpers.sol";
 import { IShortfall } from "../Interfaces/IShortfall.sol";
 import { ensureNonzeroAddress } from "../Utils/Validators.sol";
-import { RiskFundV1Storage } from "./RiskFundV1Storage.sol";
+import { RiskFundV2Storage } from "./RiskFundStorage.sol";
 
-/// @title ReserveHelpers
+/// @title RiskFundV2
 /// @author Venus
-/// @notice Contract with basic features to track/hold different assets for different Comptrollers.
+/// @notice Contract with basic features to hold base asset for different Comptrollers.
 /// @dev This contract does not support BNB.
-contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV1Storage, IRiskFund {
+contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2Storage, IRiskFund {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    address private pancakeSwapRouter;
-    uint256 private minAmountToConvert;
-    address public convertibleBaseAsset;
-    address public shortfall;
-
-    /// Store base asset's reserve for specific pool
-    mapping(address => uint256) public poolReserves;
-
-    /// Risk fund transformer address
-    address public riskFundTransformer;
+    /// @notice Emitted when convertible base asset address is updated
+    event ConvertibleBaseAssetUpdated(address indexed oldConvertibleBaseAsset, address indexed newConvertibleBaseAsset);
 
     /// @notice Emitted when pool registry address is updated
     event RiskFundTransformerUpdated(address indexed oldRiskFundTransformer, address indexed newRiskFundTransformer);
@@ -45,31 +36,24 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV1St
     /// @notice Error is thrown when updatePoolState is not called by riskFundTransformer
     error InvalidRiskFundTransformer();
 
-    /// @dev Note that the contract is upgradeable. Use initialize() or reinitializers
-    /// to set the state variables.
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
+    /// @notice Error is thrown when transferReserveForAuction is not called by shortfall
+    error InvalidShortfallAddress();
 
-    /// @dev Initializes the deployer to owner.
-    /// @param convertibleBaseAsset_ Address of the base asset
-    /// @param accessControlManager_ Address of the access control contract
-    /// @param loopsLimit_ Limit for the loops in the contract to avoid DOS
-    /// @custom:error ZeroAddressNotAllowed is thrown when PCS router address is zero
-    /// @custom:error ZeroAddressNotAllowed is thrown when convertible base asset address is zero
-    function initialize(
-        address convertibleBaseAsset_,
-        address accessControlManager_,
-        uint256 loopsLimit_
-    ) external initializer {
+    /// @notice Error is thrown when pool reserve is less than the amount needed
+    error InsufficientPoolReserve(uint256 amount, uint256 poolReserve);
+
+    /// @notice Error is thrown when base asset od riskFUnd and shortfall is different
+    error BaseAssetNotMatched(address shortfallBaseAsset, address riskFundBaseAsset);
+
+    /// @dev Convertible base asset setter
+    /// @param convertibleBaseAsset_ Address of the convertible base asset
+    /// @custom:event ConvertibleBaseAssetUpdated emit on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when risk fund transformer address is zero
+    function setConvertibleBaseAsset(address convertibleBaseAsset_) external onlyOwner {
         ensureNonzeroAddress(convertibleBaseAsset_);
-        require(loopsLimit_ > 0, "Risk Fund: Loops limit can not be zero");
-
-        __Ownable2Step_init();
-        __AccessControlled_init_unchained(accessControlManager_);
-
+        address oldConvertibleBaseAsset = convertibleBaseAsset;
         convertibleBaseAsset = convertibleBaseAsset_;
+        emit ConvertibleBaseAssetUpdated(oldConvertibleBaseAsset, convertibleBaseAsset_);
     }
 
     /// @dev Risk fund transformer setter
@@ -88,10 +72,11 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV1St
     /// @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
     function setShortfallContractAddress(address shortfallContractAddress_) external onlyOwner {
         ensureNonzeroAddress(shortfallContractAddress_);
-        require(
-            IShortfall(shortfallContractAddress_).convertibleBaseAsset() == convertibleBaseAsset,
-            "Risk Fund: Base asset doesn't match"
-        );
+        address shortfallBaseAsset = IShortfall(shortfallContractAddress_).convertibleBaseAsset();
+
+        if (shortfallBaseAsset != convertibleBaseAsset) {
+            revert BaseAssetNotMatched(shortfallBaseAsset, convertibleBaseAsset);
+        }
 
         address oldShortfallContractAddress = shortfall;
         shortfall = shortfallContractAddress_;
@@ -102,13 +87,24 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV1St
     /// @param comptroller Comptroller of the pool.
     /// @param amount Amount to be transferred to auction contract.
     /// @return Number reserved tokens.
+    /// @custom:error InvalidShortfallAddress is thrown when risk fund transformer address is zero
+    /// @custom:error InsufficientPoolReserve is thrown when risk fund transformer address is zero
     function transferReserveForAuction(address comptroller, uint256 amount) external override returns (uint256) {
         address shortfall_ = shortfall;
-        require(msg.sender == shortfall_, "Risk fund: Only callable by Shortfall contract");
-        require(amount <= poolReserves[comptroller], "Risk Fund: Insufficient pool reserve.");
-        unchecked {
-            poolReserves[comptroller] = poolReserves[comptroller] - amount;
+        uint256 poolReserve = poolReserves[comptroller];
+
+        if (msg.sender != shortfall_) {
+            revert InvalidShortfallAddress();
         }
+
+        if (amount > poolReserve) {
+            revert InsufficientPoolReserve(amount, poolReserve);
+        }
+
+        unchecked {
+            poolReserves[comptroller] = poolReserve - amount;
+        }
+
         IERC20Upgradeable(convertibleBaseAsset).safeTransfer(shortfall_, amount);
 
         emit TransferredReserveForAuction(comptroller, amount);
