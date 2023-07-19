@@ -4,26 +4,26 @@ pragma solidity 0.8.13;
 import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
 
 interface IAbstractTokenTransformer {
-    struct SwapConfiguration {
+    struct TransformationConfig {
         /// tokenIn address
         address tokenAddressIn;
         /// tokenOut address
         address tokenAddressOut;
-        /// incentive on swapping tokens in mantissa i.e 10% incentive would be 0.1 * 1e18
+        /// incentive on transformation of tokens in mantissa i.e 10% incentive would be 0.1 * 1e18
         uint256 incentive;
-        /// whether the swap is enabled
+        /// whether the transformation is enabled
         bool enabled;
     }
 
-    function pauseSwap() external;
+    function pauseTransformation() external;
 
-    function resumeSwap() external;
+    function resumeTransformation() external;
 
     function setPriceOracle(ResilientOracle priceOracle_) external;
 
-    function setSwapConfiguration(SwapConfiguration calldata swapConfiguration) external;
+    function setTransformationConfig(TransformationConfig calldata transformationConfig) external;
 
-    function swapExactTokensForTokens(
+    function transformExactTokens(
         uint256 amountInMantissa,
         uint256 amountOutMinMantissa,
         address tokenAddressIn,
@@ -31,7 +31,7 @@ interface IAbstractTokenTransformer {
         address to
     ) external;
 
-    function swapTokensForExactTokens(
+    function transformForExactTokens(
         uint256 amountInMaxMantissa,
         uint256 amountOutMantissa,
         address tokenAddressIn,
@@ -39,7 +39,7 @@ interface IAbstractTokenTransformer {
         address to
     ) external;
 
-    function swapExactTokensForTokensSupportingFeeOnTransferTokens(
+    function transformExactTokensSupportingFeeOnTransferTokens(
         uint256 amountInMantissa,
         uint256 amountOutMinMantissa,
         address tokenAddressIn,
@@ -47,7 +47,7 @@ interface IAbstractTokenTransformer {
         address to
     ) external;
 
-    function swapTokensForExactTokensSupportingFeeOnTransferTokens(
+    function transformForExactTokensSupportingFeeOnTransferTokens(
         uint256 amountInMaxMantissa,
         uint256 amountOutMantissa,
         address tokenAddressIn,

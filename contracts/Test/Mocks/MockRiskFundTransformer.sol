@@ -4,15 +4,15 @@ pragma solidity 0.8.13;
 import { RiskFundTransformer } from "../../TokenTransformer/RiskFundTransformer.sol";
 
 contract MockRiskFundTransformer is RiskFundTransformer {
-    function postSwapHookMock(address tokenInAddress, uint256 amountIn, uint256 amountOut) external {
-        super.postSwapHook(tokenInAddress, amountIn, amountOut);
+    function postTransformationHookMock(address tokenInAddress, uint256 amountIn, uint256 amountOut) external {
+        super.postTransformationHook(tokenInAddress, amountIn, amountOut);
     }
 
-    function getPoolsAssetsReserves(address comptroller, address asset) external returns (uint256) {
+    function getPoolsAssetsReserves(address comptroller, address asset) external view returns (uint256) {
         return poolsAssetsReserves[comptroller][asset];
     }
 
-    function getAssetsReserves(address asset) external returns (uint256) {
+    function getAssetsReserves(address asset) external view returns (uint256) {
         return assetsReserves[asset];
     }
 

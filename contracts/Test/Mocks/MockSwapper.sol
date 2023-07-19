@@ -3,4 +3,4 @@ pragma solidity ^0.8.10;
 
 import { AbstractTokenTransformer } from "../../TokenTransformer/AbstractTokenTransformer.sol";
 
-contract MockSwapper is AbstractTokenTransformer {}
+contract MockTransformer is AbstractTokenTransformer {}

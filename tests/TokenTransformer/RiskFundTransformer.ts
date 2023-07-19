@@ -124,7 +124,7 @@ describe("Risk fund Transformer: tests", () => {
     ]);
 
     await transformer.setAssetsReserves(tokenIn.address, TOTAL_ASSESTS_RESERVES);
-    await transformer.postSwapHookMock(tokenIn.address, AMOUNT_IN, AMOUNT_OUT);
+    await transformer.postTransformationHookMock(tokenIn.address, AMOUNT_IN, AMOUNT_OUT);
 
     const poolAShare = new BigNumber(POOL_A_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_IN);
     const poolBShare = new BigNumber(POOL_B_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_IN);

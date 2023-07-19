@@ -26,7 +26,7 @@ contract RiskFundTransformer is AbstractTokenTransformer, ReserveHelpers {
         ResilientOracle priceOracle_,
         address destinationAddress_
     ) public override {
-        // Initialize AbstractSwapper
+        // Initialize AbstractTokenTransformer
         super.initialize(accessControlManager_, priceOracle_, destinationAddress_);
     }
 
@@ -48,11 +48,11 @@ contract RiskFundTransformer is AbstractTokenTransformer, ReserveHelpers {
         tokenBalance = token.balanceOf(address(this));
     }
 
-    /// @notice Perform after swapping the assets
+    /// @notice Hook to perform after tranforming tokens
     /// @param tokenInAddress Address of the tokenIn
-    /// @param amountIn Amount of tokenIn swapped
-    /// @param amountOut Amount of tokenOut swapped
-    function postSwapHook(address tokenInAddress, uint256 amountIn, uint256 amountOut) internal override {
+    /// @param amountIn Amount of tokenIn transformered
+    /// @param amountOut Amount of tokenOut transformered
+    function postTransformationHook(address tokenInAddress, uint256 amountIn, uint256 amountOut) internal override {
         address[] memory pools = PoolRegistryInterface(poolRegistry).getPoolsSupportedByAsset(tokenInAddress);
 
         for (uint256 i; i < pools.length; ++i) {
