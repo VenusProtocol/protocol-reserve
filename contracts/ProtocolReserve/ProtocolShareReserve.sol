@@ -21,7 +21,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address private protocolIncome;
-    address private riskFundSwapper;
+    address private riskFundTransformer;
     // Percentage of funds not sent to the RiskFund contract when the funds are released, following the project Tokenomics
     uint256 private constant PROTOCOL_SHARE_PERCENTAGE = 70;
     uint256 private constant BASE_UNIT = 100;
@@ -32,8 +32,8 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
 
-    /// @notice Emitted whrn risk fund swappar address is updated
-    event RiskFundSwapperUpdated(address indexed oldRiskFundSwapper, address indexed newRiskFundSwapper);
+    /// @notice Emitted whrn risk fund transformer address is updated
+    event RiskFundTransformerUpdated(address indexed oldRiskFundTransformer, address indexed newRiskFundTransformer);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -68,15 +68,15 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     }
 
     /**
-     * @dev Risk fund swapper setter
-     * @param riskFundSwapper_ Address of the Risk fund swapper
+     * @dev Risk fund transformer setter
+     * @param riskFundTransformer_ Address of the Risk fund transformer
      * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
      */
-    function setRiskFundTransformer(address riskFundSwapper_) external onlyOwner {
-        ensureNonzeroAddress(riskFundSwapper_);
-        address oldRiskFundSwapper = riskFundSwapper;
-        riskFundSwapper = riskFundSwapper_;
-        emit RiskFundSwapperUpdated(oldRiskFundSwapper, riskFundSwapper_);
+    function setRiskFundTransformer(address riskFundTransformer_) external onlyOwner {
+        ensureNonzeroAddress(riskFundTransformer_);
+        address oldRiskFundTransformer = riskFundTransformer;
+        riskFundTransformer = riskFundTransformer_;
+        emit RiskFundTransformerUpdated(oldRiskFundTransformer, riskFundTransformer_);
     }
 
     /**
@@ -98,13 +98,13 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
             div_(Exp({ mantissa: PROTOCOL_SHARE_PERCENTAGE * EXP_SCALE }), BASE_UNIT)
         ).mantissa;
 
-        address riskFundSwapper_ = riskFundSwapper;
+        address riskFundTransformer_ = riskFundTransformer;
 
         IERC20Upgradeable(asset).safeTransfer(protocolIncome, protocolIncomeAmount);
-        IERC20Upgradeable(asset).safeTransfer(riskFundSwapper_, amount - protocolIncomeAmount);
+        IERC20Upgradeable(asset).safeTransfer(riskFundTransformer_, amount - protocolIncomeAmount);
 
         // Update the pool asset's state in the risk fund for the above transfer.
-        IRiskFundTransformer(riskFundSwapper_).updateAssetsState(comptroller, asset);
+        IRiskFundTransformer(riskFundTransformer_).updateAssetsState(comptroller, asset);
 
         emit FundsReleased(comptroller, asset, amount);
 

@@ -10,10 +10,10 @@ import {
   IAccessControlManagerV8,
   MockDeflatingToken,
   MockDeflatingToken__factory,
-  MockSwapper,
-  MockSwapper__factory,
   MockToken,
   MockToken__factory,
+  MockTransformer,
+  MockTransformer__factory,
   ResilientOracleInterface,
 } from "../../typechain";
 import { convertToUnit } from "../utils";
@@ -22,7 +22,7 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 let accessControl: FakeContract<IAccessControlManagerV8>;
-let swapper: MockContract<MockSwapper>;
+let transformer: MockContract<MockTransformer>;
 let tokenIn: MockContract<MockToken>;
 let tokenOut: MockContract<MockToken>;
 let oracle: FakeContract<ResilientOracleInterface>;
@@ -30,7 +30,7 @@ let tokenInDeflationary: MockContract<MockDeflatingToken>;
 let to: Signer;
 let destination: Signer;
 let owner: Signer;
-let swapPairConfig: {
+let TransformationConfig: {
   tokenAddressIn: string;
   tokenAddressOut: string;
   incentive: string;
@@ -45,7 +45,7 @@ const MANTISSA_ONE = convertToUnit("1", 18);
 
 async function fixture(): Promise<void> {
   [owner, destination, to] = await ethers.getSigners();
-  const Swapper = await smock.mock<MockSwapper__factory>("MockSwapper");
+  const Transformer = await smock.mock<MockTransformer__factory>("MockTransformer");
 
   accessControl = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
   oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
@@ -60,11 +60,11 @@ async function fixture(): Promise<void> {
   tokenOut = await MockToken.deploy("TokenOut", "tokenOut", 18);
   await tokenOut.faucet(parseUnits("1000", 18));
 
-  swapper = await Swapper.deploy();
-  await swapper.initialize(accessControl.address, oracle.address, await destination.getAddress());
+  transformer = await Transformer.deploy();
+  await transformer.initialize(accessControl.address, oracle.address, await destination.getAddress());
   accessControl.isAllowedToCall.returns(true);
 
-  swapPairConfig = {
+  TransformationConfig = {
     tokenAddressIn: tokenIn.address,
     tokenAddressOut: tokenOut.address,
     incentive: INCENTIVE,
@@ -72,28 +72,28 @@ async function fixture(): Promise<void> {
   };
 }
 
-describe("MockSwapper: tests", () => {
+describe("MockTransformer: tests", () => {
   beforeEach(async () => {
     await loadFixture(fixture);
   });
-  describe("Swap tokens for exact tokens", async () => {
+  describe("Transform tokens for exact tokens", async () => {
     beforeEach(async () => {
-      await tokenInDeflationary.connect(owner).approve(swapper.address, convertToUnit("1", 18));
-      await tokenIn.connect(owner).approve(swapper.address, convertToUnit("1", 18));
-      await tokenOut.transfer(swapper.address, convertToUnit("1.5", 18));
+      await tokenInDeflationary.connect(owner).approve(transformer.address, convertToUnit("1", 18));
+      await tokenIn.connect(owner).approve(transformer.address, convertToUnit("1", 18));
+      await tokenOut.transfer(transformer.address, convertToUnit("1.5", 18));
 
       await oracle.getPrice.whenCalledWith(tokenInDeflationary.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
     });
-    it("Success on swap exact tokens", async () => {
+    it("Success on transform exact tokens", async () => {
       const MAX_AMOUNT_IN = convertToUnit(".25", 18);
       const AMOUNT_OUT = convertToUnit(".5", 18);
-      await swapper.setSwapConfiguration(swapPairConfig);
+      await transformer.setTransformationConfig(TransformationConfig);
 
-      const expectedResults = await swapper.getAmountIn(AMOUNT_OUT, tokenIn.address, tokenOut.address);
+      const expectedResults = await transformer.getAmountIn(AMOUNT_OUT, tokenIn.address, tokenOut.address);
 
-      const tx = await swapper.swapTokensForExactTokens(
+      const tx = await transformer.transformForExactTokens(
         MAX_AMOUNT_IN,
         AMOUNT_OUT,
         tokenIn.address,
@@ -103,60 +103,60 @@ describe("MockSwapper: tests", () => {
 
       await tx.wait();
 
-      await expect(tx).to.emit(swapper, "SwapTokensForExactTokens").withArgs(expectedResults[1], expectedResults[0]);
+      await expect(tx).to.emit(transformer, "TransformForExactTokens").withArgs(expectedResults[1], expectedResults[0]);
     });
     it("Revert on lower amount out than expected", async () => {
-      await swapper.setSwapConfiguration(swapPairConfig);
+      await transformer.setTransformationConfig(TransformationConfig);
       await expect(
-        swapper.swapTokensForExactTokens(
+        transformer.transformForExactTokens(
           convertToUnit(".5", 18),
           convertToUnit("1.5", 18),
           tokenIn.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.be.revertedWithCustomError(swapper, "AmountInHigherThanMax");
+      ).to.be.revertedWithCustomError(transformer, "AmountInHigherThanMax");
     });
 
     it("Revert on deflationary token transfer", async () => {
-      const swapPairConfig = {
+      const TransformationConfig = {
         tokenAddressIn: tokenInDeflationary.address,
         tokenAddressOut: tokenOut.address,
         incentive: INCENTIVE,
         enabled: true,
       };
 
-      await swapper.setSwapConfiguration(swapPairConfig);
+      await transformer.setTransformationConfig(TransformationConfig);
 
       await expect(
-        swapper.swapTokensForExactTokens(
+        transformer.transformForExactTokens(
           convertToUnit(".25", 18),
           convertToUnit(".5", 18),
           tokenInDeflationary.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.be.revertedWithCustomError(swapper, "AmountInOrAmountOutMismatched");
+      ).to.be.revertedWithCustomError(transformer, "AmountInOrAmountOutMismatched");
     });
   });
-  describe("Swap exact tokens for tokens", async () => {
+  describe("Transform exact tokens for tokens", async () => {
     beforeEach(async () => {
-      await tokenInDeflationary.connect(owner).approve(swapper.address, convertToUnit("1", 18));
-      await tokenIn.connect(owner).approve(swapper.address, convertToUnit("1", 18));
-      await tokenOut.transfer(swapper.address, convertToUnit("1.5", 18));
+      await tokenInDeflationary.connect(owner).approve(transformer.address, convertToUnit("1", 18));
+      await tokenIn.connect(owner).approve(transformer.address, convertToUnit("1", 18));
+      await tokenOut.transfer(transformer.address, convertToUnit("1.5", 18));
 
       await oracle.getPrice.whenCalledWith(tokenInDeflationary.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
     });
-    it("Success on swap exact tokens", async () => {
+    it("Success on transform exact tokens", async () => {
       const AMOUNT_IN = convertToUnit(".25", 18);
       const MIN_AMOUNT_OUT = convertToUnit(".5", 18);
-      await swapper.setSwapConfiguration(swapPairConfig);
+      await transformer.setTransformationConfig(TransformationConfig);
 
-      const expectedResults = await swapper.getAmountOut(AMOUNT_IN, tokenIn.address, tokenOut.address);
+      const expectedResults = await transformer.getAmountOut(AMOUNT_IN, tokenIn.address, tokenOut.address);
 
-      const tx = await swapper.swapExactTokensForTokens(
+      const tx = await transformer.transformExactTokens(
         AMOUNT_IN,
         MIN_AMOUNT_OUT,
         tokenIn.address,
@@ -166,102 +166,108 @@ describe("MockSwapper: tests", () => {
 
       await tx.wait();
 
-      await expect(tx).to.emit(swapper, "SwapExactTokensForTokens").withArgs(expectedResults[0], expectedResults[1]);
+      await expect(tx).to.emit(transformer, "TransformExactTokens").withArgs(expectedResults[0], expectedResults[1]);
     });
 
     it("Revert on lower amount out than expected", async () => {
-      await swapper.setSwapConfiguration(swapPairConfig);
+      await transformer.setTransformationConfig(TransformationConfig);
       await expect(
-        swapper.swapExactTokensForTokens(
+        transformer.transformExactTokens(
           convertToUnit(".5", 18),
           convertToUnit("1.5", 18),
           tokenIn.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.be.revertedWithCustomError(swapper, "AmountOutLowerThanMinRequired");
+      ).to.be.revertedWithCustomError(transformer, "AmountOutLowerThanMinRequired");
     });
 
     it("Revert on deflationary token transfer", async () => {
-      const swapPairConfig = {
+      const TransformationConfig = {
         tokenAddressIn: tokenInDeflationary.address,
         tokenAddressOut: tokenOut.address,
         incentive: INCENTIVE,
         enabled: true,
       };
 
-      await swapper.setSwapConfiguration(swapPairConfig);
+      await transformer.setTransformationConfig(TransformationConfig);
 
       await expect(
-        swapper.swapExactTokensForTokens(
+        transformer.transformExactTokens(
           convertToUnit(".25", 18),
           convertToUnit(".5", 18),
           tokenInDeflationary.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.be.revertedWithCustomError(swapper, "AmountInOrAmountOutMismatched");
+      ).to.be.revertedWithCustomError(transformer, "AmountInOrAmountOutMismatched");
     });
   });
 
-  describe("Set swap configurations", () => {
+  describe("Set transform configurations", () => {
     beforeEach(async () => {
       accessControl.isAllowedToCall.returns(true);
     });
 
-    it("Revert on not access to set swap configurations", async () => {
+    it("Revert on not access to set transform configurations", async () => {
       accessControl.isAllowedToCall.reset;
       accessControl.isAllowedToCall.returns(false);
 
-      await expect(swapper.setSwapConfiguration(swapPairConfig)).to.be.revertedWithCustomError(swapper, "Unauthorized");
+      await expect(transformer.setTransformationConfig(TransformationConfig)).to.be.revertedWithCustomError(
+        transformer,
+        "Unauthorized",
+      );
     });
 
     it("Revert on invalid tokenIn address", async () => {
-      const swapConfig = {
-        ...swapPairConfig,
+      const TransformerConfig = {
+        ...TransformationConfig,
         tokenAddressIn: ethers.constants.AddressZero,
       };
 
-      await expect(swapper.setSwapConfiguration(swapConfig)).to.be.revertedWithCustomError(
-        swapper,
+      await expect(transformer.setTransformationConfig(TransformerConfig)).to.be.revertedWithCustomError(
+        transformer,
         "ZeroAddressNotAllowed",
       );
     });
 
     it("Revert on invalid tokenOut address", async () => {
-      const swapConfig = {
-        ...swapPairConfig,
+      const TransformerConfig = {
+        ...TransformationConfig,
         tokenAddressOut: ethers.constants.AddressZero,
       };
 
-      await expect(swapper.setSwapConfiguration(swapConfig)).to.be.revertedWithCustomError(
-        swapper,
+      await expect(transformer.setTransformationConfig(TransformerConfig)).to.be.revertedWithCustomError(
+        transformer,
         "ZeroAddressNotAllowed",
       );
     });
 
     it("Revert on high incentive percentage", async () => {
-      const swapConfig = {
-        ...swapPairConfig,
+      const TransformerConfig = {
+        ...TransformationConfig,
         incentive: convertToUnit("6", 18), // more than MAX_INCENTIVE = 5e18
       };
 
-      await expect(swapper.setSwapConfiguration(swapConfig)).to.be.revertedWithCustomError(swapper, "IncentiveTooHigh");
+      await expect(transformer.setTransformationConfig(TransformerConfig)).to.be.revertedWithCustomError(
+        transformer,
+        "IncentiveTooHigh",
+      );
     });
 
-    it("Set swap config for first time", async () => {
-      let isExist = await swapper.swapConfigurations(tokenIn.address, tokenOut.address);
+    it("Set transform config for first time", async () => {
+      let isExist = await transformer.transformConfigurations(tokenIn.address, tokenOut.address);
 
       expect(isExist[0]).to.equal(ethers.constants.AddressZero);
       expect(isExist[1]).to.equal(ethers.constants.AddressZero);
       expect(isExist[2]).to.equal(0);
       expect(isExist[3]).to.equal(false);
 
-      await expect(swapper.setSwapConfiguration(swapPairConfig))
-        .to.emit(swapper, "SwapConfigurationUpdated")
+      await expect(transformer.setTransformationConfig(TransformationConfig))
+        .to.emit(transformer, "TransformationConfigUpdated")
         .withArgs(tokenIn.address, tokenOut.address, 0, INCENTIVE, false, true);
 
-      isExist = await swapper.swapConfigurations(tokenIn.address, tokenOut.address);
+      isExist = await transformer.transformConfigurations(tokenIn.address, tokenOut.address);
 
       expect(isExist[0]).to.equal(tokenIn.address);
       expect(isExist[1]).to.equal(tokenOut.address);
@@ -272,18 +278,18 @@ describe("MockSwapper: tests", () => {
     it("Update the incentive", async () => {
       const NEW_INCENTIVE = convertToUnit("2", 17);
 
-      await swapper.setSwapConfiguration(swapPairConfig);
+      await transformer.setTransformationConfig(TransformationConfig);
 
-      const swapConfig = {
-        ...swapPairConfig,
+      const TransformerConfig = {
+        ...TransformationConfig,
         incentive: NEW_INCENTIVE,
       };
 
-      await expect(swapper.setSwapConfiguration(swapConfig))
-        .to.emit(swapper, "SwapConfigurationUpdated")
+      await expect(transformer.setTransformationConfig(TransformerConfig))
+        .to.emit(transformer, "TransformationConfigUpdated")
         .withArgs(tokenIn.address, tokenOut.address, INCENTIVE, NEW_INCENTIVE, true, true);
 
-      const isExist = await swapper.swapConfigurations(tokenIn.address, tokenOut.address);
+      const isExist = await transformer.transformConfigurations(tokenIn.address, tokenOut.address);
       expect(isExist[2]).to.equal(NEW_INCENTIVE);
     });
   });
@@ -293,33 +299,33 @@ describe("MockSwapper: tests", () => {
     const AMOUNT_IN_OVER = convertToUnit("1", 18);
 
     beforeEach(async () => {
-      await tokenIn.connect(owner).approve(swapper.address, convertToUnit("1", 18));
-      await tokenOut.transfer(swapper.address, convertToUnit("1.5", 18));
+      await tokenIn.connect(owner).approve(transformer.address, convertToUnit("1", 18));
+      await tokenOut.transfer(transformer.address, convertToUnit("1.5", 18));
     });
 
-    const setSwapperConfig = async () => {
-      await swapper.setSwapConfiguration(swapPairConfig);
+    const setTransformationConfig = async () => {
+      await transformer.setTransformationConfig(TransformationConfig);
       await tokenOut.balanceOf.returns(TOKEN_OUT_MAX);
     };
 
     it("Revert on zero amountIn value", async () => {
-      await expect(swapper.getAmountOut(0, tokenIn.address, tokenOut.address)).to.be.revertedWithCustomError(
-        swapper,
+      await expect(transformer.getAmountOut(0, tokenIn.address, tokenOut.address)).to.be.revertedWithCustomError(
+        transformer,
         "InsufficientInputAmount",
       );
     });
 
-    it("Revert on no config or disabled swap for tokens pair", async () => {
+    it("Revert on no config or disabled transform for tokens pair", async () => {
       await expect(
-        swapper.getAmountOut(TOKEN_OUT_MAX, tokenIn.address, tokenOut.address),
-      ).to.be.revertedWithCustomError(swapper, "SwapConfigurationNotEnabled");
+        transformer.getAmountOut(TOKEN_OUT_MAX, tokenIn.address, tokenOut.address),
+      ).to.be.revertedWithCustomError(transformer, "TransformationConfigNotEnabled");
     });
 
-    it("Success on swapping tokenIn to tokenOut for under tokenOut liquidity", async () => {
-      await setSwapperConfig();
+    it("Success on transforming tokenIn to tokenOut for under tokenOut liquidity", async () => {
+      await setTransformationConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await swapper.getAmountOut(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address);
+      const results = await transformer.getAmountOut(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address);
       const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
       const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
       const amountOut = new BigNumber(AMOUNT_IN_UNDER)
@@ -332,11 +338,11 @@ describe("MockSwapper: tests", () => {
       expect(results[1]).to.equal(amountOut);
     });
 
-    it("Success on swapping tokenIn to tokenOut for over tokenOut liquidity", async () => {
-      await setSwapperConfig();
+    it("Success on transforming tokenIn to tokenOut for over tokenOut liquidity", async () => {
+      await setTransformationConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await swapper.getAmountOut(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
+      const results = await transformer.getAmountOut(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
       const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
       const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
       const amountIn = new BigNumber(TOKEN_OUT_MAX)
@@ -355,33 +361,33 @@ describe("MockSwapper: tests", () => {
     const AMOUNT_IN_OVER = convertToUnit("2", 18);
 
     beforeEach(async () => {
-      await tokenIn.connect(owner).approve(swapper.address, convertToUnit("1", 18));
-      await tokenOut.transfer(swapper.address, convertToUnit("1.5", 18));
+      await tokenIn.connect(owner).approve(transformer.address, convertToUnit("1", 18));
+      await tokenOut.transfer(transformer.address, convertToUnit("1.5", 18));
     });
 
-    const setSwapperConfig = async () => {
-      await swapper.setSwapConfiguration(swapPairConfig);
+    const setTransformationConfig = async () => {
+      await transformer.setTransformationConfig(TransformationConfig);
       await tokenOut.balanceOf.returns(TOKEN_OUT_MAX);
     };
 
     it("Revert on zero amountIn value", async () => {
-      await expect(swapper.getAmountIn(0, tokenIn.address, tokenOut.address)).to.be.revertedWithCustomError(
-        swapper,
+      await expect(transformer.getAmountIn(0, tokenIn.address, tokenOut.address)).to.be.revertedWithCustomError(
+        transformer,
         "InsufficientInputAmount",
       );
     });
 
-    it("Revert on no config or disabled swap for tokens pair", async () => {
+    it("Revert on no config or disabled transform for tokens pair", async () => {
       await expect(
-        swapper.getAmountIn(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address),
-      ).to.be.revertedWithCustomError(swapper, "SwapConfigurationNotEnabled");
+        transformer.getAmountIn(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address),
+      ).to.be.revertedWithCustomError(transformer, "TransformationConfigNotEnabled");
     });
 
-    it("Success on swapping tokenIn to tokenOut for under tokenOut liquidity", async () => {
-      await setSwapperConfig();
+    it("Success on transforming tokenIn to tokenOut for under tokenOut liquidity", async () => {
+      await setTransformationConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await swapper.getAmountIn(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address);
+      const results = await transformer.getAmountIn(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address);
       const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
       const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
       const amountIn = new BigNumber(AMOUNT_IN_UNDER)
@@ -394,11 +400,11 @@ describe("MockSwapper: tests", () => {
       expect(results[1]).to.equal(amountIn);
     });
 
-    it("Success on swapping tokenIn to tokenOut for over tokenOut liquidity", async () => {
-      await setSwapperConfig();
+    it("Success on transforming tokenIn to tokenOut for over tokenOut liquidity", async () => {
+      await setTransformationConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await swapper.getAmountIn(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
+      const results = await transformer.getAmountIn(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
       const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
       const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
       const amountIn = new BigNumber(TOKEN_OUT_MAX)
@@ -412,11 +418,11 @@ describe("MockSwapper: tests", () => {
     });
   });
 
-  describe("Swap exact tokens for tokens with supporting fee", async () => {
+  describe("Transform exact tokens for tokens with supporting fee", async () => {
     beforeEach(async () => {
-      await tokenInDeflationary.connect(owner).approve(swapper.address, convertToUnit("1", 18));
-      await tokenIn.connect(owner).approve(swapper.address, convertToUnit("1", 18));
-      await tokenOut.transfer(swapper.address, convertToUnit("1.5", 18));
+      await tokenInDeflationary.connect(owner).approve(transformer.address, convertToUnit("1", 18));
+      await tokenIn.connect(owner).approve(transformer.address, convertToUnit("1", 18));
+      await tokenOut.transfer(transformer.address, convertToUnit("1.5", 18));
 
       await oracle.getPrice.whenCalledWith(tokenInDeflationary.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
@@ -424,45 +430,45 @@ describe("MockSwapper: tests", () => {
     });
 
     it("Revert on lower amount out than expected", async () => {
-      await swapper.setSwapConfiguration(swapPairConfig);
+      await transformer.setTransformationConfig(TransformationConfig);
       await expect(
-        swapper.swapExactTokensForTokens(
+        transformer.transformExactTokens(
           convertToUnit(".5", 18),
           convertToUnit("1.5", 18),
           tokenIn.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.be.revertedWithCustomError(swapper, "AmountOutLowerThanMinRequired");
+      ).to.be.revertedWithCustomError(transformer, "AmountOutLowerThanMinRequired");
     });
 
-    it("Success on swap exact tokens with supporting fee", async () => {
-      const swapPairConfig = {
+    it("Success on transform exact tokens with supporting fee", async () => {
+      const TransformationConfig = {
         tokenAddressIn: tokenInDeflationary.address,
         tokenAddressOut: tokenOut.address,
         incentive: INCENTIVE,
         enabled: true,
       };
 
-      await swapper.setSwapConfiguration(swapPairConfig);
+      await transformer.setTransformationConfig(TransformationConfig);
 
       await expect(
-        swapper.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        transformer.transformExactTokensSupportingFeeOnTransferTokens(
           convertToUnit(".25", 18),
           convertToUnit(".5", 18),
           tokenInDeflationary.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.emit(swapper, "SwapExactTokensForTokensSupportingFeeOnTransferTokens");
+      ).to.emit(transformer, "TransformExactTokensSupportingFeeOnTransferTokens");
     });
   });
 
-  describe("Swap tokens for exact tokens", async () => {
+  describe("Transform tokens for exact tokens", async () => {
     beforeEach(async () => {
-      await tokenInDeflationary.connect(owner).approve(swapper.address, convertToUnit("1", 18));
-      await tokenIn.connect(owner).approve(swapper.address, convertToUnit("1", 18));
-      await tokenOut.transfer(swapper.address, convertToUnit("1.5", 18));
+      await tokenInDeflationary.connect(owner).approve(transformer.address, convertToUnit("1", 18));
+      await tokenIn.connect(owner).approve(transformer.address, convertToUnit("1", 18));
+      await tokenOut.transfer(transformer.address, convertToUnit("1.5", 18));
 
       await oracle.getPrice.whenCalledWith(tokenInDeflationary.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
@@ -470,37 +476,37 @@ describe("MockSwapper: tests", () => {
     });
 
     it("Revert on lower amount out than expected", async () => {
-      await swapper.setSwapConfiguration(swapPairConfig);
+      await transformer.setTransformationConfig(TransformationConfig);
       await expect(
-        swapper.swapTokensForExactTokens(
+        transformer.transformForExactTokens(
           convertToUnit(".5", 18),
           convertToUnit("1.5", 18),
           tokenIn.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.be.revertedWithCustomError(swapper, "AmountInHigherThanMax");
+      ).to.be.revertedWithCustomError(transformer, "AmountInHigherThanMax");
     });
 
-    it("Success on swap exact tokens with supporting fee", async () => {
-      const swapPairConfig = {
+    it("Success on transform exact tokens with supporting fee", async () => {
+      const TransformationConfig = {
         tokenAddressIn: tokenInDeflationary.address,
         tokenAddressOut: tokenOut.address,
         incentive: INCENTIVE,
         enabled: true,
       };
 
-      await swapper.setSwapConfiguration(swapPairConfig);
+      await transformer.setTransformationConfig(TransformationConfig);
 
       await expect(
-        swapper.swapTokensForExactTokensSupportingFeeOnTransferTokens(
+        transformer.transformForExactTokensSupportingFeeOnTransferTokens(
           convertToUnit(".25", 18),
           convertToUnit(".5", 18),
           tokenInDeflationary.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.emit(swapper, "SwapTokensForExactTokensSupportingFeeOnTransferTokens");
+      ).to.emit(transformer, "TransformForExactTokensSupportingFeeOnTransferTokens");
     });
   });
 
@@ -514,21 +520,21 @@ describe("MockSwapper: tests", () => {
     it("Revert on non-owner call", async () => {
       const [, nonOwner] = await ethers.getSigners();
 
-      await expect(swapper.connect(nonOwner).setPriceOracle(newOracle.address)).to.be.revertedWith(
+      await expect(transformer.connect(nonOwner).setPriceOracle(newOracle.address)).to.be.revertedWith(
         "Ownable: caller is not the owner",
       );
     });
 
     it("Revert on invalid oracle address", async () => {
-      await expect(swapper.setPriceOracle(ethers.constants.AddressZero)).to.be.revertedWithCustomError(
-        swapper,
+      await expect(transformer.setPriceOracle(ethers.constants.AddressZero)).to.be.revertedWithCustomError(
+        transformer,
         "ZeroAddressNotAllowed",
       );
     });
 
     it("Success on new price oracle update", async () => {
-      await expect(swapper.setPriceOracle(newOracle.address))
-        .to.emit(swapper, "PriceOracleUpdated")
+      await expect(transformer.setPriceOracle(newOracle.address))
+        .to.emit(transformer, "PriceOracleUpdated")
         .withArgs(oracle.address, newOracle.address);
     });
   });
@@ -539,84 +545,96 @@ describe("MockSwapper: tests", () => {
       accessControl.isAllowedToCall.returns(true);
     });
 
-    it("Revert on pauseSwap for non owner call", async () => {
+    it("Revert on pauseTransformation for non owner call", async () => {
       accessControl.isAllowedToCall.reset;
       accessControl.isAllowedToCall.returns(false);
 
-      await expect(swapper.connect(to).pauseSwap()).to.be.revertedWithCustomError(swapper, "Unauthorized");
+      await expect(transformer.connect(to).pauseTransformation()).to.be.revertedWithCustomError(
+        transformer,
+        "Unauthorized",
+      );
     });
 
-    it("Success on pauseSwap", async () => {
-      await expect(swapper.pauseSwap()).to.emit(swapper, "SwapPaused");
+    it("Success on pauseTransformation", async () => {
+      await expect(transformer.pauseTransformation()).to.emit(transformer, "TransformationPaused");
     });
 
-    it("Revert on when swap is already paused", async () => {
-      await swapper.pauseSwap();
-      await expect(swapper.pauseSwap()).to.be.revertedWithCustomError(swapper, "SwapTokensPaused");
+    it("Revert on when transform is already paused", async () => {
+      await transformer.pauseTransformation();
+      await expect(transformer.pauseTransformation()).to.be.revertedWithCustomError(
+        transformer,
+        "TransformationTokensPaused",
+      );
     });
 
-    it("Swap methods should revert on swap pause", async () => {
+    it("Transform methods should revert on transform pause", async () => {
       const Value_1 = convertToUnit(".25", 18);
       const VALUE_2 = convertToUnit(".5", 18);
-      await swapper.pauseSwap();
+      await transformer.pauseTransformation();
 
       await expect(
-        swapper.swapExactTokensForTokens(Value_1, VALUE_2, tokenIn.address, tokenOut.address, await to.getAddress()),
-      ).to.be.revertedWithCustomError(swapper, "SwapTokensPaused");
+        transformer.transformExactTokens(Value_1, VALUE_2, tokenIn.address, tokenOut.address, await to.getAddress()),
+      ).to.be.revertedWithCustomError(transformer, "TransformationTokensPaused");
 
       await expect(
-        swapper.swapTokensForExactTokens(Value_1, VALUE_2, tokenIn.address, tokenOut.address, await to.getAddress()),
-      ).to.be.revertedWithCustomError(swapper, "SwapTokensPaused");
+        transformer.transformForExactTokens(Value_1, VALUE_2, tokenIn.address, tokenOut.address, await to.getAddress()),
+      ).to.be.revertedWithCustomError(transformer, "TransformationTokensPaused");
 
       await expect(
-        swapper.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        transformer.transformExactTokensSupportingFeeOnTransferTokens(
           Value_1,
           VALUE_2,
           tokenIn.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.be.revertedWithCustomError(swapper, "SwapTokensPaused");
+      ).to.be.revertedWithCustomError(transformer, "TransformationTokensPaused");
 
       await expect(
-        swapper.swapTokensForExactTokensSupportingFeeOnTransferTokens(
+        transformer.transformForExactTokensSupportingFeeOnTransferTokens(
           Value_1,
           VALUE_2,
           tokenIn.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.be.revertedWithCustomError(swapper, "SwapTokensPaused");
+      ).to.be.revertedWithCustomError(transformer, "TransformationTokensPaused");
     });
 
-    it("Revert on resumeSwap for non owner call", async () => {
+    it("Revert on resumeTransformation for non owner call", async () => {
       accessControl.isAllowedToCall.reset;
       accessControl.isAllowedToCall.returns(false);
 
-      await expect(swapper.connect(to).resumeSwap()).to.be.revertedWithCustomError(swapper, "Unauthorized");
+      await expect(transformer.connect(to).resumeTransformation()).to.be.revertedWithCustomError(
+        transformer,
+        "Unauthorized",
+      );
     });
 
-    it("Success on resumeSwap", async () => {
-      await swapper.pauseSwap();
-      await expect(swapper.resumeSwap()).to.emit(swapper, "SwapResumed");
+    it("Success on resumeTransformation", async () => {
+      await transformer.pauseTransformation();
+      await expect(transformer.resumeTransformation()).to.emit(transformer, "TransformationResumed");
     });
 
-    it("Revert on when swap is already active", async () => {
-      await expect(swapper.resumeSwap()).to.be.revertedWithCustomError(swapper, "SwapTokensActive");
+    it("Revert on when transform is already active", async () => {
+      await expect(transformer.resumeTransformation()).to.be.revertedWithCustomError(
+        transformer,
+        "TransformationTokensActive",
+      );
     });
   });
 
-  describe("SweepTokens abstract swapper", () => {
+  describe("SweepTokens abstract transformer", () => {
     it("Transfer sweep tokens", async () => {
-      expect(await tokenIn.balanceOf(swapper.address)).to.equals(0);
-      await expect(tokenIn.transfer(swapper.address, 1000)).to.changeTokenBalances(
+      expect(await tokenIn.balanceOf(transformer.address)).to.equals(0);
+      await expect(tokenIn.transfer(transformer.address, 1000)).to.changeTokenBalances(
         tokenIn,
-        [await owner.getAddress(), swapper.address],
+        [await owner.getAddress(), transformer.address],
         [-1000, 1000],
       );
-      await expect(swapper.sweepToken(tokenIn.address)).to.changeTokenBalances(
+      await expect(transformer.sweepToken(tokenIn.address)).to.changeTokenBalances(
         tokenIn,
-        [await owner.getAddress(), swapper.address],
+        [await owner.getAddress(), transformer.address],
         [1000, -1000],
       );
     });

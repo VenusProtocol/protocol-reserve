@@ -13,7 +13,7 @@ import { IAbstractTokenTransformer } from "./IAbstractTokenTransformer.sol";
 
 /// @title AbstractTokenTransformer
 /// @author Venus
-/// @notice Abstract contract will be extended by XVSVaultSwapper and RiskFundSwapper
+/// @notice Abstract contract will be extended by XVSVaultTransformer and RiskFundTransformer
 abstract contract AbstractTokenTransformer is
     AccessControlledV8,
     IAbstractTokenTransformer,
@@ -27,15 +27,15 @@ abstract contract AbstractTokenTransformer is
     /// @notice Venus price oracle contract
     ResilientOracle public priceOracle;
 
-    /// @notice swap configurations for the existing pairs
-    /// @dev tokenAddressIn => tokenAddressOut => SwapConfiguration
-    mapping(address => mapping(address => SwapConfiguration)) public swapConfigurations;
+    /// @notice transformation configurations for the existing pairs
+    /// @dev tokenAddressIn => tokenAddressOut => TransformationConfig
+    mapping(address => mapping(address => TransformationConfig)) public transformConfigurations;
 
     /// @notice Address at all incoming tokens are transferred to
     address public destinationAddress;
 
-    /// @notice Boolean of if swap is paused
-    bool public swapPaused;
+    /// @notice Boolean of if transform is paused
+    bool public transformationPaused;
 
     /// @dev This empty reserved space is put in place to allow future versions to add new
     /// variables without shifting down storage in the inheritance chain.
@@ -43,7 +43,7 @@ abstract contract AbstractTokenTransformer is
     uint256[47] private __gap;
 
     /// @notice Emitted when config is updated for tokens pair
-    event SwapConfigurationUpdated(
+    event TransformationConfigUpdated(
         address indexed tokenAddressIn,
         address indexed tokenAddressOut,
         uint256 oldIncentive,
@@ -54,23 +54,23 @@ abstract contract AbstractTokenTransformer is
     /// @notice Emitted when price oracle address is updated
     event PriceOracleUpdated(ResilientOracle oldPriceOracle, ResilientOracle priceOracle);
 
-    /// @notice Emitted when exact amount of tokens are swapped for tokens
-    event SwapExactTokensForTokens(uint256 amountIn, uint256 amountOut);
+    /// @notice Emitted when exact amount of tokens are transform for tokens
+    event TransformExactTokens(uint256 amountIn, uint256 amountOut);
 
-    /// @notice Emitted when tokens are swapped for exact amount of tokens
-    event SwapTokensForExactTokens(uint256 amountIn, uint256 amountOut);
+    /// @notice Emitted when tokens are transform for exact amount of tokens
+    event TransformForExactTokens(uint256 amountIn, uint256 amountOut);
 
-    /// @notice Emitted when exact amount of tokens are swapped for tokens, for deflationary tokens
-    event SwapExactTokensForTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOut);
+    /// @notice Emitted when exact amount of tokens are transform for tokens, for deflationary tokens
+    event TransformExactTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOut);
 
-    /// @notice Emitted when tokens are swapped for exact amount of tokens, for deflationary tokens
-    event SwapTokensForExactTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOut);
+    /// @notice Emitted when tokens are transform for exact amount of tokens, for deflationary tokens
+    event TransformForExactTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOut);
 
-    /// @notice Emitted when swap is paused
-    event SwapPaused(address sender);
+    /// @notice Emitted when transformation is paused
+    event TransformationPaused(address sender);
 
-    /// @notice Emitted when swap is unpaused
-    event SwapResumed(address sender);
+    /// @notice Emitted when transformation is unpaused
+    event TransformationResumed(address sender);
 
     /// @notice Event emitted when tokens are swept
     event SweepToken(address indexed token);
@@ -78,8 +78,8 @@ abstract contract AbstractTokenTransformer is
     /// @notice Thrown when given input amount is zero
     error InsufficientInputAmount();
 
-    /// @notice Thrown when swap is disabled or config does not exist for given pair
-    error SwapConfigurationNotEnabled();
+    /// @notice Thrown when transformation is disabled or config does not exist for given pair
+    error TransformationConfigNotEnabled();
 
     /// @notice Thrown when incentive is higher than the MAX_INCENTIVE
     error IncentiveTooHigh(uint256 incentive, uint256 maxIncentive);
@@ -98,11 +98,11 @@ abstract contract AbstractTokenTransformer is
     /// @notice Thrown when amountIn is higher than amountInMax
     error AmountInHigherThanMax(uint256 amountInMantissa, uint256 amountInMaxMantissa);
 
-    /// @notice Thrown when swap is paused
-    error SwapTokensPaused();
+    /// @notice Thrown when transformation is paused
+    error TransformationTokensPaused();
 
-    /// @notice Thrown when swap is Active
-    error SwapTokensActive();
+    /// @notice Thrown when transformation is Active
+    error TransformationTokensActive();
 
     /// @param accessControlManager_ Access control manager contract address
     /// @param priceOracle_ Resilient oracle address
@@ -117,36 +117,36 @@ abstract contract AbstractTokenTransformer is
 
         _setPriceOracle(priceOracle_);
         destinationAddress = destinationAddress_;
-        swapPaused = false;
+        transformationPaused = false;
     }
 
     /**
-     * @notice Pause swapping of tokens
-     * @custom:event Emits SwapPaused on success
-     * @custom:error SwapTokensPaused thrown when Swap is already paused
+     * @notice Pause transformation of tokens
+     * @custom:event Emits TransformationPaused on success
+     * @custom:error TransformationTokensPaused thrown when transform is already paused
      * @custom:access Restricted by ACM
      */
-    function pauseSwap() external {
-        _checkAccessAllowed("pauseSwap()");
-        _checkSwapPaused();
-        swapPaused = true;
-        emit SwapPaused(msg.sender);
+    function pauseTransformation() external {
+        _checkAccessAllowed("pauseTransformation()");
+        _checkTransformationPaused();
+        transformationPaused = true;
+        emit TransformationPaused(msg.sender);
     }
 
     /**
-     * @notice Resume swapping of tokens.
-     * @custom:event Emits SwapResumed on success
-     * @custom:error SwapTokensActive thrown when Swap is already active
+     * @notice Resume transformation of tokens.
+     * @custom:event Emits TransformationResumed on success
+     * @custom:error TransformationTokensActive thrown when transform is already active
      * @custom:access Restricted by ACM
      */
-    function resumeSwap() external {
-        _checkAccessAllowed("resumeSwap()");
-        if (!swapPaused) {
-            revert SwapTokensActive();
+    function resumeTransformation() external {
+        _checkAccessAllowed("resumeTransformation()");
+        if (!transformationPaused) {
+            revert TransformationTokensActive();
         }
 
-        swapPaused = false;
-        emit SwapResumed(msg.sender);
+        transformationPaused = false;
+        emit TransformationResumed(msg.sender);
     }
 
     /// @notice Sets a new price oracle
@@ -156,112 +156,111 @@ abstract contract AbstractTokenTransformer is
         _setPriceOracle(priceOracle_);
     }
 
-    /// @notice Set the configuration for new or existing swap pair
-    /// @param swapConfiguration SwapConfiguration config details to update
-    /// @custom:event Emits SwapConfigurationUpdated event on success
+    /// @notice Set the configuration for new or existing transform pair
+    /// @param transformationConfig TransformationConfig config details to update
+    /// @custom:event Emits TransformationConfigUpdated event on success
     /// @custom:error Unauthorized error is thrown when the call is not authorized by AccessControlManager
     /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
     /// @custom:access Controlled by AccessControlManager
-    function setSwapConfiguration(SwapConfiguration calldata swapConfiguration) external {
-        _checkAccessAllowed("setSwapConfiguration(SwapConfiguration)");
-        ensureNonzeroAddress(swapConfiguration.tokenAddressIn);
-        ensureNonzeroAddress(swapConfiguration.tokenAddressOut);
+    function setTransformationConfig(TransformationConfig calldata transformationConfig) external {
+        _checkAccessAllowed("setTransformationConfig(TransformationConfig)");
+        ensureNonzeroAddress(transformationConfig.tokenAddressIn);
+        ensureNonzeroAddress(transformationConfig.tokenAddressOut);
 
-        if (swapConfiguration.incentive > MAX_INCENTIVE) {
-            revert IncentiveTooHigh(swapConfiguration.incentive, MAX_INCENTIVE);
+        if (transformationConfig.incentive > MAX_INCENTIVE) {
+            revert IncentiveTooHigh(transformationConfig.incentive, MAX_INCENTIVE);
         }
 
-        SwapConfiguration storage configuration = swapConfigurations[swapConfiguration.tokenAddressIn][
-            swapConfiguration.tokenAddressOut
+        TransformationConfig storage configuration = transformConfigurations[transformationConfig.tokenAddressIn][
+            transformationConfig.tokenAddressOut
         ];
 
         uint256 oldIncentive = configuration.incentive;
         bool oldEnabled = configuration.enabled;
 
-        configuration.tokenAddressIn = swapConfiguration.tokenAddressIn;
-        configuration.tokenAddressOut = swapConfiguration.tokenAddressOut;
-        configuration.incentive = swapConfiguration.incentive;
-        configuration.enabled = swapConfiguration.enabled;
+        configuration.tokenAddressIn = transformationConfig.tokenAddressIn;
+        configuration.tokenAddressOut = transformationConfig.tokenAddressOut;
+        configuration.incentive = transformationConfig.incentive;
+        configuration.enabled = transformationConfig.enabled;
 
-        emit SwapConfigurationUpdated(
-            swapConfiguration.tokenAddressIn,
-            swapConfiguration.tokenAddressOut,
+        emit TransformationConfigUpdated(
+            transformationConfig.tokenAddressIn,
+            transformationConfig.tokenAddressOut,
             oldIncentive,
-            swapConfiguration.incentive,
+            transformationConfig.incentive,
             oldEnabled,
-            swapConfiguration.enabled
+            transformationConfig.enabled
         );
     }
 
-    /// @notice Swap exact amount of tokenAddressIn for tokenAddressOut
+    /// @notice Transform exact amount of tokenAddressIn for tokenAddressOut
     /// @dev Method does not support deflationary tokens transfer
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param amountOutMinMantissa Min amount of tokenAddressOut required as output
-    /// @param tokenAddressIn Address of the token to swap
-    /// @param tokenAddressOut Address of the token to get after swap
+    /// @param tokenAddressIn Address of the token to transform
+    /// @param tokenAddressOut Address of the token to get after transform
     /// @param to Address of the tokenAddressOut receiver
-    /// @custom:event Emits SwapExactTokensForTokens event on success
+    /// @custom:event Emits TransformExactTokens event on success
     /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
     /// @custom:error AmountInOrAmountOutMismatched error is thrown when Amount of tokenAddressIn or tokenAddressOut is lower than expected fater transfer
-    function swapExactTokensForTokens(
+    function transformExactTokens(
         uint256 amountInMantissa,
         uint256 amountOutMinMantissa,
         address tokenAddressIn,
         address tokenAddressOut,
         address to
     ) external nonReentrant {
-        _checkSwapPaused();
+        _checkTransformationPaused();
         uint256 actualAmountIn;
-        uint256 amountSwappedMantissa;
+        uint256 amountTransformedMantissa;
         uint256 actualAmountOut;
         uint256 amountOutMantissa;
 
-        (actualAmountIn, amountSwappedMantissa, actualAmountOut, amountOutMantissa) = _swapExactTokensForTokens(
-            amountInMantissa,
-            amountOutMinMantissa,
-            tokenAddressIn,
-            tokenAddressOut,
-            to
-        );
+        (
+            actualAmountIn,
+            amountTransformedMantissa,
+            actualAmountOut,
+            amountOutMantissa
+        ) = _transformExactTokensForTokens(amountInMantissa, amountOutMinMantissa, tokenAddressIn, tokenAddressOut, to);
 
-        if ((actualAmountIn < amountSwappedMantissa) || (actualAmountOut < amountOutMantissa)) {
+        if ((actualAmountIn < amountTransformedMantissa) || (actualAmountOut < amountOutMantissa)) {
             revert AmountInOrAmountOutMismatched(
                 actualAmountIn,
-                amountSwappedMantissa,
+                amountTransformedMantissa,
                 actualAmountOut,
                 amountOutMantissa
             );
         }
 
-        emit SwapExactTokensForTokens(actualAmountIn, actualAmountOut);
+        emit TransformExactTokens(actualAmountIn, actualAmountOut);
 
-        postSwapHook(tokenAddressIn, actualAmountIn, actualAmountOut);
+        postTransformationHook(tokenAddressIn, actualAmountIn, actualAmountOut);
     }
 
-    /// @notice Swap tokens for tokenAddressIn for exact amount of tokenAddressOut
+    /// @notice Transform tokens for tokenAddressIn for exact amount of tokenAddressOut
     /// @dev Method does not support deflationary tokens transfer
     /// @param amountInMaxMantissa Max amount of tokenAddressIn
     /// @param amountOutMantissa Amount of tokenAddressOut required as output
-    /// @param tokenAddressIn Address of the token to swap
-    /// @param tokenAddressOut Address of the token to get after swap
+    /// @param tokenAddressIn Address of the token to transform
+    /// @param tokenAddressOut Address of the token to get after transform
     /// @param to Address of the tokenAddressOut receiver
-    /// @custom:event Emits SwapTokensForExactTokens event on success
+    /// @custom:event Emits TransformForExactTokens event on success
     /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
     /// @custom:error AmountInOrAmountOutMismatched error is thrown when Amount of tokenAddressIn or tokenAddressOut is lower than expected fater transfer
-    function swapTokensForExactTokens(
+    function transformForExactTokens(
         uint256 amountInMaxMantissa,
         uint256 amountOutMantissa,
         address tokenAddressIn,
         address tokenAddressOut,
         address to
     ) external nonReentrant {
-        _checkSwapPaused();
+        _checkTransformationPaused();
         uint256 actualAmountIn;
         uint256 amountInMantissa;
         uint256 actualAmountOut;
-        uint256 amountSwappedMantissa;
+        uint256 amountTransformedMantissa;
 
-        (actualAmountIn, amountInMantissa, actualAmountOut, amountSwappedMantissa) = _swapTokensForExactTokens(
+        (actualAmountIn, amountInMantissa, actualAmountOut, amountTransformedMantissa) = _transformForExactTokens(
             amountInMaxMantissa,
             amountOutMantissa,
             tokenAddressIn,
@@ -269,76 +268,75 @@ abstract contract AbstractTokenTransformer is
             to
         );
 
-        if ((actualAmountIn < amountInMantissa) || (actualAmountOut < amountSwappedMantissa)) {
+        if ((actualAmountIn < amountInMantissa) || (actualAmountOut < amountTransformedMantissa)) {
             revert AmountInOrAmountOutMismatched(
                 actualAmountIn,
                 amountInMantissa,
                 actualAmountOut,
-                amountSwappedMantissa
+                amountTransformedMantissa
             );
         }
 
-        postSwapHook(tokenAddressIn, actualAmountIn, actualAmountOut);
+        postTransformationHook(tokenAddressIn, actualAmountIn, actualAmountOut);
 
-        emit SwapTokensForExactTokens(actualAmountIn, actualAmountOut);
+        emit TransformForExactTokens(actualAmountIn, actualAmountOut);
     }
 
-    /// @notice Swap exact amount of tokenAddressIn for tokenAddressOut
+    /// @notice Transform exact amount of tokenAddressIn for tokenAddressOut
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param amountOutMinMantissa Min amount of tokenAddressOut required as output
-    /// @param tokenAddressIn Address of the token to swap
-    /// @param tokenAddressOut Address of the token to get after swap
+    /// @param tokenAddressIn Address of the token to transform
+    /// @param tokenAddressOut Address of the token to get after transform
     /// @param to Address of the tokenAddressOut receiver
-    /// @custom:event Emits SwapExactTokensForTokensSupportingFeeOnTransferTokens event on success
+    /// @custom:event Emits TransformExactTokensSupportingFeeOnTransferTokens event on success
     /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
-    function swapExactTokensForTokensSupportingFeeOnTransferTokens(
+    function transformExactTokensSupportingFeeOnTransferTokens(
         uint256 amountInMantissa,
         uint256 amountOutMinMantissa,
         address tokenAddressIn,
         address tokenAddressOut,
         address to
     ) external nonReentrant {
-        _checkSwapPaused();
+        _checkTransformationPaused();
         uint256 actualAmountIn;
-        uint256 amountSwappedMantissa;
+        uint256 amountTransformedMantissa;
         uint256 actualAmountOut;
         uint256 amountOutMantissa;
 
-        (actualAmountIn, amountSwappedMantissa, actualAmountOut, amountOutMantissa) = _swapExactTokensForTokens(
-            amountInMantissa,
-            amountOutMinMantissa,
-            tokenAddressIn,
-            tokenAddressOut,
-            to
-        );
+        (
+            actualAmountIn,
+            amountTransformedMantissa,
+            actualAmountOut,
+            amountOutMantissa
+        ) = _transformExactTokensForTokens(amountInMantissa, amountOutMinMantissa, tokenAddressIn, tokenAddressOut, to);
 
-        postSwapHook(tokenAddressIn, actualAmountIn, actualAmountOut);
+        postTransformationHook(tokenAddressIn, actualAmountIn, actualAmountOut);
 
-        emit SwapExactTokensForTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
+        emit TransformExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
 
-    /// @notice Swap tokens for tokenAddressIn for exact amount of tokenAddressOut
+    /// @notice Transform tokens for tokenAddressIn for exact amount of tokenAddressOut
     /// @param amountInMaxMantissa Max amount of tokenAddressIn
     /// @param amountOutMantissa Amount of tokenAddressOut required as output
-    /// @param tokenAddressIn Address of the token to swap
-    /// @param tokenAddressOut Address of the token to get after swap
+    /// @param tokenAddressIn Address of the token to transform
+    /// @param tokenAddressOut Address of the token to get after transform
     /// @param to Address of the tokenAddressOut receiver
-    /// @custom:event Emits SwapTokensForExactTokensSupportingFeeOnTransferTokens event on success
+    /// @custom:event Emits TransformForExactTokensSupportingFeeOnTransferTokens event on success
     /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
-    function swapTokensForExactTokensSupportingFeeOnTransferTokens(
+    function transformForExactTokensSupportingFeeOnTransferTokens(
         uint256 amountInMaxMantissa,
         uint256 amountOutMantissa,
         address tokenAddressIn,
         address tokenAddressOut,
         address to
     ) external nonReentrant {
-        _checkSwapPaused();
+        _checkTransformationPaused();
         uint256 actualAmountIn;
         uint256 amountInMantissa;
         uint256 actualAmountOut;
-        uint256 amountSwappedMantissa;
+        uint256 amountTransformedMantissa;
 
-        (actualAmountIn, amountInMantissa, actualAmountOut, amountSwappedMantissa) = _swapTokensForExactTokens(
+        (actualAmountIn, amountInMantissa, actualAmountOut, amountTransformedMantissa) = _transformForExactTokens(
             amountInMaxMantissa,
             amountOutMantissa,
             tokenAddressIn,
@@ -346,9 +344,9 @@ abstract contract AbstractTokenTransformer is
             to
         );
 
-        postSwapHook(tokenAddressIn, actualAmountIn, actualAmountOut);
+        postTransformationHook(tokenAddressIn, actualAmountIn, actualAmountOut);
 
-        emit SwapTokensForExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
+        emit TransformForExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
 
     /// @notice A public function to sweep accidental ERC-20 transfers to this contract. Tokens are sent to admin (timelock)
@@ -369,25 +367,25 @@ abstract contract AbstractTokenTransformer is
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @param amountInMantissa Amount of tokenAddressIn
-    /// @param tokenAddressIn Address of the token to swap
-    /// @param tokenAddressOut Address of the token to get after swap
-    /// @return amountSwappedMantissa Amount of tokenAddressIn should be transferred after swap
-    /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after swap
+    /// @param tokenAddressIn Address of the token to transform
+    /// @param tokenAddressOut Address of the token to get after transform
+    /// @return amountTransformedMantissa Amount of tokenAddressIn should be transferred after transform
+    /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after transform
     /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
-    /// @custom:error SwapConfigurationNotEnabled is thrown when swap is disabled or config does not exist for given pair
+    /// @custom:error TransformationConfigNotEnabled is thrown when transform is disabled or config does not exist for given pair
     function getAmountOut(
         uint256 amountInMantissa,
         address tokenAddressIn,
         address tokenAddressOut
-    ) public view returns (uint256 amountSwappedMantissa, uint256 amountOutMantissa) {
+    ) public view returns (uint256 amountTransformedMantissa, uint256 amountOutMantissa) {
         if (amountInMantissa == 0) {
             revert InsufficientInputAmount();
         }
 
-        SwapConfiguration storage configuration = swapConfigurations[tokenAddressIn][tokenAddressOut];
+        TransformationConfig storage configuration = transformConfigurations[tokenAddressIn][tokenAddressOut];
 
         if (!configuration.enabled) {
-            revert SwapConfigurationNotEnabled();
+            revert TransformationConfigNotEnabled();
         }
 
         uint256 maxTokenOutLiquidity = IERC20Upgradeable(tokenAddressOut).balanceOf(address(this));
@@ -400,36 +398,36 @@ abstract contract AbstractTokenTransformer is
         uint256 tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
 
         amountOutMantissa = (amountInMantissa * tokenInToOutConversion) / EXP_SCALE;
-        amountSwappedMantissa = amountInMantissa;
+        amountTransformedMantissa = amountInMantissa;
 
         /// If contract has less liquity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutLiquidity < amountOutMantissa) {
-            amountSwappedMantissa = ((maxTokenOutLiquidity * EXP_SCALE) / tokenInToOutConversion);
+            amountTransformedMantissa = ((maxTokenOutLiquidity * EXP_SCALE) / tokenInToOutConversion);
             amountOutMantissa = maxTokenOutLiquidity;
         }
     }
 
     /// @notice To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
     /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
-    /// @param tokenAddressIn Address of the token to swap
-    /// @param tokenAddressOut Address of the token to get after swap
-    /// @return amountSwappedMantissa Amount of tokenAddressOut should be transferred after swap
-    /// @return amountInMantissa Amount of the tokenAddressIn sender would send to contract before swap
+    /// @param tokenAddressIn Address of the token to transform
+    /// @param tokenAddressOut Address of the token to get after transform
+    /// @return amountTransformedMantissa Amount of tokenAddressOut should be transferred after transform
+    /// @return amountInMantissa Amount of the tokenAddressIn sender would send to contract before transform
     /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
-    /// @custom:error SwapConfigurationNotEnabled is thrown when swap is disabled or config does not exist for given pair
+    /// @custom:error TransformationConfigNotEnabled is thrown when transform is disabled or config does not exist for given pair
     function getAmountIn(
         uint256 amountOutMantissa,
         address tokenAddressIn,
         address tokenAddressOut
-    ) public view returns (uint256 amountSwappedMantissa, uint256 amountInMantissa) {
+    ) public view returns (uint256 amountTransformedMantissa, uint256 amountInMantissa) {
         if (amountOutMantissa == 0) {
             revert InsufficientInputAmount();
         }
 
-        SwapConfiguration storage configuration = swapConfigurations[tokenAddressIn][tokenAddressOut];
+        TransformationConfig storage configuration = transformConfigurations[tokenAddressIn][tokenAddressOut];
 
         if (!configuration.enabled) {
-            revert SwapConfigurationNotEnabled();
+            revert TransformationConfigNotEnabled();
         }
 
         uint256 maxTokenOutLiquidity = IERC20Upgradeable(tokenAddressOut).balanceOf(address(this));
@@ -442,27 +440,27 @@ abstract contract AbstractTokenTransformer is
         uint256 tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
 
         amountInMantissa = ((amountOutMantissa * EXP_SCALE) / tokenInToOutConversion);
-        amountSwappedMantissa = amountOutMantissa;
+        amountTransformedMantissa = amountOutMantissa;
 
         /// If contract has less liquity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutLiquidity < amountOutMantissa) {
             amountInMantissa = ((maxTokenOutLiquidity * EXP_SCALE) / tokenInToOutConversion);
-            amountSwappedMantissa = maxTokenOutLiquidity;
+            amountTransformedMantissa = maxTokenOutLiquidity;
         }
     }
 
-    /// @notice Swap exact amount of tokenAddressIn for tokenAddressOut
+    /// @notice Transform exact amount of tokenAddressIn for tokenAddressOut
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param amountOutMinMantissa Min amount of tokenAddressOut required as output
-    /// @param tokenAddressIn Address of the token to swap
-    /// @param tokenAddressOut Address of the token to get after swap
+    /// @param tokenAddressIn Address of the token to transform
+    /// @param tokenAddressOut Address of the token to get after transform
     /// @param to Address of the tokenAddressOut receiver
     /// @return actualAmountIn Actual amount of tokenAddressIn transferred
-    /// @return amountSwappedMantissa Amount of tokenAddressIn supposed to get transferred
+    /// @return amountTransformedMantissa Amount of tokenAddressIn supposed to get transferred
     /// @return actualAmountOut Actual amount of tokenAddressOut transferred
     /// @return amountOutMantissa Amount of tokenAddressOut supposed to get transferred
     /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
-    function _swapExactTokensForTokens(
+    function _transformExactTokensForTokens(
         uint256 amountInMantissa,
         uint256 amountOutMinMantissa,
         address tokenAddressIn,
@@ -472,12 +470,16 @@ abstract contract AbstractTokenTransformer is
         internal
         returns (
             uint256 actualAmountIn,
-            uint256 amountSwappedMantissa,
+            uint256 amountTransformedMantissa,
             uint256 actualAmountOut,
             uint256 amountOutMantissa
         )
     {
-        (amountSwappedMantissa, amountOutMantissa) = getAmountOut(amountInMantissa, tokenAddressIn, tokenAddressOut);
+        (amountTransformedMantissa, amountOutMantissa) = getAmountOut(
+            amountInMantissa,
+            tokenAddressIn,
+            tokenAddressOut
+        );
 
         if (amountOutMantissa < amountOutMinMantissa) {
             revert AmountOutLowerThanMinRequired(amountOutMantissa, amountOutMinMantissa);
@@ -485,7 +487,7 @@ abstract contract AbstractTokenTransformer is
 
         IERC20Upgradeable tokenIn = IERC20Upgradeable(tokenAddressIn);
         uint256 balanceBeforeDestination = tokenIn.balanceOf(destinationAddress);
-        tokenIn.safeTransferFrom(msg.sender, destinationAddress, amountSwappedMantissa);
+        tokenIn.safeTransferFrom(msg.sender, destinationAddress, amountTransformedMantissa);
         uint256 balanceAfterDestination = tokenIn.balanceOf(destinationAddress);
 
         IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
@@ -497,18 +499,18 @@ abstract contract AbstractTokenTransformer is
         actualAmountOut = balanceAfterTo - balanceBeforeTo;
     }
 
-    /// @notice Swap tokens for tokenAddressIn for exact amount of tokenAddressOut
+    /// @notice Transform tokens for tokenAddressIn for exact amount of tokenAddressOut
     /// @param amountInMaxMantissa Max amount of tokenAddressIn
     /// @param amountOutMantissa Amount of tokenAddressOut required as output
-    /// @param tokenAddressIn Address of the token to swap
-    /// @param tokenAddressOut Address of the token to get after swap
+    /// @param tokenAddressIn Address of the token to transform
+    /// @param tokenAddressOut Address of the token to get after transform
     /// @param to Address of the tokenAddressOut receiver
     /// @return actualAmountIn Actual amount of tokenAddressIn transferred
     /// @return amountInMantissa Amount of tokenAddressIn supposed to get transferred
     /// @return actualAmountOut Actual amount of tokenAddressOut transferred
-    /// @return amountSwappedMantissa Amount of tokenAddressOut supposed to get transferred
+    /// @return amountTransformedMantissa Amount of tokenAddressOut supposed to get transferred
     /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
-    function _swapTokensForExactTokens(
+    function _transformForExactTokens(
         uint256 amountInMaxMantissa,
         uint256 amountOutMantissa,
         address tokenAddressIn,
@@ -520,10 +522,10 @@ abstract contract AbstractTokenTransformer is
             uint256 actualAmountIn,
             uint256 amountInMantissa,
             uint256 actualAmountOut,
-            uint256 amountSwappedMantissa
+            uint256 amountTransformedMantissa
         )
     {
-        (amountSwappedMantissa, amountInMantissa) = getAmountIn(amountOutMantissa, tokenAddressIn, tokenAddressOut);
+        (amountTransformedMantissa, amountInMantissa) = getAmountIn(amountOutMantissa, tokenAddressIn, tokenAddressOut);
 
         if (amountInMantissa > amountInMaxMantissa) {
             revert AmountInHigherThanMax(amountInMantissa, amountInMaxMantissa);
@@ -536,7 +538,7 @@ abstract contract AbstractTokenTransformer is
 
         IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
         uint256 balanceBeforeTo = tokenOut.balanceOf(to);
-        tokenOut.safeTransfer(to, amountSwappedMantissa);
+        tokenOut.safeTransfer(to, amountTransformedMantissa);
         uint256 balanceAfterTo = tokenOut.balanceOf(to);
 
         actualAmountIn = balanceAfterDestination - balanceBeforeDestination;
@@ -556,14 +558,16 @@ abstract contract AbstractTokenTransformer is
         emit PriceOracleUpdated(oldPriceOracle, priceOracle);
     }
 
-    /// @notice Operations to perform after sweepToken
+    /// @notice Hook to perform after tranforming tokens
     /// @param tokenInAddress Address of the token
-    function postSwapHook(address tokenInAddress, uint256 amountIn, uint256 amountOut) internal virtual {}
+    /// @param amountIn Amount of tokenIn transformed
+    /// @param amountOut Amount of tokenOut transformed
+    function postTransformationHook(address tokenInAddress, uint256 amountIn, uint256 amountOut) internal virtual {}
 
-    /// @notice To check, is swapping paused
-    function _checkSwapPaused() internal view {
-        if (swapPaused) {
-            revert SwapTokensPaused();
+    /// @notice To check, is transform paused
+    function _checkTransformationPaused() internal view {
+        if (transformationPaused) {
+            revert TransformationTokensPaused();
         }
     }
 }

@@ -13,7 +13,7 @@ import {
 } from "../../typechain";
 
 let mockDAI: MockToken;
-let fakeRiskFundSwapper: FakeContract<IRiskFundTransformer>;
+let fakeRiskFundTransformer: FakeContract<IRiskFundTransformer>;
 let poolRegistry: FakeContract<PoolRegistryInterface>;
 let fakeProtocolIncome: FakeContract<IRiskFundTransformer>;
 let fakeComptroller: FakeContract<ComptrollerInterface>;
@@ -25,7 +25,7 @@ const fixture = async (): Promise<void> => {
   await mockDAI.faucet(convertToUnit(1000, 18));
 
   // Fake contracts
-  fakeRiskFundSwapper = await smock.fake<IRiskFundTransformer>("IRiskFundTransformer");
+  fakeRiskFundTransformer = await smock.fake<IRiskFundTransformer>("IRiskFundTransformer");
 
   poolRegistry = await smock.fake<PoolRegistryInterface>("PoolRegistryInterface");
   poolRegistry.getVTokenForAsset.returns("0x0000000000000000000000000000000000000001");
@@ -38,7 +38,7 @@ const fixture = async (): Promise<void> => {
   protocolShareReserve = await upgrades.deployProxy(ProtocolShareReserve, [fakeProtocolIncome.address]);
 
   await protocolShareReserve.setPoolRegistry(poolRegistry.address);
-  await protocolShareReserve.setRiskFundTransformer(fakeRiskFundSwapper.address);
+  await protocolShareReserve.setRiskFundTransformer(fakeRiskFundTransformer.address);
 };
 
 describe("ProtocolShareReserve: Tests", function () {
@@ -93,7 +93,7 @@ describe("ProtocolShareReserve: Tests", function () {
 
     expect(protocolUSDT).equal(convertToUnit(10, 18));
 
-    const riskFundBal = await mockDAI.balanceOf(fakeRiskFundSwapper.address);
+    const riskFundBal = await mockDAI.balanceOf(fakeRiskFundTransformer.address);
     const liquidatedShareBal = await mockDAI.balanceOf(fakeProtocolIncome.address);
     const protocolShareReserveBal = await mockDAI.balanceOf(protocolShareReserve.address);
 

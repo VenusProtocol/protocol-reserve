@@ -29,11 +29,11 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV1St
     /// Store base asset's reserve for specific pool
     mapping(address => uint256) public poolReserves;
 
-    /// Risk fund swapper address
-    address public riskFundSwapper;
+    /// Risk fund transformer address
+    address public riskFundTransformer;
 
     /// @notice Emitted when pool registry address is updated
-    event RiskFundSwapperUpdated(address indexed oldRiskFundSwapper, address indexed newRiskFundSwapper);
+    event RiskFundTransformerUpdated(address indexed oldRiskFundTransformer, address indexed newRiskFundTransformer);
 
     /// @notice Emitted when shortfall contract address is updated
     event ShortfallContractUpdated(address indexed oldShortfallContract, address indexed newShortfallContract);
@@ -44,8 +44,8 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV1St
     /// @notice Emitted when pool states is updated with amount transferred to this contract
     event PoolStateUpdated(address comptroller, uint256 amount);
 
-    /// @notice Error is thrown when updatePoolState is not called by riskFundSwapper
-    error InvalidRiskFundSwapper();
+    /// @notice Error is thrown when updatePoolState is not called by riskFundTransformer
+    error InvalidRiskFundTransformer();
 
     /// @dev Note that the contract is upgradeable. Use initialize() or reinitializers
     /// to set the state variables.
@@ -77,16 +77,16 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV1St
     }
 
     /**
-     * @dev Risk fund swapper setter
-     * @param riskFundSwapper_ Address of the risk fund swapper
-     * @custom:event RiskFundSwapperUpdated emit on success
-     * @custom:error ZeroAddressNotAllowed is thrown when risk fund swapper address is zero
+     * @dev Risk fund transformer setter
+     * @param riskFundTransformer_ Address of the risk fund transformer
+     * @custom:event RiskFundTransformerUpdated emit on success
+     * @custom:error ZeroAddressNotAllowed is thrown when risk fund transformer address is zero
      */
-    function setRiskFundSwapper(address riskFundSwapper_) external onlyOwner {
-        ensureNonzeroAddress(riskFundSwapper_);
-        address oldRiskFundSwapper = riskFundSwapper;
-        riskFundSwapper = riskFundSwapper_;
-        emit RiskFundSwapperUpdated(oldRiskFundSwapper, riskFundSwapper_);
+    function setRiskFundTransformer(address riskFundTransformer_) external onlyOwner {
+        ensureNonzeroAddress(riskFundTransformer_);
+        address oldRiskFundTransformer = riskFundTransformer;
+        riskFundTransformer = riskFundTransformer_;
+        emit RiskFundTransformerUpdated(oldRiskFundTransformer, riskFundTransformer_);
     }
 
     /**
@@ -132,8 +132,8 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV1St
      * @param amount Amount transferred for the pool
      */
     function updatePoolState(address comptroller, uint256 amount) public {
-        if (msg.sender != riskFundSwapper) {
-            revert InvalidRiskFundSwapper();
+        if (msg.sender != riskFundTransformer) {
+            revert InvalidRiskFundTransformer();
         }
 
         poolReserves[comptroller] += amount;
