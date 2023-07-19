@@ -4,19 +4,13 @@ import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../helpers/utils";
-import {
-  ComptrollerInterface,
-  IRiskFundTransformer,
-  MockToken,
-  PoolRegistryInterface,
-  ProtocolShareReserve,
-} from "../../typechain";
+import { IComptroller, IPoolRegistry, IRiskFundTransformer, MockToken, ProtocolShareReserve } from "../../typechain";
 
 let mockDAI: MockToken;
 let fakeRiskFundTransformer: FakeContract<IRiskFundTransformer>;
-let poolRegistry: FakeContract<PoolRegistryInterface>;
+let poolRegistry: FakeContract<IPoolRegistry>;
 let fakeProtocolIncome: FakeContract<IRiskFundTransformer>;
-let fakeComptroller: FakeContract<ComptrollerInterface>;
+let fakeComptroller: FakeContract<IComptroller>;
 let protocolShareReserve: ProtocolShareReserve;
 
 const fixture = async (): Promise<void> => {
@@ -27,11 +21,11 @@ const fixture = async (): Promise<void> => {
   // Fake contracts
   fakeRiskFundTransformer = await smock.fake<IRiskFundTransformer>("IRiskFundTransformer");
 
-  poolRegistry = await smock.fake<PoolRegistryInterface>("PoolRegistryInterface");
+  poolRegistry = await smock.fake<IPoolRegistry>("IPoolRegistry");
   poolRegistry.getVTokenForAsset.returns("0x0000000000000000000000000000000000000001");
 
   fakeProtocolIncome = await smock.fake<IRiskFundTransformer>("IRiskFundTransformer");
-  fakeComptroller = await smock.fake<ComptrollerInterface>("ComptrollerInterface");
+  fakeComptroller = await smock.fake<IComptroller>("IComptroller");
 
   // ProtocolShareReserve contract deployment
   const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");

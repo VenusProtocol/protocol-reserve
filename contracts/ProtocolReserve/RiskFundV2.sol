@@ -12,12 +12,10 @@ import { IShortfall } from "../Interfaces/IShortfall.sol";
 import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 import { RiskFundV1Storage } from "./RiskFundV1Storage.sol";
 
-/**
- * @title ReserveHelpers
- * @author Venus
- * @notice Contract with basic features to track/hold different assets for different Comptrollers.
- * @dev This contract does not support BNB.
- */
+/// @title ReserveHelpers
+/// @author Venus
+/// @notice Contract with basic features to track/hold different assets for different Comptrollers.
+/// @dev This contract does not support BNB.
 contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV1Storage, IRiskFund {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -54,14 +52,12 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV1St
         _disableInitializers();
     }
 
-    /**
-     * @dev Initializes the deployer to owner.
-     * @param convertibleBaseAsset_ Address of the base asset
-     * @param accessControlManager_ Address of the access control contract
-     * @param loopsLimit_ Limit for the loops in the contract to avoid DOS
-     * @custom:error ZeroAddressNotAllowed is thrown when PCS router address is zero
-     * @custom:error ZeroAddressNotAllowed is thrown when convertible base asset address is zero
-     */
+    /// @dev Initializes the deployer to owner.
+    /// @param convertibleBaseAsset_ Address of the base asset
+    /// @param accessControlManager_ Address of the access control contract
+    /// @param loopsLimit_ Limit for the loops in the contract to avoid DOS
+    /// @custom:error ZeroAddressNotAllowed is thrown when PCS router address is zero
+    /// @custom:error ZeroAddressNotAllowed is thrown when convertible base asset address is zero
     function initialize(
         address convertibleBaseAsset_,
         address accessControlManager_,
@@ -76,12 +72,10 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV1St
         convertibleBaseAsset = convertibleBaseAsset_;
     }
 
-    /**
-     * @dev Risk fund transformer setter
-     * @param riskFundTransformer_ Address of the risk fund transformer
-     * @custom:event RiskFundTransformerUpdated emit on success
-     * @custom:error ZeroAddressNotAllowed is thrown when risk fund transformer address is zero
-     */
+    /// @dev Risk fund transformer setter
+    /// @param riskFundTransformer_ Address of the risk fund transformer
+    /// @custom:event RiskFundTransformerUpdated emit on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when risk fund transformer address is zero
     function setRiskFundTransformer(address riskFundTransformer_) external onlyOwner {
         ensureNonzeroAddress(riskFundTransformer_);
         address oldRiskFundTransformer = riskFundTransformer;
@@ -89,11 +83,9 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV1St
         emit RiskFundTransformerUpdated(oldRiskFundTransformer, riskFundTransformer_);
     }
 
-    /**
-     * @dev Shortfall contract address setter
-     * @param shortfallContractAddress_ Address of the auction contract
-     * @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
-     */
+    /// @dev Shortfall contract address setter
+    /// @param shortfallContractAddress_ Address of the auction contract
+    /// @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
     function setShortfallContractAddress(address shortfallContractAddress_) external onlyOwner {
         ensureNonzeroAddress(shortfallContractAddress_);
         require(
@@ -106,12 +98,10 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV1St
         emit ShortfallContractUpdated(oldShortfallContractAddress, shortfallContractAddress_);
     }
 
-    /**
-     * @dev Transfer tokens for auction.
-     * @param comptroller Comptroller of the pool.
-     * @param amount Amount to be transferred to auction contract.
-     * @return Number reserved tokens.
-     */
+    /// @dev Transfer tokens for auction.
+    /// @param comptroller Comptroller of the pool.
+    /// @param amount Amount to be transferred to auction contract.
+    /// @return Number reserved tokens.
     function transferReserveForAuction(address comptroller, uint256 amount) external override returns (uint256) {
         address shortfall_ = shortfall;
         require(msg.sender == shortfall_, "Risk fund: Only callable by Shortfall contract");
@@ -126,11 +116,9 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV1St
         return amount;
     }
 
-    /**
-     * @dev Update the reserve of the asset for the specific pool after transferring to risk fund
-     * @param comptroller  Comptroller address(pool)
-     * @param amount Amount transferred for the pool
-     */
+    /// @dev Update the reserve of the asset for the specific pool after transferring to risk fund
+    /// @param comptroller  Comptroller address(pool)
+    /// @param amount Amount transferred for the pool
     function updatePoolState(address comptroller, uint256 amount) public {
         if (msg.sender != riskFundTransformer) {
             revert InvalidRiskFundTransformer();

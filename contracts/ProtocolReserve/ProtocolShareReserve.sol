@@ -12,11 +12,9 @@ import { IRiskFundTransformer } from "../Interfaces/IRiskFundTransformer.sol";
 import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 import { EXP_SCALE } from "../Utils/Constants.sol";
 
-/**
- * @title ProtocolShareReserve
- * @author Venus
- * @notice Contract used to store and distribute the reserves generated in the markets.
- */
+/// @title ProtocolShareReserve
+/// @author Venus
+/// @notice Contract used to store and distribute the reserves generated in the markets.
 contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -42,11 +40,9 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         _disableInitializers();
     }
 
-    /**
-     * @dev Initializes the deployer to owner.
-     * @param protocolIncome_ The address protocol income will be sent to
-     * @custom:error ZeroAddressNotAllowed is thrown when protocol income address is zero
-     */
+    /// @dev Initializes the deployer to owner.
+    /// @param protocolIncome_ The address protocol income will be sent to
+    /// @custom:error ZeroAddressNotAllowed is thrown when protocol income address is zero
     function initialize(address protocolIncome_) external initializer {
         ensureNonzeroAddress(protocolIncome_);
 
@@ -55,11 +51,9 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         protocolIncome = protocolIncome_;
     }
 
-    /**
-     * @dev Pool registry setter.
-     * @param poolRegistry_ Address of the pool registry
-     * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
-     */
+    /// @dev Pool registry setter.
+    /// @param poolRegistry_ Address of the pool registry
+    /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
     function setPoolRegistry(address poolRegistry_) external onlyOwner {
         ensureNonzeroAddress(poolRegistry_);
         address oldPoolRegistry = poolRegistry;
@@ -67,11 +61,9 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         emit PoolRegistryUpdated(oldPoolRegistry, poolRegistry_);
     }
 
-    /**
-     * @dev Risk fund transformer setter
-     * @param riskFundTransformer_ Address of the Risk fund transformer
-     * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
-     */
+    /// @dev Risk fund transformer setter
+    /// @param riskFundTransformer_ Address of the Risk fund transformer
+    /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
     function setRiskFundTransformer(address riskFundTransformer_) external onlyOwner {
         ensureNonzeroAddress(riskFundTransformer_);
         address oldRiskFundTransformer = riskFundTransformer;
@@ -79,14 +71,12 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         emit RiskFundTransformerUpdated(oldRiskFundTransformer, riskFundTransformer_);
     }
 
-    /**
-     * @dev Release funds
-     * @param comptroller Pool's Comptroller
-     * @param asset  Asset to be released
-     * @param amount Amount to release
-     * @return Number of total released tokens
-     * @custom:error ZeroAddressNotAllowed is thrown when asset address is zero
-     */
+    /// @dev Release funds
+    /// @param comptroller Pool's Comptroller
+    /// @param asset  Asset to be released
+    /// @param amount Amount to release
+    /// @return Number of total released tokens
+    /// @custom:error ZeroAddressNotAllowed is thrown when asset address is zero
     function releaseFunds(address comptroller, address asset, uint256 amount) external returns (uint256) {
         ensureNonzeroAddress(asset);
         require(amount <= poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
@@ -111,11 +101,9 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         return amount;
     }
 
-    /**
-     * @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
-     * @param comptroller  Comptroller address(pool)
-     * @param asset Asset address.
-     */
+    /// @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
+    /// @param comptroller  Comptroller address(pool)
+    /// @param asset Asset address.
     function updateAssetsState(
         address comptroller,
         address asset

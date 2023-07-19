@@ -104,22 +104,6 @@ abstract contract AbstractTokenTransformer is
     /// @notice Thrown when transformation is Active
     error TransformationTokensActive();
 
-    /// @param accessControlManager_ Access control manager contract address
-    /// @param priceOracle_ Resilient oracle address
-    /// @param destinationAddress_  Address at all incoming tokens will transferred to
-    function initialize(
-        address accessControlManager_,
-        ResilientOracle priceOracle_,
-        address destinationAddress_
-    ) public virtual initializer {
-        __AccessControlled_init(accessControlManager_);
-        __ReentrancyGuard_init();
-
-        _setPriceOracle(priceOracle_);
-        destinationAddress = destinationAddress_;
-        transformationPaused = false;
-    }
-
     /**
      * @notice Pause transformation of tokens
      * @custom:event Emits TransformationPaused on success
@@ -364,6 +348,22 @@ abstract contract AbstractTokenTransformer is
     /// @notice Get the balance for specific token
     /// @param token Address of the token
     function balanceOf(address token) external virtual returns (uint256 tokenBalance) {}
+
+    /// @param accessControlManager_ Access control manager contract address
+    /// @param priceOracle_ Resilient oracle address
+    /// @param destinationAddress_  Address at all incoming tokens will transferred to
+    function initialize(
+        address accessControlManager_,
+        ResilientOracle priceOracle_,
+        address destinationAddress_
+    ) public virtual initializer {
+        __AccessControlled_init(accessControlManager_);
+        __ReentrancyGuard_init();
+
+        _setPriceOracle(priceOracle_);
+        destinationAddress = destinationAddress_;
+        transformationPaused = false;
+    }
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @param amountInMantissa Amount of tokenAddressIn
