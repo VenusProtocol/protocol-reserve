@@ -9,6 +9,7 @@ import "hardhat-deploy";
 import { HardhatUserConfig, task } from "hardhat/config";
 import "solidity-docgen";
 
+//eslint-disable-next-line @typescript-eslint/no-var-requires
 require("dotenv").config();
 
 const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY;

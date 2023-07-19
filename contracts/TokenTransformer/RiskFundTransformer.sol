@@ -8,7 +8,7 @@ import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle
 import { AbstractTokenTransformer } from "./AbstractTokenTransformer.sol";
 import { ReserveHelpers } from "../Helpers/ReserveHelpers.sol";
 import { ensureNonzeroAddress } from "../Utils/Validators.sol";
-import { PoolRegistryInterface } from "../Interfaces/PoolRegistryInterface.sol";
+import { IPoolRegistry } from "../Interfaces/IPoolRegistry.sol";
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
 import { EXP_SCALE } from "../Utils/Constants.sol";
 
@@ -17,18 +17,6 @@ contract RiskFundTransformer is AbstractTokenTransformer, ReserveHelpers {
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
-
-    /// @param accessControlManager_ Access control manager contract address
-    /// @param priceOracle_ Resilient oracle address
-    /// @param destinationAddress_  Address at all incoming tokens will transferred to
-    function initialize(
-        address accessControlManager_,
-        ResilientOracle priceOracle_,
-        address destinationAddress_
-    ) public override {
-        // Initialize AbstractTokenTransformer
-        super.initialize(accessControlManager_, priceOracle_, destinationAddress_);
-    }
 
     /// @dev Pool registry setter
     /// @param poolRegistry_ Address of the pool registry
@@ -48,12 +36,24 @@ contract RiskFundTransformer is AbstractTokenTransformer, ReserveHelpers {
         tokenBalance = token.balanceOf(address(this));
     }
 
+    /// @param accessControlManager_ Access control manager contract address
+    /// @param priceOracle_ Resilient oracle address
+    /// @param destinationAddress_  Address at all incoming tokens will transferred to
+    function initialize(
+        address accessControlManager_,
+        ResilientOracle priceOracle_,
+        address destinationAddress_
+    ) public override {
+        // Initialize AbstractTokenTransformer
+        super.initialize(accessControlManager_, priceOracle_, destinationAddress_);
+    }
+
     /// @notice Hook to perform after tranforming tokens
     /// @param tokenInAddress Address of the tokenIn
     /// @param amountIn Amount of tokenIn transformered
     /// @param amountOut Amount of tokenOut transformered
     function postTransformationHook(address tokenInAddress, uint256 amountIn, uint256 amountOut) internal override {
-        address[] memory pools = PoolRegistryInterface(poolRegistry).getPoolsSupportedByAsset(tokenInAddress);
+        address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenInAddress);
 
         for (uint256 i; i < pools.length; ++i) {
             uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenInAddress] * EXP_SCALE) /

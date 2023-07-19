@@ -5,8 +5,8 @@ import { SafeERC20Upgradeable, IERC20Upgradeable } from "@openzeppelin/contracts
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 
 import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
-import { ComptrollerInterface } from "../Interfaces/ComptrollerInterface.sol";
-import { PoolRegistryInterface } from "../Interfaces/PoolRegistryInterface.sol";
+import { IComptroller } from "../Interfaces/IComptroller.sol";
+import { IPoolRegistry } from "../Interfaces/IPoolRegistry.sol";
 import { IPrime } from "../Interfaces/IPrime.sol";
 import { IVToken } from "../Interfaces/IVToken.sol";
 import { IIncomeDestination } from "../Interfaces/IIncomeDestination.sol";
@@ -239,21 +239,19 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         return distributionTargets.length;
     }
 
-    /**
-     * @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
-     * @param comptroller  Comptroller address(pool)
-     * @param asset Asset address.
-     */
+    /// @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
+    /// @param comptroller  Comptroller address(pool)
+    /// @param asset Asset address.
     function updateAssetsState(
         address comptroller,
         address asset,
         IncomeType incomeType
     ) public override(IProtocolShareReserve) {
-        if (!ComptrollerInterface(comptroller).isComptroller()) revert InvalidAddress();
+        if (!IComptroller(comptroller).isComptroller()) revert InvalidAddress();
         if (asset == address(0)) revert InvalidAddress();
         if (
             comptroller != CORE_POOL_COMPTROLLER &&
-            PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) == address(0)
+            IPoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) == address(0)
         ) revert InvalidAddress();
 
         Schema schema = getSchema(comptroller, asset, incomeType);

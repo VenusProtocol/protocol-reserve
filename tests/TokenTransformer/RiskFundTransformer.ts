@@ -8,13 +8,13 @@ import { ethers } from "hardhat";
 
 import {
   IAccessControlManagerV8,
+  IPoolRegistry,
   MockDeflatingToken,
   MockDeflatingToken__factory,
   MockRiskFundTransformer,
   MockRiskFundTransformer__factory,
   MockToken,
   MockToken__factory,
-  PoolRegistryInterface,
   ResilientOracleInterface,
   RiskFundV2,
 } from "../../typechain";
@@ -28,14 +28,14 @@ let transformer: MockContract<MockRiskFundTransformer>;
 let tokenIn: MockContract<MockToken>;
 let tokenOut: MockContract<MockToken>;
 let oracle: FakeContract<ResilientOracleInterface>;
-let poolRegistry: FakeContract<PoolRegistryInterface>;
+let poolRegistry: FakeContract<IPoolRegistry>;
 let riskFund: FakeContract<RiskFundV2>;
 let tokenInDeflationary: MockContract<MockDeflatingToken>;
 let unKnown: Signer;
 
 async function fixture(): Promise<void> {
   [, unKnown] = await ethers.getSigners();
-  poolRegistry = await smock.fake<PoolRegistryInterface>("PoolRegistryInterface");
+  poolRegistry = await smock.fake<IPoolRegistry>("IPoolRegistry");
   const transformerFactory = await smock.mock<MockRiskFundTransformer__factory>("MockRiskFundTransformer");
 
   riskFund = await smock.fake<RiskFundV2>("RiskFundV2");
