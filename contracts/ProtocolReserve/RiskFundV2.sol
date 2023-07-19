@@ -10,6 +10,7 @@ import { IRiskFund } from "../Interfaces/IRiskFund.sol";
 import { ReserveHelpers } from "../Helpers/ReserveHelpers.sol";
 import { IShortfall } from "../Interfaces/IShortfall.sol";
 import { ensureNonzeroAddress } from "../Helpers/validators.sol";
+import { RiskFundV1Storage } from "./RiskFundV1Storage.sol";
 
 /**
  * @title ReserveHelpers
@@ -17,15 +18,19 @@ import { ensureNonzeroAddress } from "../Helpers/validators.sol";
  * @notice Contract with basic features to track/hold different assets for different Comptrollers.
  * @dev This contract does not support BNB.
  */
-contract RiskFund is Ownable2StepUpgradeable, AccessControlledV8, IRiskFund {
+contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV1Storage, IRiskFund {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    address private pancakeSwapRouter;
+    uint256 private minAmountToConvert;
     address public convertibleBaseAsset;
     address public shortfall;
-    address public riskFundSwapper;
 
-    // Store base asset's reserve for specific pool
+    /// Store base asset's reserve for specific pool
     mapping(address => uint256) public poolReserves;
+
+    /// Risk fund swapper address
+    address public riskFundSwapper;
 
     /// @notice Emitted when pool registry address is updated
     event RiskFundSwapperUpdated(address indexed oldRiskFundSwapper, address indexed newRiskFundSwapper);

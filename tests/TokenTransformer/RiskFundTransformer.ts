@@ -16,7 +16,7 @@ import {
   MockToken__factory,
   PoolRegistryInterface,
   ResilientOracleInterface,
-  RiskFund,
+  RiskFundV2,
 } from "../../typechain";
 import { convertToUnit } from "../utils";
 
@@ -29,7 +29,7 @@ let tokenIn: MockContract<MockToken>;
 let tokenOut: MockContract<MockToken>;
 let oracle: FakeContract<ResilientOracleInterface>;
 let poolRegistry: FakeContract<PoolRegistryInterface>;
-let riskFund: FakeContract<RiskFund>;
+let riskFund: FakeContract<RiskFundV2>;
 let tokenInDeflationary: MockContract<MockDeflatingToken>;
 let unKnown: Signer;
 
@@ -38,7 +38,7 @@ async function fixture(): Promise<void> {
   poolRegistry = await smock.fake<PoolRegistryInterface>("PoolRegistryInterface");
   const transformerFactory = await smock.mock<MockRiskFundTransformer__factory>("MockRiskFundTransformer");
 
-  riskFund = await smock.fake<RiskFund>("RiskFund");
+  riskFund = await smock.fake<RiskFundV2>("RiskFundV2");
 
   accessControl = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
   oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
