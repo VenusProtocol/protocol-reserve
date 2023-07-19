@@ -9,7 +9,7 @@ import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contract
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
 import { ReserveHelpers } from "../Helpers/ReserveHelpers.sol";
 import { IShortfall } from "../Interfaces/IShortfall.sol";
-import { ensureNonzeroAddress } from "../Helpers/validators.sol";
+import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 import { RiskFundV1Storage } from "./RiskFundV1Storage.sol";
 
 /**
