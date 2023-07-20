@@ -29,7 +29,10 @@ const fixture = async (): Promise<void> => {
 
   // ProtocolShareReserve contract deployment
   const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
-  protocolShareReserve = await upgrades.deployProxy(ProtocolShareReserve, [fakeProtocolIncome.address]);
+  protocolShareReserve = await upgrades.deployProxy(ProtocolShareReserve, [
+    fakeProtocolIncome.address,
+    fakeRiskFundTransformer.address,
+  ]);
 
   await protocolShareReserve.setPoolRegistry(poolRegistry.address);
   await protocolShareReserve.setRiskFundTransformer(fakeRiskFundTransformer.address);

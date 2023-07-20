@@ -43,12 +43,13 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     /// @dev Initializes the deployer to owner.
     /// @param protocolIncome_ The address protocol income will be sent to
     /// @custom:error ZeroAddressNotAllowed is thrown when protocol income address is zero
-    function initialize(address protocolIncome_) external initializer {
+    function initialize(address protocolIncome_, address riskFundTransformer_) external initializer {
         ensureNonzeroAddress(protocolIncome_);
 
         __Ownable2Step_init();
 
         protocolIncome = protocolIncome_;
+        riskFundTransformer = riskFundTransformer_;
     }
 
     /// @dev Pool registry setter.
