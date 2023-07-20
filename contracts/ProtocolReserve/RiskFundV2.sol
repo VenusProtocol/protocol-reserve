@@ -7,14 +7,13 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
-import { IShortfall } from "../Interfaces/IShortfall.sol";
 import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 import { RiskFundV2Storage } from "./RiskFundStorage.sol";
 
 /// @title RiskFundV2
 /// @author Venus
-/// @notice Contract with basic features to hold base asset for different Comptrollers.
-/// @dev This contract does not support BNB.
+/// @notice Contract with basic features to hold base asset for different Comptrollers
+/// @dev This contract does not support BNB
 contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2Storage, IRiskFund {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -41,9 +40,6 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
 
     /// @notice Error is thrown when pool reserve is less than the amount needed
     error InsufficientPoolReserve(uint256 amount, uint256 poolReserve);
-
-    /// @notice Error is thrown when base asset od riskFUnd and shortfall is different
-    error BaseAssetNotMatched(address shortfallBaseAsset, address riskFundBaseAsset);
 
     /// @dev Convertible base asset setter
     /// @param convertibleBaseAsset_ Address of the convertible base asset
@@ -72,31 +68,28 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
     /// @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
     function setShortfallContractAddress(address shortfallContractAddress_) external onlyOwner {
         ensureNonzeroAddress(shortfallContractAddress_);
-        address shortfallBaseAsset = IShortfall(shortfallContractAddress_).convertibleBaseAsset();
-
-        if (shortfallBaseAsset != convertibleBaseAsset) {
-            revert BaseAssetNotMatched(shortfallBaseAsset, convertibleBaseAsset);
-        }
-
         address oldShortfallContractAddress = shortfall;
         shortfall = shortfallContractAddress_;
         emit ShortfallContractUpdated(oldShortfallContractAddress, shortfallContractAddress_);
     }
 
-    /// @dev Transfer tokens for auction.
-    /// @param comptroller Comptroller of the pool.
-    /// @param amount Amount to be transferred to auction contract.
+    /// @dev Transfer tokens for auction
+    /// @param comptroller Comptroller of the pool
+    /// @param bidder Amount transferred to bidder address
+    /// @param amount Amount to be transferred to auction contract
     /// @return Number reserved tokens.
     /// @custom:error InvalidShortfallAddress is thrown when risk fund transformer address is zero
     /// @custom:error InsufficientPoolReserve is thrown when risk fund transformer address is zero
-    function transferReserveForAuction(address comptroller, uint256 amount) external override returns (uint256) {
-        address shortfall_ = shortfall;
+    function transferReserveForAuction(
+        address comptroller,
+        address bidder,
+        uint256 amount
+    ) external override returns (uint256) {
         uint256 poolReserve = poolReserves[comptroller];
 
-        if (msg.sender != shortfall_) {
+        if (msg.sender != shortfall) {
             revert InvalidShortfallAddress();
         }
-
         if (amount > poolReserve) {
             revert InsufficientPoolReserve(amount, poolReserve);
         }
@@ -105,8 +98,7 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
             poolReserves[comptroller] = poolReserve - amount;
         }
 
-        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(shortfall_, amount);
-
+        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(bidder, amount);
         emit TransferredReserveForAuction(comptroller, amount);
 
         return amount;
@@ -121,7 +113,6 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
         }
 
         poolReserves[comptroller] += amount;
-
         emit PoolStateUpdated(comptroller, amount);
     }
 }
