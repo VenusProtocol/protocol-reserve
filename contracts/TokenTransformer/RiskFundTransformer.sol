@@ -48,7 +48,7 @@ contract RiskFundTransformer is AbstractTokenTransformer, ReserveHelpers {
         super.initialize(accessControlManager_, priceOracle_, destinationAddress_);
     }
 
-    /// @notice Hook to perform after tranforming tokens
+    /// @notice Hook to perform after transforming tokens
     /// @param tokenInAddress Address of the tokenIn
     /// @param amountIn Amount of tokenIn transformered
     /// @param amountOut Amount of tokenOut transformered

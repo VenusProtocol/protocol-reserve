@@ -558,7 +558,7 @@ abstract contract AbstractTokenTransformer is
         emit PriceOracleUpdated(oldPriceOracle, priceOracle);
     }
 
-    /// @notice Hook to perform after tranforming tokens
+    /// @notice Hook to perform after transforming tokens
     /// @param tokenInAddress Address of the token
     /// @param amountIn Amount of tokenIn transformed
     /// @param amountOut Amount of tokenOut transformed

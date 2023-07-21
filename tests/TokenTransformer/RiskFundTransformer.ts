@@ -58,10 +58,6 @@ async function fixture(): Promise<void> {
 }
 
 describe("Risk fund Transformer: tests", () => {
-  /**
-   * Deploying required contracts along with the poolRegistry.
-   */
-
   before(async function () {
     await loadFixture(fixture);
   });
