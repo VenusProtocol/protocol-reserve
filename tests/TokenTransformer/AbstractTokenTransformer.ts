@@ -14,7 +14,7 @@ import {
   MockToken__factory,
   MockTransformer,
   MockTransformer__factory,
-  ResilientOracleInterface,
+  ResilientOracle,
 } from "../../typechain";
 import { convertToUnit } from "../utils";
 
@@ -25,7 +25,7 @@ let accessControl: FakeContract<IAccessControlManagerV8>;
 let transformer: MockContract<MockTransformer>;
 let tokenIn: MockContract<MockToken>;
 let tokenOut: MockContract<MockToken>;
-let oracle: FakeContract<ResilientOracleInterface>;
+let oracle: FakeContract<ResilientOracle>;
 let tokenInDeflationary: MockContract<MockDeflatingToken>;
 let to: Signer;
 let destination: Signer;
@@ -48,7 +48,7 @@ async function fixture(): Promise<void> {
   const Transformer = await smock.mock<MockTransformer__factory>("MockTransformer");
 
   accessControl = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
-  oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+  oracle = await smock.fake<ResilientOracle>("ResilientOracle");
 
   const MockToken = await smock.mock<MockToken__factory>("MockToken");
   const MockTokenDeflationary = await smock.mock<MockDeflatingToken__factory>("MockDeflatingToken");
@@ -90,8 +90,7 @@ describe("MockTransformer: tests", () => {
       const MAX_AMOUNT_IN = convertToUnit(".25", 18);
       const AMOUNT_OUT = convertToUnit(".5", 18);
       await transformer.setTransformationConfig(TransformationConfig);
-
-      const expectedResults = await transformer.getAmountIn(AMOUNT_OUT, tokenIn.address, tokenOut.address);
+      const expectedResults = await transformer.callStatic.getAmountIn(AMOUNT_OUT, tokenIn.address, tokenOut.address);
 
       const tx = await transformer.transformForExactTokens(
         MAX_AMOUNT_IN,
@@ -154,7 +153,7 @@ describe("MockTransformer: tests", () => {
       const MIN_AMOUNT_OUT = convertToUnit(".5", 18);
       await transformer.setTransformationConfig(TransformationConfig);
 
-      const expectedResults = await transformer.getAmountOut(AMOUNT_IN, tokenIn.address, tokenOut.address);
+      const expectedResults = await transformer.callStatic.getAmountOut(AMOUNT_IN, tokenIn.address, tokenOut.address);
 
       const tx = await transformer.transformExactTokens(
         AMOUNT_IN,
@@ -325,7 +324,7 @@ describe("MockTransformer: tests", () => {
       await setTransformationConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await transformer.getAmountOut(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address);
+      const results = await transformer.callStatic.getAmountOut(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address);
       const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
       const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
       const amountOut = new BigNumber(AMOUNT_IN_UNDER)
@@ -342,7 +341,7 @@ describe("MockTransformer: tests", () => {
       await setTransformationConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await transformer.getAmountOut(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
+      const results = await transformer.callStatic.getAmountOut(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
       const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
       const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
       const amountIn = new BigNumber(TOKEN_OUT_MAX)
@@ -387,7 +386,7 @@ describe("MockTransformer: tests", () => {
       await setTransformationConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await transformer.getAmountIn(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address);
+      const results = await transformer.callStatic.getAmountIn(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address);
       const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
       const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
       const amountIn = new BigNumber(AMOUNT_IN_UNDER)
@@ -404,7 +403,7 @@ describe("MockTransformer: tests", () => {
       await setTransformationConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await transformer.getAmountIn(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
+      const results = await transformer.callStatic.getAmountIn(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
       const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
       const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
       const amountIn = new BigNumber(TOKEN_OUT_MAX)
@@ -511,10 +510,10 @@ describe("MockTransformer: tests", () => {
   });
 
   describe("Set price oracle", () => {
-    let newOracle: FakeContract<ResilientOracleInterface>;
+    let newOracle: FakeContract<ResilientOracle>;
 
     before(async () => {
-      newOracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+      newOracle = await smock.fake<ResilientOracle>("ResilientOracle");
     });
 
     it("Revert on non-owner call", async () => {

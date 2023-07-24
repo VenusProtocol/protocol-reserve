@@ -338,6 +338,7 @@ abstract contract AbstractTokenTransformer is
     /// @custom:event Emits SweepToken event on success
     /// @custom:access Only Governance
     function sweepToken(address tokenAddress) external onlyOwner nonReentrant {
+        preSweepToken(tokenAddress);
         IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
         uint256 balance = token.balanceOf(address(this));
         token.safeTransfer(owner(), balance);
@@ -348,6 +349,10 @@ abstract contract AbstractTokenTransformer is
     /// @notice Get the balance for specific token
     /// @param token Address of the token
     function balanceOf(address token) external virtual returns (uint256 tokenBalance) {}
+
+    /// @notice Operations to perform before sweepToken
+    /// @param token Address od the token
+    function preSweepToken(address token) public virtual {}
 
     /// @param accessControlManager_ Access control manager contract address
     /// @param priceOracle_ Resilient oracle address
@@ -377,16 +382,19 @@ abstract contract AbstractTokenTransformer is
         uint256 amountInMantissa,
         address tokenAddressIn,
         address tokenAddressOut
-    ) public view returns (uint256 amountTransformedMantissa, uint256 amountOutMantissa) {
+    ) public returns (uint256 amountTransformedMantissa, uint256 amountOutMantissa) {
         if (amountInMantissa == 0) {
             revert InsufficientInputAmount();
         }
 
-        TransformationConfig storage configuration = transformConfigurations[tokenAddressIn][tokenAddressOut];
+        TransformationConfig memory configuration = transformConfigurations[tokenAddressIn][tokenAddressOut];
 
         if (!configuration.enabled) {
             revert TransformationConfigNotEnabled();
         }
+
+        priceOracle.updateAssetPrice(tokenAddressIn);
+        priceOracle.updateAssetPrice(tokenAddressOut);
 
         uint256 maxTokenOutLiquidity = IERC20Upgradeable(tokenAddressOut).balanceOf(address(this));
         uint256 tokenInUnderlyingPrice = priceOracle.getPrice(tokenAddressIn);
@@ -419,16 +427,19 @@ abstract contract AbstractTokenTransformer is
         uint256 amountOutMantissa,
         address tokenAddressIn,
         address tokenAddressOut
-    ) public view returns (uint256 amountTransformedMantissa, uint256 amountInMantissa) {
+    ) public returns (uint256 amountTransformedMantissa, uint256 amountInMantissa) {
         if (amountOutMantissa == 0) {
             revert InsufficientInputAmount();
         }
 
-        TransformationConfig storage configuration = transformConfigurations[tokenAddressIn][tokenAddressOut];
+        TransformationConfig memory configuration = transformConfigurations[tokenAddressIn][tokenAddressOut];
 
         if (!configuration.enabled) {
             revert TransformationConfigNotEnabled();
         }
+
+        priceOracle.updateAssetPrice(tokenAddressIn);
+        priceOracle.updateAssetPrice(tokenAddressOut);
 
         uint256 maxTokenOutLiquidity = IERC20Upgradeable(tokenAddressOut).balanceOf(address(this));
         uint256 tokenInUnderlyingPrice = priceOracle.getPrice(tokenAddressIn);
