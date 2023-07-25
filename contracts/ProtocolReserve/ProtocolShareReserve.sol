@@ -203,6 +203,8 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      * @param assets assets to be released to distribution targets
      */
     function releaseFunds(address comptroller, address[] memory assets) external {
+        _accrueAndReleaseFundsToPrime();
+        
         for (uint i = 0; i < assets.length; i++) {
             _releaseFund(comptroller, assets[i]);
         }
