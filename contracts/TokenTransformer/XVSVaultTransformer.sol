@@ -24,8 +24,8 @@ contract XVSVaultTransformer is AbstractTokenTransformer {
         address accessControlManager_,
         ResilientOracle priceOracle_,
         address destinationAddress_
-    ) public override {
+    ) public initializer {
         // Initialize AbstractTokenTransformer
-        super.initialize(accessControlManager_, priceOracle_, destinationAddress_);
+        __AbstractTokenTransformer_init(accessControlManager_, priceOracle_, destinationAddress_);
     }
 }

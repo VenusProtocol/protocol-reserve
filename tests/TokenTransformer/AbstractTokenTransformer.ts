@@ -61,7 +61,11 @@ async function fixture(): Promise<void> {
   await tokenOut.faucet(parseUnits("1000", 18));
 
   transformer = await Transformer.deploy();
-  await transformer.initialize(accessControl.address, oracle.address, await destination.getAddress());
+  await transformer.AbstractTokenTransformer_init(
+    accessControl.address,
+    oracle.address,
+    await destination.getAddress(),
+  );
   accessControl.isAllowedToCall.returns(true);
 
   TransformationConfig = {

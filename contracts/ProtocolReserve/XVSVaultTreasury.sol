@@ -17,6 +17,11 @@ contract XVSVaultTreasury is AccessControlledV8 {
     /// @notice The xvs token address
     address public xvsAddress;
 
+    /// @dev This empty reserved space is put in place to allow future versions to add new
+    /// variables without shifting down storage in the inheritance chain.
+    /// See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+    uint256[48] private __gap;
+
     /// @notice Emitted when XVS vault address is updated
     event XVSVaultUpdated(address indexed oldXVSVault, address indexed newXVSVault);
 

@@ -35,7 +35,7 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
     /// @notice Error is thrown when updatePoolState is not called by riskFundTransformer
     error InvalidRiskFundTransformer();
 
-    /// @notice Error is thrown when transferReserveForAuction is not called by shortfall
+    /// @notice Error is thrown when transferReserveForAuction is called by non shortfall address
     error InvalidShortfallAddress();
 
     /// @notice Error is thrown when pool reserve is less than the amount needed
@@ -78,8 +78,8 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
     /// @param bidder Amount transferred to bidder address
     /// @param amount Amount to be transferred to auction contract
     /// @return Number reserved tokens.
-    /// @custom:error InvalidShortfallAddress is thrown when risk fund transformer address is zero
-    /// @custom:error InsufficientPoolReserve is thrown when risk fund transformer address is zero
+    /// @custom:error InvalidShortfallAddress is thrown on invalid shortfall address
+    /// @custom:error InsufficientPoolReserve is thrown when pool reserve is less than the amount needed
     function transferReserveForAuction(
         address comptroller,
         address bidder,
@@ -105,7 +105,7 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
     }
 
     /// @dev Update the reserve of the asset for the specific pool after transferring to risk fund
-    /// @param comptroller  Comptroller address(pool)
+    /// @param comptroller Comptroller address (pool)
     /// @param amount Amount transferred for the pool
     function updatePoolState(address comptroller, uint256 amount) public {
         if (msg.sender != riskFundTransformer) {

@@ -240,7 +240,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     }
 
     /// @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
-    /// @param comptroller  Comptroller address(pool)
+    /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address.
     function updateAssetsState(
         address comptroller,
