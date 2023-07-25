@@ -144,6 +144,18 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     }
 
     /**
+     * @dev Fetches the list of prime markets and then accrues interest 
+     * to prime for each market
+     */
+    function _accruePrimeInterest() internal {
+        address[] memory markets = IPrime(prime).allMarkets();
+        for (uint i = 0; i < markets.length; i++) {
+            address market = markets[i];
+            IPrime(prime).accrueInterest(market);
+        }
+    }
+
+    /**
      * @dev Add or update destination target based on destination address
      * @param config configuration of the destination.
      */
@@ -203,7 +215,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      * @param assets assets to be released to distribution targets
      */
     function releaseFunds(address comptroller, address[] memory assets) external {
-        _accrueAndReleaseFundsToPrime();
+        _accruePrimeInterest();
         
         for (uint i = 0; i < assets.length; i++) {
             _releaseFund(comptroller, assets[i]);
