@@ -18,11 +18,15 @@ import { EXP_SCALE } from "../Utils/Constants.sol";
 contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    address private protocolIncome;
-    address private riskFundTransformer;
+    address public protocolIncome;
+    address public riskFundTransformer;
     // Percentage of funds not sent to the RiskFund contract when the funds are released, following the project Tokenomics
-    uint256 private constant PROTOCOL_SHARE_PERCENTAGE = 70;
-    uint256 private constant BASE_UNIT = 100;
+    uint256 public constant PROTOCOL_SHARE_PERCENTAGE = 70;
+    uint256 public constant BASE_UNIT = 100;
+
+    /// @dev This empty reserved space is put in place to allow future versions to add new
+    /// variables without shifting down storage in the inheritance chain.
+    uint256[48] private __gap;
 
     /// @notice Emitted when funds are released
     event FundsReleased(address indexed comptroller, address indexed asset, uint256 amount);
@@ -42,9 +46,11 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
     /// @dev Initializes the deployer to owner.
     /// @param protocolIncome_ The address protocol income will be sent to
+    /// @param riskFundTransformer_ The address of the Risk fund transformer
     /// @custom:error ZeroAddressNotAllowed is thrown when protocol income address is zero
     function initialize(address protocolIncome_, address riskFundTransformer_) external initializer {
         ensureNonzeroAddress(protocolIncome_);
+        ensureNonzeroAddress(riskFundTransformer_);
 
         __Ownable2Step_init();
 
@@ -94,7 +100,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         IERC20Upgradeable(asset).safeTransfer(protocolIncome, protocolIncomeAmount);
         IERC20Upgradeable(asset).safeTransfer(riskFundTransformer_, amount - protocolIncomeAmount);
 
-        // Update the pool asset's state in the risk fund for the above transfer.
+        // Update the pool asset's state in the risk fund transformer for the above transfer
         IRiskFundTransformer(riskFundTransformer_).updateAssetsState(comptroller, asset);
 
         emit FundsReleased(comptroller, asset, amount);
@@ -103,7 +109,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     }
 
     /// @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
-    /// @param comptroller  Comptroller address(pool)
+    /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address.
     function updateAssetsState(
         address comptroller,

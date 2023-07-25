@@ -357,14 +357,22 @@ abstract contract AbstractTokenTransformer is
     /// @param accessControlManager_ Access control manager contract address
     /// @param priceOracle_ Resilient oracle address
     /// @param destinationAddress_  Address at all incoming tokens will transferred to
-    function initialize(
+    function __AbstractTokenTransformer_init(
         address accessControlManager_,
         ResilientOracle priceOracle_,
         address destinationAddress_
-    ) public virtual initializer {
+    ) internal onlyInitializing {
         __AccessControlled_init(accessControlManager_);
         __ReentrancyGuard_init();
+        __AbstractTokenTransformer_init_unchained(priceOracle_, destinationAddress_);
+    }
 
+    /// @param priceOracle_ Resilient oracle address
+    /// @param destinationAddress_  Address at all incoming tokens will transferred to
+    function __AbstractTokenTransformer_init_unchained(
+        ResilientOracle priceOracle_,
+        address destinationAddress_
+    ) internal onlyInitializing {
         _setPriceOracle(priceOracle_);
         destinationAddress = destinationAddress_;
         transformationPaused = false;
