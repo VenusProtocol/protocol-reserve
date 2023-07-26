@@ -147,7 +147,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      */
     function _accrueAndReleaseFundsToPrime() internal {
         address[] memory markets = IPrime(prime).allMarkets();
-        for (uint i = 0; i < markets.length; i++) {
+        for (uint i = 0; i < markets.length; ++i) {
             address market = markets[i];
             IPrime(prime).accrueInterest(market);
             _releaseFund(CORE_POOL_COMPTROLLER, IVToken(market).underlying());
@@ -160,7 +160,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      */
     function _accruePrimeInterest() internal {
         address[] memory markets = IPrime(prime).allMarkets();
-        for (uint i = 0; i < markets.length; i++) {
+        for (uint i = 0; i < markets.length; ++i) {
             address market = markets[i];
             IPrime(prime).accrueInterest(market);
         }
@@ -177,12 +177,12 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         //because prime relies on getUnreleasedFunds and it's return value may change after config update
         _accrueAndReleaseFundsToPrime();
 
-        for (uint i = 0; i < configs.length; i++) {
+        for (uint i = 0; i < configs.length; ++i) {
             DistributionConfig memory _config = configs[i];
             require(_config.destination != address(0), "ProtocolShareReserve: Destination address invalid");
 
             bool updated = false;
-            for (uint i = 0; i < distributionTargets.length; i++) {
+            for (uint i = 0; i < distributionTargets.length; ++i) {
                 DistributionConfig storage config = distributionTargets[i];
 
                 if (_config.schema == config.schema && config.destination == _config.destination) {
@@ -206,7 +206,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         uint totalSchemaOnePercentage;
         uint totalSchemaTwoPercentage;
 
-        for (uint i = 0; i < distributionTargets.length; i++) {
+        for (uint i = 0; i < distributionTargets.length; ++i) {
             DistributionConfig storage config = distributionTargets[i];
 
             if (config.schema == Schema.ONE) {
@@ -235,7 +235,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         address destination,
         address asset
     ) external view returns (uint256) {
-        for (uint i = 0; i < distributionTargets.length; i++) {
+        for (uint i = 0; i < distributionTargets.length; ++i) {
             DistributionConfig storage _config = distributionTargets[i];
             if (_config.schema == schema && _config.destination == destination) {
                 uint256 total = assetsReserves[comptroller][asset][schema];
@@ -251,7 +251,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     function releaseFunds(address comptroller, address[] memory assets) external {
         _accruePrimeInterest();
 
-        for (uint i = 0; i < assets.length; i++) {
+        for (uint i = 0; i < assets.length; ++i) {
             _releaseFund(comptroller, assets[i]);
         }
     }
@@ -267,7 +267,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         uint256 schemaOneTotalTransferAmount;
         uint256 schemaTwoTotalTransferAmount;
 
-        for (uint i = 0; i < distributionTargets.length; i++) {
+        for (uint i = 0; i < distributionTargets.length; ++i) {
             DistributionConfig storage _config = distributionTargets[i];
 
             uint256 transferAmount;
