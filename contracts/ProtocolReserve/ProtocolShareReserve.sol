@@ -341,4 +341,11 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             emit AssetsReservesUpdated(comptroller, asset, balanceDifference, incomeType, schema);
         }
     }
+
+    /**
+     * @dev Returns the total number of distribution targets
+     */
+    function totalDistributions() external view returns (uint256) {
+        return distributionTargets.length;
+    }
 }
