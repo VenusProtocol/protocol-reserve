@@ -581,15 +581,15 @@ abstract contract AbstractTokenTransformer is
         uint256 amountInMantissa,
         uint256 amountTransformedMantissa
     ) internal returns (uint256 actualAmountIn, uint256 actualAmountOut) {
-        uint256 balanceBeforeDestination = balanceOf(tokenAddressIn);
         IERC20Upgradeable tokenIn = IERC20Upgradeable(tokenAddressIn);
+        uint256 balanceBeforeDestination = tokenIn.balanceOf(destinationAddress);
         tokenIn.safeTransferFrom(msg.sender, destinationAddress, amountInMantissa);
-        uint256 balanceAfterDestination = balanceOf(tokenAddressIn);
+        uint256 balanceAfterDestination = tokenIn.balanceOf(destinationAddress);
 
-        uint256 balanceBeforeTo = balanceOf(tokenAddressOut);
         IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
+        uint256 balanceBeforeTo = tokenOut.balanceOf(to);
         tokenOut.safeTransfer(to, amountTransformedMantissa);
-        uint256 balanceAfterTo = balanceOf(tokenAddressOut);
+        uint256 balanceAfterTo = tokenOut.balanceOf(to);
 
         actualAmountIn = balanceAfterDestination - balanceBeforeDestination;
         actualAmountOut = balanceAfterTo - balanceBeforeTo;
