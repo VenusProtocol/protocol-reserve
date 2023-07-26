@@ -31,9 +31,8 @@ contract RiskFundTransformer is AbstractTokenTransformer, ReserveHelpers {
 
     /// @notice Get the balance for specific token
     /// @param tokenAddress Address of the token
-    function balanceOf(address tokenAddress) external view override returns (uint256 tokenBalance) {
-        IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
-        tokenBalance = token.balanceOf(address(this));
+    function balanceOf(address tokenAddress) public view override returns (uint256 tokenBalance) {
+        return assetsReserves[tokenAddress];
     }
 
     /// @param accessControlManager_ Access control manager contract address
@@ -49,6 +48,7 @@ contract RiskFundTransformer is AbstractTokenTransformer, ReserveHelpers {
     }
 
     /// @notice Hook to perform after transforming tokens
+    /// @dev After transfromation poolsAssetsReserves are settled by pool's reserves fraction
     /// @param tokenInAddress Address of the tokenIn
     /// @param amountIn Amount of tokenIn transformered
     /// @param amountOut Amount of tokenOut transformered
@@ -56,15 +56,46 @@ contract RiskFundTransformer is AbstractTokenTransformer, ReserveHelpers {
         address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenInAddress);
 
         for (uint256 i; i < pools.length; ++i) {
-            uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenInAddress] * EXP_SCALE) /
-                assetsReserves[tokenInAddress];
-            uint256 poolAmountInShare = (poolShare * amountIn) / EXP_SCALE;
-            uint256 poolAmountOutShare = (poolShare * amountOut) / EXP_SCALE;
+            uint256 poolShare = updatePoolAssetsReserve(pools[i], tokenInAddress, amountIn);
+            if (poolShare == 0) continue;
 
-            poolsAssetsReserves[pools[i]][tokenInAddress] -= poolAmountInShare;
+            uint256 poolAmountOutShare = (poolShare * amountOut) / EXP_SCALE;
             IRiskFund(destinationAddress).updatePoolState(pools[i], poolAmountOutShare);
         }
 
         assetsReserves[tokenInAddress] -= amountIn;
+    }
+
+    /// @notice Operations to perform after sweepToken
+    /// @param tokenAddress Address of the token
+    /// @param amount Amount transferred to address(to)
+    function postSweepToken(address tokenAddress, uint256 amount) public override {
+        uint256 balance = IERC20Upgradeable(tokenAddress).balanceOf(address(this));
+        uint256 balanceDiff = balance - assetsReserves[tokenAddress];
+
+        uint256 amountDiff = amount - balanceDiff;
+        if (amountDiff > 0) {
+            address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenAddress);
+
+            for (uint256 i; i < pools.length; ++i) {
+                updatePoolAssetsReserve(pools[i], tokenAddress, amount);
+            }
+            assetsReserves[tokenAddress] -= amountDiff;
+        }
+    }
+
+    /// @notice Update the poolAssetsResreves upon transferring the tokens
+    /// @param pool Address of the pool
+    /// @param tokenAddress Address of the token
+    /// @param amount Amount transferred to address(to)
+    function updatePoolAssetsReserve(
+        address pool,
+        address tokenAddress,
+        uint256 amount
+    ) internal returns (uint256 poolShare) {
+        poolShare = (poolsAssetsReserves[pool][tokenAddress] * EXP_SCALE) / assetsReserves[tokenAddress];
+
+        uint256 poolAmountShare = (poolShare * amount) / EXP_SCALE;
+        poolsAssetsReserves[pool][tokenAddress] -= poolAmountShare;
     }
 }

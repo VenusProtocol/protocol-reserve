@@ -76,6 +76,11 @@ contract XVSVaultTreasury is AccessControlledV8 {
         emit FundsTransferredToXVSStore(xvsStore, amountMantissa);
     }
 
+    /// @dev This function is called by protocolShareReserve
+    /// @param comptroller Comptroller address (pool)
+    /// @param asset Asset address.
+    function updateAssetsState(address comptroller, address asset) public {}
+
     /// @dev XVS vault setter
     /// @param xvsVault_ Address of the XVS vault
     /// @custom:event XVSVaultUpdated emits on success
