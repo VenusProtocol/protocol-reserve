@@ -155,7 +155,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     }
 
     /**
-     * @dev Fetches the list of prime markets and then accrues interest 
+     * @dev Fetches the list of prime markets and then accrues interest
      * to prime for each market
      */
     function _accruePrimeInterest() internal {
@@ -186,7 +186,12 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
                 DistributionConfig storage config = distributionTargets[i];
 
                 if (_config.schema == config.schema && config.destination == _config.destination) {
-                    emit DistributionConfigUpdated(config.destination, config.percentage, _config.percentage, config.schema);
+                    emit DistributionConfigUpdated(
+                        config.destination,
+                        config.percentage,
+                        _config.percentage,
+                        config.schema
+                    );
                     config.percentage = _config.percentage;
                     updated = true;
                 }
@@ -211,7 +216,10 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             }
         }
 
-        require(totalSchemaOnePercentage == MAX_PERCENT && totalSchemaTwoPercentage == MAX_PERCENT, "ProtocolShareReserve: Total Percentage must 100");
+        require(
+            totalSchemaOnePercentage == MAX_PERCENT && totalSchemaTwoPercentage == MAX_PERCENT,
+            "ProtocolShareReserve: Total Percentage must 100"
+        );
     }
 
     /**
@@ -242,7 +250,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      */
     function releaseFunds(address comptroller, address[] memory assets) external {
         _accruePrimeInterest();
-        
+
         for (uint i = 0; i < assets.length; i++) {
             _releaseFund(comptroller, assets[i]);
         }

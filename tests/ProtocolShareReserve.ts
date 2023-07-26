@@ -128,7 +128,7 @@ const configureDistribution = async (setup: SetupProtocolShareReserveFixture) =>
       schema: SCHEMA_TWO,
       percentage: 26,
       destination: setup.dao.address,
-    }
+    },
   ]);
 };
 
@@ -185,11 +185,13 @@ describe("ProtocolShareReserve: Tests", function () {
   it("update configuration of schemas", async () => {
     const protocolShareReserve = setup.protocolShareReserve;
     await expect(
-      protocolShareReserve.addOrUpdateDistributionConfig([{
-        schema: SCHEMA_ONE,
-        percentage: 30,
-        destination: signers[0].address,
-      }]),
+      protocolShareReserve.addOrUpdateDistributionConfig([
+        {
+          schema: SCHEMA_ONE,
+          percentage: 30,
+          destination: signers[0].address,
+        },
+      ]),
     ).to.be.revertedWith("ProtocolShareReserve: Total Percentage must 100");
 
     await protocolShareReserve.addOrUpdateDistributionConfig([
@@ -202,16 +204,10 @@ describe("ProtocolShareReserve: Tests", function () {
         schema: SCHEMA_ONE,
         percentage: 30,
         destination: setup.xvsVaultSwapper.address,
-      }
+      },
     ]);
 
     const config1 = await protocolShareReserve.distributionTargets(0);
-    const config2 = await protocolShareReserve.distributionTargets(1);
-    const config3 = await protocolShareReserve.distributionTargets(2);
-    const config4 = await protocolShareReserve.distributionTargets(3);
-    const config5 = await protocolShareReserve.distributionTargets(4);
-    const config6 = await protocolShareReserve.distributionTargets(5);
-    const config7 = await protocolShareReserve.distributionTargets(6);
 
     expect(config1.schema).to.equal(SCHEMA_ONE);
     expect(config1.destination).to.equal(setup.riskFundSwapper.address);
