@@ -150,7 +150,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         for (uint i = 0; i < markets.length; ++i) {
             address market = markets[i];
             IPrime(prime).accrueInterest(market);
-            _releaseFund(CORE_POOL_COMPTROLLER, IVToken(market).underlying());
+            _releaseFund(CORE_POOL_COMPTROLLER, IVToken(market).underlying(), distributionTargets.length);
         }
     }
 
@@ -251,12 +251,13 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     function releaseFunds(address comptroller, address[] memory assets) external {
         _accruePrimeInterest();
 
+        uint256 totalDistributionTargets = distributionTargets.length;
         for (uint i = 0; i < assets.length; ++i) {
-            _releaseFund(comptroller, assets[i]);
+            _releaseFund(comptroller, assets[i], totalDistributionTargets);
         }
     }
 
-    function _releaseFund(address comptroller, address asset) internal {
+    function _releaseFund(address comptroller, address asset, uint256 totalDistributionTargets) internal {
         uint256 schemaOneBalance = assetsReserves[comptroller][asset][Schema.ONE];
         uint256 schemaTwoBalance = assetsReserves[comptroller][asset][Schema.TWO];
 
@@ -267,7 +268,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         uint256 schemaOneTotalTransferAmount;
         uint256 schemaTwoTotalTransferAmount;
 
-        for (uint i = 0; i < distributionTargets.length; ++i) {
+        for (uint i = 0; i < totalDistributionTargets; ++i) {
             DistributionConfig storage _config = distributionTargets[i];
 
             uint256 transferAmount;
