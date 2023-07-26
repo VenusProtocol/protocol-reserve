@@ -54,6 +54,9 @@ abstract contract AbstractTokenTransformer is
     /// @notice Emitted when price oracle address is updated
     event PriceOracleUpdated(ResilientOracle oldPriceOracle, ResilientOracle priceOracle);
 
+    /// @notice Emitted when destination address is updated
+    event DestinationAddressUpdated(address oldDestinationAddress, address destinationAddress);
+
     /// @notice Emitted when exact amount of tokens are transform for tokens
     event TransformExactTokens(uint256 amountIn, uint256 amountOut);
 
@@ -138,6 +141,13 @@ abstract contract AbstractTokenTransformer is
     /// @custom:access Only Governance
     function setPriceOracle(ResilientOracle priceOracle_) external onlyOwner {
         _setPriceOracle(priceOracle_);
+    }
+
+    /// @notice Sets a new destination address
+    /// @param destinationAddress_ Address of the new price oracle to set
+    /// @custom:access Only Governance
+    function setDestination(address destinationAddress_) external onlyOwner {
+        _setDestination(destinationAddress_);
     }
 
     /// @notice Set the configuration for new or existing transform pair
@@ -336,23 +346,27 @@ abstract contract AbstractTokenTransformer is
     /// @notice A public function to sweep accidental ERC-20 transfers to this contract. Tokens are sent to admin (timelock)
     /// @param tokenAddress The address of the ERC-20 token to sweep
     /// @custom:event Emits SweepToken event on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/to address is zero
     /// @custom:access Only Governance
-    function sweepToken(address tokenAddress) external onlyOwner nonReentrant {
-        preSweepToken(tokenAddress);
+    function sweepToken(address tokenAddress, address to, uint256 amount) external onlyOwner nonReentrant {
+        ensureNonzeroAddress(tokenAddress);
+        ensureNonzeroAddress(to);
+
         IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
-        uint256 balance = token.balanceOf(address(this));
-        token.safeTransfer(owner(), balance);
+        postSweepToken(tokenAddress, amount);
+        token.safeTransfer(to, amount);
 
         emit SweepToken(address(token));
     }
 
     /// @notice Get the balance for specific token
     /// @param token Address of the token
-    function balanceOf(address token) external virtual returns (uint256 tokenBalance) {}
+    function balanceOf(address token) public virtual returns (uint256 tokenBalance) {}
 
-    /// @notice Operations to perform before sweepToken
-    /// @param token Address od the token
-    function preSweepToken(address token) public virtual {}
+    /// @notice Operations to perform after sweepToken
+    /// @param token Address of the token
+    /// @param amount Amount transferred to address(to)
+    function postSweepToken(address token, uint256 amount) public virtual {}
 
     /// @param accessControlManager_ Access control manager contract address
     /// @param priceOracle_ Resilient oracle address
@@ -374,7 +388,7 @@ abstract contract AbstractTokenTransformer is
         address destinationAddress_
     ) internal onlyInitializing {
         _setPriceOracle(priceOracle_);
-        destinationAddress = destinationAddress_;
+        _setDestination(destinationAddress_);
         transformationPaused = false;
     }
 
@@ -404,7 +418,7 @@ abstract contract AbstractTokenTransformer is
         priceOracle.updateAssetPrice(tokenAddressIn);
         priceOracle.updateAssetPrice(tokenAddressOut);
 
-        uint256 maxTokenOutLiquidity = IERC20Upgradeable(tokenAddressOut).balanceOf(address(this));
+        uint256 maxTokenOutReserve = balanceOf(tokenAddressOut);
         uint256 tokenInUnderlyingPrice = priceOracle.getPrice(tokenAddressIn);
         uint256 tokenOutUnderlyingPrice = priceOracle.getPrice(tokenAddressOut);
 
@@ -417,9 +431,9 @@ abstract contract AbstractTokenTransformer is
         amountTransformedMantissa = amountInMantissa;
 
         /// If contract has less liquity for tokenAddressOut than amountOutMantissa
-        if (maxTokenOutLiquidity < amountOutMantissa) {
-            amountTransformedMantissa = ((maxTokenOutLiquidity * EXP_SCALE) / tokenInToOutConversion);
-            amountOutMantissa = maxTokenOutLiquidity;
+        if (maxTokenOutReserve < amountOutMantissa) {
+            amountTransformedMantissa = ((maxTokenOutReserve * EXP_SCALE) / tokenInToOutConversion);
+            amountOutMantissa = maxTokenOutReserve;
         }
     }
 
@@ -449,7 +463,7 @@ abstract contract AbstractTokenTransformer is
         priceOracle.updateAssetPrice(tokenAddressIn);
         priceOracle.updateAssetPrice(tokenAddressOut);
 
-        uint256 maxTokenOutLiquidity = IERC20Upgradeable(tokenAddressOut).balanceOf(address(this));
+        uint256 maxTokenOutReserve = balanceOf(tokenAddressOut);
         uint256 tokenInUnderlyingPrice = priceOracle.getPrice(tokenAddressIn);
         uint256 tokenOutUnderlyingPrice = priceOracle.getPrice(tokenAddressOut);
 
@@ -462,9 +476,9 @@ abstract contract AbstractTokenTransformer is
         amountTransformedMantissa = amountOutMantissa;
 
         /// If contract has less liquity for tokenAddressOut than amountOutMantissa
-        if (maxTokenOutLiquidity < amountOutMantissa) {
-            amountInMantissa = ((maxTokenOutLiquidity * EXP_SCALE) / tokenInToOutConversion);
-            amountTransformedMantissa = maxTokenOutLiquidity;
+        if (maxTokenOutReserve < amountOutMantissa) {
+            amountInMantissa = ((maxTokenOutReserve * EXP_SCALE) / tokenInToOutConversion);
+            amountTransformedMantissa = maxTokenOutReserve;
         }
     }
 
@@ -505,9 +519,9 @@ abstract contract AbstractTokenTransformer is
         }
 
         IERC20Upgradeable tokenIn = IERC20Upgradeable(tokenAddressIn);
-        uint256 balanceBeforeDestination = tokenIn.balanceOf(destinationAddress);
+        uint256 balanceBeforeDestination = balanceOf(tokenAddressIn);
         tokenIn.safeTransferFrom(msg.sender, destinationAddress, amountTransformedMantissa);
-        uint256 balanceAfterDestination = tokenIn.balanceOf(destinationAddress);
+        uint256 balanceAfterDestination = balanceOf(tokenAddressIn);
 
         IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
         uint256 balanceBeforeTo = tokenOut.balanceOf(to);
@@ -551,9 +565,9 @@ abstract contract AbstractTokenTransformer is
         }
 
         IERC20Upgradeable tokenIn = IERC20Upgradeable(tokenAddressIn);
-        uint256 balanceBeforeDestination = tokenIn.balanceOf(destinationAddress);
+        uint256 balanceBeforeDestination = balanceOf(tokenAddressIn);
         tokenIn.safeTransferFrom(msg.sender, destinationAddress, amountInMantissa);
-        uint256 balanceAfterDestination = tokenIn.balanceOf(destinationAddress);
+        uint256 balanceAfterDestination = balanceOf(tokenAddressIn);
 
         IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
         uint256 balanceBeforeTo = tokenOut.balanceOf(to);
@@ -567,7 +581,7 @@ abstract contract AbstractTokenTransformer is
     /// @notice Sets a new price oracle
     /// @param priceOracle_ Address of the new price oracle to set
     /// @custom:event Emits PriceOracleUpdated event on success
-    /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
+    /// @custom:error ZeroAddressNotAllowed is thrown when price oracle address is zero
     function _setPriceOracle(ResilientOracle priceOracle_) internal {
         ensureNonzeroAddress(address(priceOracle_));
 
@@ -575,6 +589,19 @@ abstract contract AbstractTokenTransformer is
         priceOracle = priceOracle_;
 
         emit PriceOracleUpdated(oldPriceOracle, priceOracle);
+    }
+
+    /// @notice Sets a new destination address
+    /// @param destinationAddress_ Address of the new price oracle to set
+    /// @custom:event Emits DestinationAddressUpdated event on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when destination address is zero
+    function _setDestination(address destinationAddress_) internal {
+        ensureNonzeroAddress(destinationAddress_);
+
+        address oldDestinationAddress = destinationAddress;
+        destinationAddress = destinationAddress_;
+
+        emit DestinationAddressUpdated(oldDestinationAddress, destinationAddress);
     }
 
     /// @notice Hook to perform after transforming tokens
