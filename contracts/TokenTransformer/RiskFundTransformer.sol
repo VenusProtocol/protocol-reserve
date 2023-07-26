@@ -54,10 +54,9 @@ contract RiskFundTransformer is AbstractTokenTransformer, ReserveHelpers {
     /// @param amountOut Amount of tokenOut transformered
     function postTransformationHook(address tokenInAddress, uint256 amountIn, uint256 amountOut) internal override {
         address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenInAddress);
-
+        uint256 assetReserve = assetsReserves[tokenInAddress];
         for (uint256 i; i < pools.length; ++i) {
-            uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenInAddress] * EXP_SCALE) /
-                assetsReserves[tokenInAddress];
+            uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenInAddress] * EXP_SCALE) / assetReserve;
             if (poolShare == 0) continue;
             updatePoolAssetsReserve(pools[i], tokenInAddress, amountIn, poolShare);
             uint256 poolAmountOutShare = (poolShare * amountOut) / EXP_SCALE;
@@ -77,10 +76,9 @@ contract RiskFundTransformer is AbstractTokenTransformer, ReserveHelpers {
         uint256 amountDiff = amount - balanceDiff;
         if (amountDiff > 0) {
             address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenAddress);
-
+            uint256 assetReserve = assetsReserves[tokenAddress];
             for (uint256 i; i < pools.length; ++i) {
-                uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenAddress] * EXP_SCALE) /
-                    assetsReserves[tokenAddress];
+                uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenAddress] * EXP_SCALE) / assetReserve;
                 if (poolShare == 0) continue;
                 updatePoolAssetsReserve(pools[i], tokenAddress, amount, poolShare);
             }
