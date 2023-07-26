@@ -85,6 +85,17 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         uint256 newBalance
     );
 
+    /// @notice Event emitted when distribution configuration is updated
+    event DistributionConfigUpdated(
+        address indexed destination,
+        uint256 oldPercentage,
+        uint256 newPercentage,
+        Schema schema
+    );
+
+    /// @notice Event emitted when distribution configuration is added
+    event DistributionConfigAdded(address indexed destination, uint256 percentage, Schema schema);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -175,6 +186,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
                 DistributionConfig storage config = distributionTargets[i];
 
                 if (_config.schema == config.schema && config.destination == _config.destination) {
+                    emit DistributionConfigUpdated(config.destination, config.percentage, _config.percentage, config.schema);
                     config.percentage = _config.percentage;
                     updated = true;
                 }
@@ -182,6 +194,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
             if (!updated) {
                 distributionTargets.push(_config);
+                emit DistributionConfigAdded(_config.destination, _config.percentage, _config.schema);
             }
         }
 
