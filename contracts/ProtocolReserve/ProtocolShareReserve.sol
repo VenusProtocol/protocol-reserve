@@ -314,9 +314,8 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         require(ComptrollerInterface(comptroller).isComptroller(), "ProtocolShareReserve: Comptroller address invalid");
         require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
         require(
-            (comptroller != CORE_POOL_COMPTROLLER &&
-                PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0)) ||
-                (comptroller == CORE_POOL_COMPTROLLER),
+            comptroller == CORE_POOL_COMPTROLLER ||
+                PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0),
             "ProtocolShareReserve: The pool doesn't support the asset"
         );
 
