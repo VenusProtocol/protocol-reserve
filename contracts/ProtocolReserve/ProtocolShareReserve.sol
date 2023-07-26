@@ -194,6 +194,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
                     );
                     config.percentage = _config.percentage;
                     updated = true;
+                    break;
                 }
             }
 
