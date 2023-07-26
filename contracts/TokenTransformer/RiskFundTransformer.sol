@@ -56,9 +56,10 @@ contract RiskFundTransformer is AbstractTokenTransformer, ReserveHelpers {
         address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenInAddress);
 
         for (uint256 i; i < pools.length; ++i) {
-            uint256 poolShare = updatePoolAssetsReserve(pools[i], tokenInAddress, amountIn);
+            uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenInAddress] * EXP_SCALE) /
+                assetsReserves[tokenInAddress];
             if (poolShare == 0) continue;
-
+            updatePoolAssetsReserve(pools[i], tokenInAddress, amountIn, poolShare);
             uint256 poolAmountOutShare = (poolShare * amountOut) / EXP_SCALE;
             IRiskFund(destinationAddress).updatePoolState(pools[i], poolAmountOutShare);
         }
@@ -78,7 +79,10 @@ contract RiskFundTransformer is AbstractTokenTransformer, ReserveHelpers {
             address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenAddress);
 
             for (uint256 i; i < pools.length; ++i) {
-                updatePoolAssetsReserve(pools[i], tokenAddress, amount);
+                uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenAddress] * EXP_SCALE) /
+                    assetsReserves[tokenAddress];
+                if (poolShare == 0) continue;
+                updatePoolAssetsReserve(pools[i], tokenAddress, amount, poolShare);
             }
             assetsReserves[tokenAddress] -= amountDiff;
         }
@@ -88,13 +92,8 @@ contract RiskFundTransformer is AbstractTokenTransformer, ReserveHelpers {
     /// @param pool Address of the pool
     /// @param tokenAddress Address of the token
     /// @param amount Amount transferred to address(to)
-    function updatePoolAssetsReserve(
-        address pool,
-        address tokenAddress,
-        uint256 amount
-    ) internal returns (uint256 poolShare) {
-        poolShare = (poolsAssetsReserves[pool][tokenAddress] * EXP_SCALE) / assetsReserves[tokenAddress];
-
+    /// @param poolShare share for corresponding pool
+    function updatePoolAssetsReserve(address pool, address tokenAddress, uint256 amount, uint256 poolShare) internal {
         uint256 poolAmountShare = (poolShare * amount) / EXP_SCALE;
         poolsAssetsReserves[pool][tokenAddress] -= poolAmountShare;
     }
