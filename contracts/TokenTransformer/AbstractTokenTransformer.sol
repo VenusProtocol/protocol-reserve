@@ -517,19 +517,13 @@ abstract contract AbstractTokenTransformer is
         if (amountOutMantissa < amountOutMinMantissa) {
             revert AmountOutLowerThanMinRequired(amountOutMantissa, amountOutMinMantissa);
         }
-
-        IERC20Upgradeable tokenIn = IERC20Upgradeable(tokenAddressIn);
-        uint256 balanceBeforeDestination = balanceOf(tokenAddressIn);
-        tokenIn.safeTransferFrom(msg.sender, destinationAddress, amountTransformedMantissa);
-        uint256 balanceAfterDestination = balanceOf(tokenAddressIn);
-
-        IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
-        uint256 balanceBeforeTo = tokenOut.balanceOf(to);
-        tokenOut.safeTransfer(to, amountOutMantissa);
-        uint256 balanceAfterTo = tokenOut.balanceOf(to);
-
-        actualAmountIn = balanceAfterDestination - balanceBeforeDestination;
-        actualAmountOut = balanceAfterTo - balanceBeforeTo;
+        (actualAmountIn, actualAmountOut) = _actualAmounts(
+            tokenAddressIn,
+            tokenAddressOut,
+            to,
+            amountInMantissa,
+            amountTransformedMantissa
+        );
     }
 
     /// @notice Transform tokens for tokenAddressIn for exact amount of tokenAddressOut
@@ -563,16 +557,39 @@ abstract contract AbstractTokenTransformer is
         if (amountInMantissa > amountInMaxMantissa) {
             revert AmountInHigherThanMax(amountInMantissa, amountInMaxMantissa);
         }
+        (actualAmountIn, actualAmountOut) = _actualAmounts(
+            tokenAddressIn,
+            tokenAddressOut,
+            to,
+            amountInMantissa,
+            amountTransformedMantissa
+        );
+    }
 
-        IERC20Upgradeable tokenIn = IERC20Upgradeable(tokenAddressIn);
+    /// @notice return actualAmounts from reservers for tokenAddressIn and tokenAddressOut
+    /// @param tokenAddressIn Address of the token to transform
+    /// @param tokenAddressOut Address of the token to get after transform
+    /// @param to Address of the tokenAddressOut receiver
+    /// @param amountInMantissa Amount of tokenAddressIn supposed to get transferred
+    /// @param amountTransformedMantissa Amount of tokenAddressOut supposed to get transferred
+    /// @return actualAmountIn Actual amount of tokenAddressIn transferred
+    /// @return actualAmountOut Actual amount of tokenAddressOut transferred
+    function _actualAmounts(
+        address tokenAddressIn,
+        address tokenAddressOut,
+        address to,
+        uint256 amountInMantissa,
+        uint256 amountTransformedMantissa
+    ) internal returns (uint256 actualAmountIn, uint256 actualAmountOut) {
         uint256 balanceBeforeDestination = balanceOf(tokenAddressIn);
+        IERC20Upgradeable tokenIn = IERC20Upgradeable(tokenAddressIn);
         tokenIn.safeTransferFrom(msg.sender, destinationAddress, amountInMantissa);
         uint256 balanceAfterDestination = balanceOf(tokenAddressIn);
 
+        uint256 balanceBeforeTo = balanceOf(tokenAddressOut);
         IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
-        uint256 balanceBeforeTo = tokenOut.balanceOf(to);
         tokenOut.safeTransfer(to, amountTransformedMantissa);
-        uint256 balanceAfterTo = tokenOut.balanceOf(to);
+        uint256 balanceAfterTo = balanceOf(tokenAddressOut);
 
         actualAmountIn = balanceAfterDestination - balanceBeforeDestination;
         actualAmountOut = balanceAfterTo - balanceBeforeTo;
