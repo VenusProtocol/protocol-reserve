@@ -238,6 +238,11 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     function _releaseFund(address comptroller, address asset) internal {
         uint256 schemaOneBalance = assetsReserves[comptroller][asset][Schema.ONE];
         uint256 schemaTwoBalance = assetsReserves[comptroller][asset][Schema.TWO];
+
+        if (schemaOneBalance + schemaTwoBalance == 0) {
+            return;
+        }
+
         uint256 schemaOneTotalTransferAmount;
         uint256 schemaTwoTotalTransferAmount;
 
