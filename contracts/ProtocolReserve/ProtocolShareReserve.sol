@@ -44,7 +44,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     mapping(address => mapping(address => mapping(Schema => uint256))) public assetsReserves;
 
     /// @notice asset => balance
-    mapping(address => uint256) private totalAssetReserve;
+    mapping(address => uint256) public totalAssetReserve;
 
     /// @notice configuration for different income distribution targets
     DistributionConfig[] public distributionTargets;
