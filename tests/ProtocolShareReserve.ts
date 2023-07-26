@@ -93,47 +93,43 @@ const fixture = async (): Promise<SetupProtocolShareReserveFixture> => {
  * SCHEMA 2: Risk Fund Swapper (48 %), XVS Vault Reward (26 %) and DAO (26 %)
  */
 const configureDistribution = async (setup: SetupProtocolShareReserveFixture) => {
-  await setup.protocolShareReserve.addOrUpdateDistributionConfig({
-    schema: SCHEMA_ONE,
-    percentage: 40,
-    destination: setup.riskFundSwapper.address,
-  });
-
-  await setup.protocolShareReserve.addOrUpdateDistributionConfig({
-    schema: SCHEMA_ONE,
-    percentage: 20,
-    destination: setup.xvsVaultSwapper.address,
-  });
-
-  await setup.protocolShareReserve.addOrUpdateDistributionConfig({
-    schema: SCHEMA_ONE,
-    percentage: 20,
-    destination: setup.dao.address,
-  });
-
-  await setup.protocolShareReserve.addOrUpdateDistributionConfig({
-    schema: SCHEMA_ONE,
-    percentage: 20,
-    destination: setup.prime.address,
-  });
-
-  await setup.protocolShareReserve.addOrUpdateDistributionConfig({
-    schema: SCHEMA_TWO,
-    percentage: 48,
-    destination: setup.riskFundSwapper.address,
-  });
-
-  await setup.protocolShareReserve.addOrUpdateDistributionConfig({
-    schema: SCHEMA_TWO,
-    percentage: 26,
-    destination: setup.xvsVaultSwapper.address,
-  });
-
-  await setup.protocolShareReserve.addOrUpdateDistributionConfig({
-    schema: SCHEMA_TWO,
-    percentage: 26,
-    destination: setup.dao.address,
-  });
+  await setup.protocolShareReserve.addOrUpdateDistributionConfig([
+    {
+      schema: SCHEMA_ONE,
+      percentage: 40,
+      destination: setup.riskFundSwapper.address,
+    },
+    {
+      schema: SCHEMA_ONE,
+      percentage: 20,
+      destination: setup.xvsVaultSwapper.address,
+    },
+    {
+      schema: SCHEMA_ONE,
+      percentage: 20,
+      destination: setup.dao.address,
+    },
+    {
+      schema: SCHEMA_ONE,
+      percentage: 20,
+      destination: setup.prime.address,
+    },
+    {
+      schema: SCHEMA_TWO,
+      percentage: 48,
+      destination: setup.riskFundSwapper.address,
+    },
+    {
+      schema: SCHEMA_TWO,
+      percentage: 26,
+      destination: setup.xvsVaultSwapper.address,
+    },
+    {
+      schema: SCHEMA_TWO,
+      percentage: 26,
+      destination: setup.dao.address,
+    }
+  ]);
 };
 
 describe("ProtocolShareReserve: Tests", function () {
@@ -189,20 +185,34 @@ describe("ProtocolShareReserve: Tests", function () {
   it("update configuration of schemas", async () => {
     const protocolShareReserve = setup.protocolShareReserve;
     await expect(
-      protocolShareReserve.addOrUpdateDistributionConfig({
+      protocolShareReserve.addOrUpdateDistributionConfig([{
         schema: SCHEMA_ONE,
         percentage: 30,
         destination: signers[0].address,
-      }),
-    ).to.be.revertedWith("ProtocolShareReserve: Percentage must be between 0 and 100");
+      }]),
+    ).to.be.revertedWith("ProtocolShareReserve: Total Percentage must 100");
 
-    await protocolShareReserve.addOrUpdateDistributionConfig({
-      schema: SCHEMA_ONE,
-      percentage: 30,
-      destination: setup.riskFundSwapper.address,
-    });
+    await protocolShareReserve.addOrUpdateDistributionConfig([
+      {
+        schema: SCHEMA_ONE,
+        percentage: 30,
+        destination: setup.riskFundSwapper.address,
+      },
+      {
+        schema: SCHEMA_ONE,
+        percentage: 30,
+        destination: setup.xvsVaultSwapper.address,
+      }
+    ]);
 
     const config1 = await protocolShareReserve.distributionTargets(0);
+    const config2 = await protocolShareReserve.distributionTargets(1);
+    const config3 = await protocolShareReserve.distributionTargets(2);
+    const config4 = await protocolShareReserve.distributionTargets(3);
+    const config5 = await protocolShareReserve.distributionTargets(4);
+    const config6 = await protocolShareReserve.distributionTargets(5);
+    const config7 = await protocolShareReserve.distributionTargets(6);
+
     expect(config1.schema).to.equal(SCHEMA_ONE);
     expect(config1.destination).to.equal(setup.riskFundSwapper.address);
     expect(config1.percentage).to.equal(30);

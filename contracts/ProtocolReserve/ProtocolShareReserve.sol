@@ -46,7 +46,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     /// @notice asset => balance
     mapping(address => uint256) private totalAssetReserve;
 
-    /// @notice configuration for different income distribution targers
+    /// @notice configuration for different income distribution targets
     DistributionConfig[] public distributionTargets;
 
     /// @notice Emitted when pool registry address is updated
@@ -156,36 +156,49 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     }
 
     /**
-     * @dev Add or update destination target based on destination address
-     * @param config configuration of the destination.
+     * @dev Add or update destination targets based on destination address
+     * @param configs configurations of the destinations.
      */
-    function addOrUpdateDistributionConfig(DistributionConfig memory config) external {
+    function addOrUpdateDistributionConfig(DistributionConfig[] memory configs) external {
         _checkAccessAllowed("addOrUpdateDistributionConfig(DistributionConfig)");
-        require(config.destination != address(0), "ProtocolShareReserve: Destination address invalid");
 
         //we need to accrue and release funds to prime before updating the distribution configuration
         //because prime relies on getUnreleasedFunds and it's return value may change after config update
         _accrueAndReleaseFundsToPrime();
 
-        uint256 total = 0;
-        bool updated = false;
-        for (uint i = 0; i < distributionTargets.length; i++) {
-            DistributionConfig storage _config = distributionTargets[i];
-            if (_config.schema == config.schema) {
-                if (config.destination == _config.destination) {
-                    _config.percentage = config.percentage;
+        for (uint i = 0; i < configs.length; i++) {
+            DistributionConfig memory _config = configs[i];
+            require(_config.destination != address(0), "ProtocolShareReserve: Destination address invalid");
+
+            bool updated = false;
+            for (uint i = 0; i < distributionTargets.length; i++) {
+                DistributionConfig storage config = distributionTargets[i];
+
+                if (_config.schema == config.schema && config.destination == _config.destination) {
+                    config.percentage = _config.percentage;
                     updated = true;
                 }
-                total += _config.percentage;
+            }
+
+            if (!updated) {
+                distributionTargets.push(_config);
             }
         }
 
-        if (!updated) {
-            total += config.percentage;
-            distributionTargets.push(config);
+        uint totalSchemaOnePercentage;
+        uint totalSchemaTwoPercentage;
+
+        for (uint i = 0; i < distributionTargets.length; i++) {
+            DistributionConfig storage config = distributionTargets[i];
+
+            if (config.schema == Schema.ONE) {
+                totalSchemaOnePercentage += config.percentage;
+            } else {
+                totalSchemaTwoPercentage += config.percentage;
+            }
         }
 
-        require(total <= MAX_PERCENT, "ProtocolShareReserve: Percentage must be between 0 and 100");
+        require(totalSchemaOnePercentage == MAX_PERCENT && totalSchemaTwoPercentage == MAX_PERCENT, "ProtocolShareReserve: Total Percentage must 100");
     }
 
     /**
