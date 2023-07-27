@@ -39,7 +39,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
     /// @notice address of vBNB contract
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address immutable vBNB;
+    address public immutable vBNB;
 
     /// @notice address of Prime contract
     address public prime;
