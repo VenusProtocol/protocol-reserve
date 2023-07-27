@@ -317,7 +317,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         uint256 schemaTwoTotalTransferAmount;
 
         for (uint i = 0; i < totalDistributionTargets; ++i) {
-            DistributionConfig storage _config = distributionTargets[i];
+            DistributionConfig memory _config = distributionTargets[i];
 
             uint256 transferAmount;
             if (_config.schema == Schema.ONE) {
