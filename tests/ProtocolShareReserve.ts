@@ -15,8 +15,9 @@ import {
   ProtocolShareReserve,
 } from "../typechain";
 
-const SCHEMA_ONE = 0;
-const SCHEMA_TWO = 1;
+const SCHEMA_DEFAULT = 0;
+const SCHEMA_SPREAD_PRIME_CORE = 1;
+
 const SPREAD_INCOME = 0;
 const LIQUIDATION_INCOME = 1;
 
@@ -102,37 +103,37 @@ const fixture = async (): Promise<SetupProtocolShareReserveFixture> => {
 const configureDistribution = async (setup: SetupProtocolShareReserveFixture) => {
   await setup.protocolShareReserve.addOrUpdateDistributionConfigs([
     {
-      schema: SCHEMA_ONE,
+      schema: SCHEMA_SPREAD_PRIME_CORE,
       percentage: 40,
       destination: setup.riskFundSwapper.address,
     },
     {
-      schema: SCHEMA_ONE,
+      schema: SCHEMA_SPREAD_PRIME_CORE,
       percentage: 20,
       destination: setup.xvsVaultSwapper.address,
     },
     {
-      schema: SCHEMA_ONE,
+      schema: SCHEMA_SPREAD_PRIME_CORE,
       percentage: 20,
       destination: setup.dao.address,
     },
     {
-      schema: SCHEMA_ONE,
+      schema: SCHEMA_SPREAD_PRIME_CORE,
       percentage: 20,
       destination: setup.prime.address,
     },
     {
-      schema: SCHEMA_TWO,
+      schema: SCHEMA_DEFAULT,
       percentage: 48,
       destination: setup.riskFundSwapper.address,
     },
     {
-      schema: SCHEMA_TWO,
+      schema: SCHEMA_DEFAULT,
       percentage: 26,
       destination: setup.xvsVaultSwapper.address,
     },
     {
-      schema: SCHEMA_TWO,
+      schema: SCHEMA_DEFAULT,
       percentage: 26,
       destination: setup.dao.address,
     },
@@ -160,31 +161,31 @@ describe("ProtocolShareReserve: Tests", function () {
     const config6 = await protocolShareReserve.distributionTargets(5);
     const config7 = await protocolShareReserve.distributionTargets(6);
 
-    expect(config1.schema).to.equal(SCHEMA_ONE);
+    expect(config1.schema).to.equal(SCHEMA_SPREAD_PRIME_CORE);
     expect(config1.destination).to.equal(setup.riskFundSwapper.address);
     expect(config1.percentage).to.equal(40);
 
-    expect(config2.schema).to.equal(SCHEMA_ONE);
+    expect(config2.schema).to.equal(SCHEMA_SPREAD_PRIME_CORE);
     expect(config2.destination).to.equal(setup.xvsVaultSwapper.address);
     expect(config2.percentage).to.equal(20);
 
-    expect(config3.schema).to.equal(SCHEMA_ONE);
+    expect(config3.schema).to.equal(SCHEMA_SPREAD_PRIME_CORE);
     expect(config3.destination).to.equal(setup.dao.address);
     expect(config3.percentage).to.equal(20);
 
-    expect(config4.schema).to.equal(SCHEMA_ONE);
+    expect(config4.schema).to.equal(SCHEMA_SPREAD_PRIME_CORE);
     expect(config4.destination).to.equal(setup.prime.address);
     expect(config4.percentage).to.equal(20);
 
-    expect(config5.schema).to.equal(SCHEMA_TWO);
+    expect(config5.schema).to.equal(SCHEMA_DEFAULT);
     expect(config5.destination).to.equal(setup.riskFundSwapper.address);
     expect(config5.percentage).to.equal(48);
 
-    expect(config6.schema).to.equal(SCHEMA_TWO);
+    expect(config6.schema).to.equal(SCHEMA_DEFAULT);
     expect(config6.destination).to.equal(setup.xvsVaultSwapper.address);
     expect(config6.percentage).to.equal(26);
 
-    expect(config7.schema).to.equal(SCHEMA_TWO);
+    expect(config7.schema).to.equal(SCHEMA_DEFAULT);
     expect(config7.destination).to.equal(setup.dao.address);
     expect(config7.percentage).to.equal(26);
   });
@@ -194,7 +195,7 @@ describe("ProtocolShareReserve: Tests", function () {
     await expect(
       protocolShareReserve.addOrUpdateDistributionConfigs([
         {
-          schema: SCHEMA_ONE,
+          schema: SCHEMA_SPREAD_PRIME_CORE,
           percentage: 30,
           destination: signers[0].address,
         },
@@ -203,12 +204,12 @@ describe("ProtocolShareReserve: Tests", function () {
 
     await protocolShareReserve.addOrUpdateDistributionConfigs([
       {
-        schema: SCHEMA_ONE,
+        schema: SCHEMA_SPREAD_PRIME_CORE,
         percentage: 30,
         destination: setup.riskFundSwapper.address,
       },
       {
-        schema: SCHEMA_ONE,
+        schema: SCHEMA_SPREAD_PRIME_CORE,
         percentage: 30,
         destination: setup.xvsVaultSwapper.address,
       },
@@ -216,7 +217,7 @@ describe("ProtocolShareReserve: Tests", function () {
 
     const config1 = await protocolShareReserve.distributionTargets(0);
 
-    expect(config1.schema).to.equal(SCHEMA_ONE);
+    expect(config1.schema).to.equal(SCHEMA_SPREAD_PRIME_CORE);
     expect(config1.destination).to.equal(setup.riskFundSwapper.address);
     expect(config1.percentage).to.equal(30);
   });
@@ -244,23 +245,23 @@ describe("ProtocolShareReserve: Tests", function () {
     await prime.vTokenForAsset.returns(ethers.constants.AddressZero);
 
     expect(
-      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockDAI.address, SCHEMA_ONE),
+      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockDAI.address, SCHEMA_SPREAD_PRIME_CORE),
     ).to.equal(100);
     expect(
-      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockDAI.address, SCHEMA_TWO),
+      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockDAI.address, SCHEMA_DEFAULT),
     ).to.equal(100);
 
     //Transfer liquidation and spread income from asset not part of prime program
     await mockUSDC.transfer(protocolShareReserve.address, 100);
     await protocolShareReserve.updateAssetsState(corePoolComptroller.address, mockUSDC.address, SPREAD_INCOME);
     expect(
-      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockUSDC.address, SCHEMA_TWO),
+      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockUSDC.address, SCHEMA_DEFAULT),
     ).to.equal(100);
 
     await mockUSDC.transfer(protocolShareReserve.address, 100);
     await protocolShareReserve.updateAssetsState(corePoolComptroller.address, mockUSDC.address, LIQUIDATION_INCOME);
     expect(
-      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockUSDC.address, SCHEMA_TWO),
+      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockUSDC.address, SCHEMA_DEFAULT),
     ).to.equal(200);
 
     //Transfer liquidation and spread income from asset part of IL
@@ -268,12 +269,12 @@ describe("ProtocolShareReserve: Tests", function () {
     await mockUSDT.transfer(protocolShareReserve.address, 100);
     await protocolShareReserve.updateAssetsState(isolatedPoolComptroller.address, mockUSDT.address, SPREAD_INCOME);
     expect(
-      await protocolShareReserve.assetsReserves(isolatedPoolComptroller.address, mockUSDT.address, SCHEMA_TWO),
+      await protocolShareReserve.assetsReserves(isolatedPoolComptroller.address, mockUSDT.address, SCHEMA_DEFAULT),
     ).to.equal(100);
     await mockUSDT.transfer(protocolShareReserve.address, 100);
     await protocolShareReserve.updateAssetsState(isolatedPoolComptroller.address, mockUSDT.address, LIQUIDATION_INCOME);
     expect(
-      await protocolShareReserve.assetsReserves(isolatedPoolComptroller.address, mockUSDT.address, SCHEMA_TWO),
+      await protocolShareReserve.assetsReserves(isolatedPoolComptroller.address, mockUSDT.address, SCHEMA_DEFAULT),
     ).to.equal(200);
 
     //Release core comptroller income
@@ -292,7 +293,7 @@ describe("ProtocolShareReserve: Tests", function () {
     expect(
       await protocolShareReserve.getUnreleasedFunds(
         isolatedPoolComptroller.address,
-        SCHEMA_ONE,
+        SCHEMA_SPREAD_PRIME_CORE,
         prime.address,
         mockUSDT.address,
       ),
@@ -301,7 +302,7 @@ describe("ProtocolShareReserve: Tests", function () {
     expect(
       await protocolShareReserve.getUnreleasedFunds(
         isolatedPoolComptroller.address,
-        SCHEMA_TWO,
+        SCHEMA_DEFAULT,
         xvsVaultSwapper.address,
         mockUSDT.address,
       ),
@@ -310,7 +311,7 @@ describe("ProtocolShareReserve: Tests", function () {
     expect(
       await protocolShareReserve.getUnreleasedFunds(
         isolatedPoolComptroller.address,
-        SCHEMA_TWO,
+        SCHEMA_DEFAULT,
         riskFundSwapper.address,
         mockUSDT.address,
       ),
@@ -319,7 +320,7 @@ describe("ProtocolShareReserve: Tests", function () {
     expect(
       await protocolShareReserve.getUnreleasedFunds(
         isolatedPoolComptroller.address,
-        SCHEMA_TWO,
+        SCHEMA_DEFAULT,
         dao.address,
         mockUSDT.address,
       ),
@@ -335,22 +336,22 @@ describe("ProtocolShareReserve: Tests", function () {
 
     //Check if all funds are released
     expect(
-      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockDAI.address, SCHEMA_ONE),
+      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockDAI.address, SCHEMA_SPREAD_PRIME_CORE),
     ).to.equal(0);
     expect(
-      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockDAI.address, SCHEMA_TWO),
+      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockDAI.address, SCHEMA_DEFAULT),
     ).to.equal(0);
     expect(
-      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockUSDC.address, SCHEMA_TWO),
+      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockUSDC.address, SCHEMA_DEFAULT),
     ).to.equal(0);
     expect(
-      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockUSDC.address, SCHEMA_TWO),
+      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockUSDC.address, SCHEMA_DEFAULT),
     ).to.equal(0);
     expect(
-      await protocolShareReserve.assetsReserves(isolatedPoolComptroller.address, mockUSDT.address, SCHEMA_TWO),
+      await protocolShareReserve.assetsReserves(isolatedPoolComptroller.address, mockUSDT.address, SCHEMA_DEFAULT),
     ).to.equal(0);
     expect(
-      await protocolShareReserve.assetsReserves(isolatedPoolComptroller.address, mockUSDT.address, SCHEMA_TWO),
+      await protocolShareReserve.assetsReserves(isolatedPoolComptroller.address, mockUSDT.address, SCHEMA_DEFAULT),
     ).to.equal(0);
   });
 });

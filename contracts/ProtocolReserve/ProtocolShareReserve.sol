@@ -301,7 +301,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
         for (uint schemaValue = 0; schemaValue <= totalSchemas - 1; ++schemaValue) {
             schemaBalances[schemaValue] = assetsReserves[comptroller][asset][Schema(schemaValue)];
-            totalBalance = schemaBalances[schemaValue];
+            totalBalance += schemaBalances[schemaValue];
         }
 
         if (totalBalance == 0) {
