@@ -339,11 +339,11 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     }
 
     function getSchema(address comptroller, address asset, IncomeType incomeType) internal returns (Schema schema) {
-        schema = DEFAULT;
+        schema = Schema.DEFAULT;
         address vToken = IPrime(prime).vTokenForAsset(asset);
 
         if (vToken != address(0) && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
-            schema = Schema.Schema.SPREAD_PRIME_CORE;
+            schema = Schema.SPREAD_PRIME_CORE;
         }
     }
 
