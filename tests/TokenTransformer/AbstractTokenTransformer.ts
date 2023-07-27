@@ -80,6 +80,7 @@ describe("MockTransformer: tests", () => {
   beforeEach(async () => {
     await loadFixture(fixture);
   });
+
   describe("Transform tokens for exact tokens", async () => {
     beforeEach(async () => {
       await tokenInDeflationary.connect(owner).approve(transformer.address, convertToUnit("1", 18));
@@ -90,6 +91,7 @@ describe("MockTransformer: tests", () => {
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
     });
+
     it("Success on transform exact tokens", async () => {
       const MAX_AMOUNT_IN = convertToUnit(".25", 18);
       const AMOUNT_OUT = convertToUnit(".5", 18);
@@ -108,6 +110,7 @@ describe("MockTransformer: tests", () => {
 
       await expect(tx).to.emit(transformer, "TransformForExactTokens").withArgs(expectedResults[1], expectedResults[0]);
     });
+
     it("Revert on lower amount out than expected", async () => {
       await transformer.setTransformationConfig(TransformationConfig);
       await expect(
@@ -142,6 +145,7 @@ describe("MockTransformer: tests", () => {
       ).to.be.revertedWithCustomError(transformer, "AmountInOrAmountOutMismatched");
     });
   });
+
   describe("Transform exact tokens for tokens", async () => {
     beforeEach(async () => {
       await tokenInDeflationary.connect(owner).approve(transformer.address, convertToUnit("1", 18));
@@ -152,6 +156,7 @@ describe("MockTransformer: tests", () => {
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
     });
+
     it("Success on transform exact tokens", async () => {
       const AMOUNT_IN = convertToUnit(".25", 18);
       const MIN_AMOUNT_OUT = convertToUnit(".5", 18);
@@ -635,7 +640,7 @@ describe("MockTransformer: tests", () => {
         [await owner.getAddress(), transformer.address],
         [-1000, 1000],
       );
-      await expect(transformer.sweepToken(tokenIn.address)).to.changeTokenBalances(
+      await expect(transformer.sweepToken(tokenIn.address, await owner.getAddress(), 1000)).to.changeTokenBalances(
         tokenIn,
         [await owner.getAddress(), transformer.address],
         [1000, -1000],

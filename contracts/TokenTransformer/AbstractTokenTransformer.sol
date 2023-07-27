@@ -521,8 +521,8 @@ abstract contract AbstractTokenTransformer is
             tokenAddressIn,
             tokenAddressOut,
             to,
-            amountInMantissa,
-            amountTransformedMantissa
+            amountTransformedMantissa,
+            amountOutMantissa
         );
     }
 
