@@ -145,8 +145,8 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      * @dev Add or update destination targets based on destination address
      * @param configs configurations of the destinations.
      */
-    function addOrUpdateDistributionConfig(DistributionConfig[] memory configs) external {
-        _checkAccessAllowed("addOrUpdateDistributionConfig(DistributionConfig)");
+    function addOrUpdateDistributionConfigs(DistributionConfig[] memory configs) external {
+        _checkAccessAllowed("addOrUpdateDistributionConfigs(DistributionConfig)");
 
         //we need to accrue and release funds to prime before updating the distribution configuration
         //because prime relies on getUnreleasedFunds and it's return value may change after config update
