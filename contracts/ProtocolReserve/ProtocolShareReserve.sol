@@ -272,13 +272,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             "ProtocolShareReserve: The pool doesn't support the asset"
         );
 
-        Schema schema = Schema.TWO;
-        address vToken = IPrime(prime).vTokenForAsset(asset);
-
-        if (vToken != address(0) && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
-            schema = Schema.ONE;
-        }
-
+        Schema schema = getSchema(comptroller, asset, incomeType);
         uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
         uint256 assetReserve = totalAssetReserve[asset];
 
@@ -369,6 +363,15 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             return WBNB;
         } else {
             return IVToken(vToken).underlying();
+        }
+    }
+
+    function getSchema(address comptroller, address asset, IncomeType incomeType) internal returns (Schema schema) {
+        schema = Schema.TWO;
+        address vToken = IPrime(prime).vTokenForAsset(asset);
+
+        if (vToken != address(0) && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
+            schema = Schema.ONE;
         }
     }
 }
