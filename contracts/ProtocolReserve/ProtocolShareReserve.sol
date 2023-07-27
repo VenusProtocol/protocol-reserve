@@ -194,7 +194,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
         require(
             totalSchemaOnePercentage == MAX_PERCENT && totalSchemaTwoPercentage == MAX_PERCENT,
-            "ProtocolShareReserve: Total Percentage must 100"
+            "ProtocolShareReserve: Total Percentage must be 100"
         );
     }
 
