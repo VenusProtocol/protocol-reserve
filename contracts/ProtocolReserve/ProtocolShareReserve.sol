@@ -20,8 +20,8 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     /// The first schema is for spread income from prime markets in core protocol
     /// The second schema is for all other sources and types of income
     enum Schema {
-        ONE,
-        TWO
+        DEFAULT,
+        SPREAD_PRIME_CORE
     }
 
     struct DistributionConfig {
@@ -181,23 +181,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             }
         }
 
-        uint totalSchemaOnePercentage;
-        uint totalSchemaTwoPercentage;
-
-        for (uint i = 0; i < distributionTargets.length; ++i) {
-            DistributionConfig storage config = distributionTargets[i];
-
-            if (config.schema == Schema.ONE) {
-                totalSchemaOnePercentage += config.percentage;
-            } else {
-                totalSchemaTwoPercentage += config.percentage;
-            }
-        }
-
-        require(
-            totalSchemaOnePercentage == MAX_PERCENT && totalSchemaTwoPercentage == MAX_PERCENT,
-            "ProtocolShareReserve: Total Percentage must be 100"
-        );
+        ensurePercentages();
     }
 
     /**
@@ -282,6 +266,21 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         }
     }
 
+    function ensurePercentages() internal {
+        mapping(Schema => uint256) totalPercentages;
+
+        for (uint i = 0; i < distributionTargets.length; ++i) {
+            totalPercentages[distributionTargets[i].schema] += config.percentage;
+        }
+
+        for (uint schemaValue = 0; schemaValue <= type(Schema).max; ++schemaValue) {
+            require(
+                totalPercentages[schemaValue] == MAX_PERCENT || totalPercentages[schemaValue] == 0,
+                "ProtocolShareReserve: Total Percentage must be 0 or 100"
+            );
+        }
+    }
+
     /**
      * @dev Fetches the list of prime markets and then accrues interest and
      * releases the funds to prime for each market
@@ -308,27 +307,13 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     }
 
     function _releaseFund(address comptroller, address asset, uint256 totalDistributionTargets) internal {
-        uint256 schemaOneBalance = assetsReserves[comptroller][asset][Schema.ONE];
-        uint256 schemaTwoBalance = assetsReserves[comptroller][asset][Schema.TWO];
-
-        if (schemaOneBalance + schemaTwoBalance == 0) {
-            return;
-        }
-
-        uint256 schemaOneTotalTransferAmount;
-        uint256 schemaTwoTotalTransferAmount;
+        mapping(Schema => uint256) totalTransferAmountPerSchema;
 
         for (uint i = 0; i < totalDistributionTargets; ++i) {
             DistributionConfig memory _config = distributionTargets[i];
 
-            uint256 transferAmount;
-            if (_config.schema == Schema.ONE) {
-                transferAmount = (schemaOneBalance * _config.percentage) / MAX_PERCENT;
-                schemaOneTotalTransferAmount += transferAmount;
-            } else {
-                transferAmount = (schemaTwoBalance * _config.percentage) / MAX_PERCENT;
-                schemaTwoTotalTransferAmount += transferAmount;
-            }
+            uint256 transferAmount = (assetsReserves[comptroller][asset][_config.schema] * _config.percentage) / MAX_PERCENT;
+            totalTransferAmountPerSchema[_config.schema] += transferAmount;
 
             IERC20Upgradeable(asset).safeTransfer(_config.destination, transferAmount);
             IIncomeDestination(_config.destination).updateAssetsState(comptroller, asset);
@@ -336,19 +321,16 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             emit AssetReleased(_config.destination, asset, _config.schema, _config.percentage, transferAmount);
         }
 
-        uint oldSchemaOneBalance = schemaOneBalance;
-        uint oldSchemaTwoBalance = schemaTwoBalance;
-        uint newSchemaOneBalance = schemaOneBalance - schemaOneTotalTransferAmount;
-        uint newSchemaTwoBalance = schemaTwoBalance - schemaTwoTotalTransferAmount;
+        for (uint schemaValue = 0; schemaValue <= type(Schema).max; ++schemaValue) {
+            uint oldSchemaReserves = assetsReserves[comptroller][asset][schemaValue];
+            uint newSchemaReserves = oldSchemaReserves - totalTransferAmountPerSchema[schemaValue]; // This should be zero or dust
 
-        assetsReserves[comptroller][asset][Schema.ONE] = newSchemaOneBalance;
-        assetsReserves[comptroller][asset][Schema.TWO] = newSchemaTwoBalance;
-        totalAssetReserve[asset] =
-            totalAssetReserve[asset] -
-            schemaOneTotalTransferAmount -
-            schemaTwoTotalTransferAmount;
+            if (newSchemaReserves != oldSchemaReserves) {
+                assetsReserves[comptroller][asset][schemaValue] = newSchemaReserves;
+                totalAssetReserve[asset] -= totalTransferAmountPerSchema[schemaValue];
 
-        emit ReservesUpdated(comptroller, asset, Schema.ONE, oldSchemaOneBalance, newSchemaOneBalance);
-        emit ReservesUpdated(comptroller, asset, Schema.TWO, oldSchemaTwoBalance, newSchemaTwoBalance);
+                emit ReservesUpdated(comptroller, asset, schemaValue, oldSchemaReserves, newSchemaReserves);
+            }
+        }
     }
 }
