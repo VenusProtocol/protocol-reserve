@@ -7,11 +7,11 @@ import {
   IAccessControlManagerV8,
   MockDeflatingToken,
   MockDeflatingToken__factory,
-  MockRiskFundTransformer,
-  MockRiskFundTransformer__factory,
   MockToken,
   MockToken__factory,
   ResilientOracleInterface,
+  XVSVaultTransformer,
+  XVSVaultTransformer__factory,
   XVSVaultTreasury,
 } from "../../typechain";
 import { convertToUnit } from "../utils";
@@ -20,7 +20,7 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 let accessControl: FakeContract<IAccessControlManagerV8>;
-let transformer: MockContract<MockRiskFundTransformer>;
+let transformer: MockContract<XVSVaultTransformer>;
 let tokenIn: MockContract<MockToken>;
 let tokenOut: MockContract<MockToken>;
 let oracle: FakeContract<ResilientOracleInterface>;
@@ -28,7 +28,7 @@ let xvsVaultTreasury: FakeContract<XVSVaultTreasury>;
 let tokenInDeflationary: MockContract<MockDeflatingToken>;
 
 async function fixture(): Promise<void> {
-  const transformerFactory = await smock.mock<MockRiskFundTransformer__factory>("MockRiskFundTransformer");
+  const transformerFactory = await smock.mock<XVSVaultTransformer__factory>("XVSVaultTransformer");
 
   xvsVaultTreasury = await smock.fake<XVSVaultTreasury>("XVSVaultTreasury");
 

@@ -86,9 +86,11 @@ describe("Risk fund Transformer: tests", () => {
     const TOKEN_IN_AMOUNT = convertToUnit(10, 18);
     const TOKEN_OUT_AMOUNT = convertToUnit(20, 18);
     const DEFLATIONARY_AMOUNT = convertToUnit(30, 18);
-    await tokenIn.transfer(transformer.address, TOKEN_IN_AMOUNT);
-    await tokenOut.transfer(transformer.address, TOKEN_OUT_AMOUNT);
-    await tokenInDeflationary.transfer(transformer.address, DEFLATIONARY_AMOUNT);
+    await transformer.setVariable("assetsReserves", {
+      [tokenIn.address]: TOKEN_IN_AMOUNT,
+      [tokenOut.address]: TOKEN_OUT_AMOUNT,
+      [tokenInDeflationary.address]: "29700000000000000000",
+    });
 
     expect(await transformer.balanceOf(tokenIn.address)).to.equals(TOKEN_IN_AMOUNT);
     expect(await transformer.balanceOf(tokenOut.address)).to.equals(TOKEN_OUT_AMOUNT);
