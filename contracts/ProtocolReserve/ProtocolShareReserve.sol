@@ -31,14 +31,15 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         address destination;
     }
 
+    /// @notice address of core pool comptroller contract
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address immutable CORE_POOL_COMPTROLLER;
+
     /// @notice address of Prime contract
     address public prime;
 
     /// @notice address of pool registry contract
     address public poolRegistry;
-
-    /// @notice address of core pool comptroller contract
-    address public corePoolComptroller;
 
     uint256 private constant MAX_PERCENT = 100;
 
@@ -99,7 +100,10 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     event DistributionConfigAdded(address indexed destination, uint256 percentage, Schema schema);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor(address _corePoolComptroller) {
+        require(_corePoolComptroller != address(0), "ProtocolShareReserve: Core pool comptroller address invalid");
+        CORE_POOL_COMPTROLLER = _corePoolComptroller;
+
         // Note that the contract is upgradeable. Use initialize() or reinitializers
         // to set the state variables.
         _disableInitializers();
@@ -107,14 +111,10 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
     /**
      * @dev Initializes the deployer to owner.
-     * @param _corePoolComptroller The address of core pool comptroller
      * @param _accessControlManager The address of ACM contract
      */
-    function initialize(address _corePoolComptroller, address _accessControlManager) external initializer {
-        require(_corePoolComptroller != address(0), "ProtocolShareReserve: Core pool comptroller address invalid");
+    function initialize(address _accessControlManager) external initializer {
         __AccessControlled_init(_accessControlManager);
-
-        corePoolComptroller = _corePoolComptroller;
     }
 
     /**
@@ -255,7 +255,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         require(ComptrollerInterface(comptroller).isComptroller(), "ProtocolShareReserve: Comptroller address invalid");
         require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
         require(
-            comptroller == corePoolComptroller ||
+            comptroller == CORE_POOL_COMPTROLLER ||
                 PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0),
             "ProtocolShareReserve: The pool doesn't support the asset"
         );
@@ -263,7 +263,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         Schema schema = Schema.TWO;
         address vToken = IPrime(prime).vTokenForAsset(asset);
 
-        if (vToken != address(0) && comptroller == corePoolComptroller && incomeType == IncomeType.SPREAD) {
+        if (vToken != address(0) && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
             schema = Schema.ONE;
         }
 
@@ -291,7 +291,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         for (uint i = 0; i < markets.length; ++i) {
             address market = markets[i];
             IPrime(prime).accrueInterest(market);
-            _releaseFund(corePoolComptroller, IVToken(market).underlying(), distributionTargets.length);
+            _releaseFund(CORE_POOL_COMPTROLLER, IVToken(market).underlying(), distributionTargets.length);
         }
     }
 

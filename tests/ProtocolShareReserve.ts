@@ -66,9 +66,10 @@ const fixture = async (): Promise<SetupProtocolShareReserveFixture> => {
   // ProtocolShareReserve contract deployment
   const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
   const protocolShareReserve = await upgrades.deployProxy(ProtocolShareReserve, [
-    corePoolComptroller.address,
     accessControl.address,
-  ]);
+  ], {
+    constructorArgs: [corePoolComptroller.address],
+  });
 
   await protocolShareReserve.setPoolRegistry(poolRegistry.address);
   await protocolShareReserve.setPrime(prime.address);
