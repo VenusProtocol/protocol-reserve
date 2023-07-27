@@ -11,6 +11,8 @@ import { IPrime } from "../Interfaces/IPrime.sol";
 import { IVToken } from "../Interfaces/IVToken.sol";
 import { IIncomeDestination } from "../Interfaces/IIncomeDestination.sol";
 
+import "hardhat/console.sol";
+
 contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -109,7 +111,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      * @param _accessControlManager The address of ACM contract
      */
     function initialize(address _corePoolComptroller, address _accessControlManager) external initializer {
-        require(corePoolComptroller != address(0), "ProtocolShareReserve: Core pool comptroller address invalid");
+        require(_corePoolComptroller != address(0), "ProtocolShareReserve: Core pool comptroller address invalid");
         __AccessControlled_init(_accessControlManager);
 
         corePoolComptroller = _corePoolComptroller;

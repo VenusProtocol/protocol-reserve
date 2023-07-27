@@ -93,7 +93,7 @@ const fixture = async (): Promise<SetupProtocolShareReserveFixture> => {
  * SCHEMA 2: Risk Fund Swapper (48 %), XVS Vault Reward (26 %) and DAO (26 %)
  */
 const configureDistribution = async (setup: SetupProtocolShareReserveFixture) => {
-  await setup.protocolShareReserve.addOrUpdateDistributionConfig([
+  await setup.protocolShareReserve.addOrUpdateDistributionConfigs([
     {
       schema: SCHEMA_ONE,
       percentage: 40,
@@ -185,16 +185,16 @@ describe("ProtocolShareReserve: Tests", function () {
   it("update configuration of schemas", async () => {
     const protocolShareReserve = setup.protocolShareReserve;
     await expect(
-      protocolShareReserve.addOrUpdateDistributionConfig([
+      protocolShareReserve.addOrUpdateDistributionConfigs([
         {
           schema: SCHEMA_ONE,
           percentage: 30,
           destination: signers[0].address,
         },
       ]),
-    ).to.be.revertedWith("ProtocolShareReserve: Total Percentage must 100");
+    ).to.be.revertedWith("ProtocolShareReserve: Total Percentage must be 100");
 
-    await protocolShareReserve.addOrUpdateDistributionConfig([
+    await protocolShareReserve.addOrUpdateDistributionConfigs([
       {
         schema: SCHEMA_ONE,
         percentage: 30,
