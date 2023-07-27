@@ -201,7 +201,7 @@ describe("ProtocolShareReserve: Tests", function () {
           destination: signers[0].address,
         },
       ]),
-    ).to.be.revertedWith("ProtocolShareReserve: Total Percentage must be 100");
+    ).to.be.revertedWith("ProtocolShareReserve: Total Percentage must be 0 or 100");
 
     await protocolShareReserve.addOrUpdateDistributionConfigs([
       {

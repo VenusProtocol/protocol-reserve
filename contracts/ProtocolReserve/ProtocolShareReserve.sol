@@ -193,23 +193,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             }
         }
 
-        uint totalSchemaOnePercentage;
-        uint totalSchemaTwoPercentage;
-
-        for (uint i = 0; i < distributionTargets.length; ++i) {
-            DistributionConfig storage config = distributionTargets[i];
-
-            if (config.schema == Schema.DEFAULT) {
-                totalSchemaOnePercentage += config.percentage;
-            } else {
-                totalSchemaTwoPercentage += config.percentage;
-            }
-        }
-
-        require(
-            totalSchemaOnePercentage == MAX_PERCENT && totalSchemaTwoPercentage == MAX_PERCENT,
-            "ProtocolShareReserve: Total Percentage must be 100"
-        );
+        _ensurePercentages();
     }
 
     /**
@@ -372,6 +356,23 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
         if (vToken != address(0) && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
             schema = Schema.DEFAULT;
+        }
+    }
+
+    function _ensurePercentages() internal {
+        uint256 totalSchemas = uint256(type(Schema).max) + 1;
+        uint[] memory totalPercentages = new uint[](totalSchemas);
+
+        for (uint i = 0; i < distributionTargets.length; ++i) {
+            DistributionConfig memory config = distributionTargets[i];
+            totalPercentages[uint256(config.schema)] += config.percentage;
+        }
+
+        for (uint schemaValue = 0; schemaValue <= totalSchemas - 1; ++schemaValue) {
+            require(
+                totalPercentages[schemaValue] == MAX_PERCENT || totalPercentages[schemaValue] == 0,
+                "ProtocolShareReserve: Total Percentage must be 0 or 100"
+            );
         }
     }
 }
