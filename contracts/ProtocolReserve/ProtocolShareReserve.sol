@@ -36,7 +36,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     address public poolRegistry;
 
     /// @notice address of core pool comptroller contract
-    address public CORE_POOL_COMPTROLLER;
+    address public corePoolComptroller;
 
     uint256 private constant MAX_PERCENT = 100;
 
@@ -105,14 +105,14 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
     /**
      * @dev Initializes the deployer to owner.
-     * @param corePoolComptroller The address of core pool comptroller
-     * @param accessControlManager The address of ACM contract
+     * @param _corePoolComptroller The address of core pool comptroller
+     * @param _accessControlManager The address of ACM contract
      */
-    function initialize(address corePoolComptroller, address accessControlManager) external initializer {
+    function initialize(address _corePoolComptroller, address _accessControlManager) external initializer {
         require(corePoolComptroller != address(0), "ProtocolShareReserve: Core pool comptroller address invalid");
-        __AccessControlled_init(accessControlManager);
+        __AccessControlled_init(_accessControlManager);
 
-        CORE_POOL_COMPTROLLER = corePoolComptroller;
+        corePoolComptroller = _corePoolComptroller;
     }
 
     /**
@@ -139,31 +139,6 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         address oldPrime = prime;
         prime = _prime;
         emit PrimeUpdated(oldPrime, prime);
-    }
-
-    /**
-     * @dev Fetches the list of prime markets and then accrues interest and
-     * releases the funds to prime for each market
-     */
-    function _accrueAndReleaseFundsToPrime() internal {
-        address[] memory markets = IPrime(prime).allMarkets();
-        for (uint i = 0; i < markets.length; ++i) {
-            address market = markets[i];
-            IPrime(prime).accrueInterest(market);
-            _releaseFund(CORE_POOL_COMPTROLLER, IVToken(market).underlying(), distributionTargets.length);
-        }
-    }
-
-    /**
-     * @dev Fetches the list of prime markets and then accrues interest
-     * to prime for each market
-     */
-    function _accruePrimeInterest() internal {
-        address[] memory markets = IPrime(prime).allMarkets();
-        for (uint i = 0; i < markets.length; ++i) {
-            address market = markets[i];
-            IPrime(prime).accrueInterest(market);
-        }
     }
 
     /**
@@ -224,6 +199,19 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     }
 
     /**
+     * @dev Release funds
+     * @param assets assets to be released to distribution targets
+     */
+    function releaseFunds(address comptroller, address[] memory assets) external {
+        _accruePrimeInterest();
+
+        uint256 totalDistributionTargets = distributionTargets.length;
+        for (uint i = 0; i < assets.length; ++i) {
+            _releaseFund(comptroller, assets[i], totalDistributionTargets);
+        }
+    }
+
+    /**
      * @dev Used to find out the amount of funds that's going to be released when release funds is called.
      * @param comptroller the comptroller address of the pool
      * @param schema the schema of the distribution target
@@ -246,15 +234,74 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     }
 
     /**
-     * @dev Release funds
-     * @param assets assets to be released to distribution targets
+     * @dev Returns the total number of distribution targets
      */
-    function releaseFunds(address comptroller, address[] memory assets) external {
-        _accruePrimeInterest();
+    function totalDistributions() external view returns (uint256) {
+        return distributionTargets.length;
+    }
 
-        uint256 totalDistributionTargets = distributionTargets.length;
-        for (uint i = 0; i < assets.length; ++i) {
-            _releaseFund(comptroller, assets[i], totalDistributionTargets);
+    /**
+     * @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
+     * @param comptroller  Comptroller address(pool)
+     * @param asset Asset address.
+     */
+    function updateAssetsState(
+        address comptroller,
+        address asset,
+        IncomeType incomeType
+    ) public override(IProtocolShareReserve) {
+        require(ComptrollerInterface(comptroller).isComptroller(), "ProtocolShareReserve: Comptroller address invalid");
+        require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
+        require(
+            comptroller == corePoolComptroller ||
+                PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0),
+            "ProtocolShareReserve: The pool doesn't support the asset"
+        );
+
+        Schema schema = Schema.TWO;
+        address vToken = IPrime(prime).vTokenForAsset(asset);
+
+        if (vToken != address(0) && comptroller == corePoolComptroller && incomeType == IncomeType.SPREAD) {
+            schema = Schema.ONE;
+        }
+
+        uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
+        uint256 assetReserve = totalAssetReserve[asset];
+
+        if (currentBalance > assetReserve) {
+            uint256 balanceDifference;
+            unchecked {
+                balanceDifference = currentBalance - assetReserve;
+            }
+
+            assetsReserves[comptroller][asset][schema] += balanceDifference;
+            totalAssetReserve[asset] += balanceDifference;
+            emit AssetsReservesUpdated(comptroller, asset, balanceDifference, incomeType, schema);
+        }
+    }
+
+    /**
+     * @dev Fetches the list of prime markets and then accrues interest and
+     * releases the funds to prime for each market
+     */
+    function _accrueAndReleaseFundsToPrime() internal {
+        address[] memory markets = IPrime(prime).allMarkets();
+        for (uint i = 0; i < markets.length; ++i) {
+            address market = markets[i];
+            IPrime(prime).accrueInterest(market);
+            _releaseFund(corePoolComptroller, IVToken(market).underlying(), distributionTargets.length);
+        }
+    }
+
+    /**
+     * @dev Fetches the list of prime markets and then accrues interest
+     * to prime for each market
+     */
+    function _accruePrimeInterest() internal {
+        address[] memory markets = IPrime(prime).allMarkets();
+        for (uint i = 0; i < markets.length; ++i) {
+            address market = markets[i];
+            IPrime(prime).accrueInterest(market);
         }
     }
 
@@ -301,52 +348,5 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
         emit ReservesUpdated(comptroller, asset, Schema.ONE, oldSchemaOneBalance, newSchemaOneBalance);
         emit ReservesUpdated(comptroller, asset, Schema.TWO, oldSchemaTwoBalance, newSchemaTwoBalance);
-    }
-
-    /**
-     * @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
-     * @param comptroller  Comptroller address(pool)
-     * @param asset Asset address.
-     */
-    function updateAssetsState(
-        address comptroller,
-        address asset,
-        IncomeType incomeType
-    ) public override(IProtocolShareReserve) {
-        require(ComptrollerInterface(comptroller).isComptroller(), "ProtocolShareReserve: Comptroller address invalid");
-        require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
-        require(
-            comptroller == CORE_POOL_COMPTROLLER ||
-                PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0),
-            "ProtocolShareReserve: The pool doesn't support the asset"
-        );
-
-        Schema schema = Schema.TWO;
-        address vToken = IPrime(prime).vTokenForAsset(asset);
-
-        if (vToken != address(0) && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
-            schema = Schema.ONE;
-        }
-
-        uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
-        uint256 assetReserve = totalAssetReserve[asset];
-
-        if (currentBalance > assetReserve) {
-            uint256 balanceDifference;
-            unchecked {
-                balanceDifference = currentBalance - assetReserve;
-            }
-
-            assetsReserves[comptroller][asset][schema] += balanceDifference;
-            totalAssetReserve[asset] += balanceDifference;
-            emit AssetsReservesUpdated(comptroller, asset, balanceDifference, incomeType, schema);
-        }
-    }
-
-    /**
-     * @dev Returns the total number of distribution targets
-     */
-    function totalDistributions() external view returns (uint256) {
-        return distributionTargets.length;
     }
 }
