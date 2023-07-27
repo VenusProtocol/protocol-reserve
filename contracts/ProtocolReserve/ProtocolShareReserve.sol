@@ -182,8 +182,8 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             require(_config.destination != address(0), "ProtocolShareReserve: Destination address invalid");
 
             bool updated = false;
-            for (uint i = 0; i < distributionTargets.length; ++i) {
-                DistributionConfig storage config = distributionTargets[i];
+            for (uint j = 0; j < distributionTargets.length; ++j) {
+                DistributionConfig storage config = distributionTargets[j];
 
                 if (_config.schema == config.schema && config.destination == _config.destination) {
                     emit DistributionConfigUpdated(
