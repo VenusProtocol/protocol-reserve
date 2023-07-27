@@ -49,6 +49,14 @@ const fixture = async (): Promise<SetupProtocolShareReserveFixture> => {
   const mockUSDT = await MockUSDT.deploy("Tether Coin", "USDT", 18);
   await mockUSDT.faucet(convertToUnit(1000, 18));
 
+  const MockWBNB = await ethers.getContractFactory("MockToken");
+  const mockWBNB = await MockWBNB.deploy("BNB Coin", "WBNB", 18);
+  await mockWBNB.faucet(convertToUnit(1000, 18));
+
+  const MockVBNB = await ethers.getContractFactory("MockToken");
+  const mockVBNB = await MockVBNB.deploy("vBNB Market", "vBNB", 18);
+  await mockVBNB.faucet(convertToUnit(1000, 18));
+
   const corePoolComptroller = await smock.fake<ComptrollerInterface>("ComptrollerInterface");
   const isolatedPoolComptroller = await smock.fake<ComptrollerInterface>("ComptrollerInterface");
   const riskFundSwapper = await smock.fake<IIncomeDestination>("IIncomeDestination");
@@ -68,7 +76,7 @@ const fixture = async (): Promise<SetupProtocolShareReserveFixture> => {
   const protocolShareReserve = await upgrades.deployProxy(ProtocolShareReserve, [
     accessControl.address,
   ], {
-    constructorArgs: [corePoolComptroller.address],
+    constructorArgs: [corePoolComptroller.address, mockWBNB.address, mockVBNB.address],
   });
 
   await protocolShareReserve.setPoolRegistry(poolRegistry.address);

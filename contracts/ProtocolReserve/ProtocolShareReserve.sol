@@ -35,6 +35,14 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address immutable CORE_POOL_COMPTROLLER;
 
+    /// @notice address of WBNB contract
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address immutable WBNB;
+
+    /// @notice address of vBNB contract
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address immutable vBNB;
+
     /// @notice address of Prime contract
     address public prime;
 
@@ -100,9 +108,13 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     event DistributionConfigAdded(address indexed destination, uint256 percentage, Schema schema);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address _corePoolComptroller) {
+    constructor(address _corePoolComptroller, address _wbnb, address _vbnb) {
         require(_corePoolComptroller != address(0), "ProtocolShareReserve: Core pool comptroller address invalid");
+        require(_wbnb != address(0), "ProtocolShareReserve: WBNB address invalid");
+        require(_vbnb != address(0), "ProtocolShareReserve: vBNB address invalid");
         CORE_POOL_COMPTROLLER = _corePoolComptroller;
+        WBNB = _wbnb;
+        vBNB = _vbnb;
 
         // Note that the contract is upgradeable. Use initialize() or reinitializers
         // to set the state variables.
@@ -291,7 +303,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         for (uint i = 0; i < markets.length; ++i) {
             address market = markets[i];
             IPrime(prime).accrueInterest(market);
-            _releaseFund(CORE_POOL_COMPTROLLER, IVToken(market).underlying());
+            _releaseFund(CORE_POOL_COMPTROLLER, _getUnderlying(market));
         }
     }
 
@@ -350,5 +362,13 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
         emit ReservesUpdated(comptroller, asset, Schema.ONE, oldSchemaOneBalance, newSchemaOneBalance);
         emit ReservesUpdated(comptroller, asset, Schema.TWO, oldSchemaTwoBalance, newSchemaTwoBalance);
+    }
+
+    function _getUnderlying(address vToken) internal view returns (address) {
+        if (vToken == vBNB) {
+            return WBNB;
+        } else {
+            return IVToken(vToken).underlying();
+        }
     }
 }
