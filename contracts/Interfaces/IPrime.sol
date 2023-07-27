@@ -5,7 +5,7 @@ import { IIncomeDestination } from "./IIncomeDestination.sol";
 
 interface IPrime is IIncomeDestination {
     function accrueInterest(address vToken) external;
-    
+
     function vTokenForAsset(address asset) external view returns (address);
 
     function allMarkets() external view returns (address[] memory);

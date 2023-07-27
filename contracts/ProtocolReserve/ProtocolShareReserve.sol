@@ -31,7 +31,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
     /// @notice address of core pool comptroller contract
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address immutable CORE_POOL_COMPTROLLER;
+    address public immutable CORE_POOL_COMPTROLLER;
 
     /// @notice address of WBNB contract
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
@@ -201,7 +201,6 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     function releaseFunds(address comptroller, address[] memory assets) external {
         _accruePrimeInterest();
 
-        uint256 totalDistributionTargets = distributionTargets.length;
         for (uint i = 0; i < assets.length; ++i) {
             _releaseFund(comptroller, assets[i]);
         }
@@ -314,7 +313,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         for (uint i = 0; i < distributionTargets.length; ++i) {
             DistributionConfig memory _config = distributionTargets[i];
 
-            uint256 transferAmount = schemaBalances[uint256(_config.schema)] * _config.percentage / MAX_PERCENT;
+            uint256 transferAmount = (schemaBalances[uint256(_config.schema)] * _config.percentage) / MAX_PERCENT;
             totalTransferAmounts[uint256(_config.schema)] += transferAmount;
 
             IERC20Upgradeable(asset).safeTransfer(_config.destination, transferAmount);
@@ -329,24 +328,22 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             assetsReserves[comptroller][asset][Schema(schemaValue)] = newSchemaBalances[schemaValue];
             totalAssetReserve[asset] = totalAssetReserve[asset] - totalTransferAmounts[schemaValue];
 
-            emit ReservesUpdated(comptroller, asset, Schema(schemaValue), schemaBalances[schemaValue], newSchemaBalances[schemaValue]);
-        }
-    }
-
-    function _getUnderlying(address vToken) internal view returns (address) {
-        if (vToken == vBNB) {
-            return WBNB;
-        } else {
-            return IVToken(vToken).underlying();
+            emit ReservesUpdated(
+                comptroller,
+                asset,
+                Schema(schemaValue),
+                schemaBalances[schemaValue],
+                newSchemaBalances[schemaValue]
+            );
         }
     }
 
     function getSchema(address comptroller, address asset, IncomeType incomeType) internal returns (Schema schema) {
-        schema = Schema.SPREAD_PRIME_CORE;
+        schema = DEFAULT;
         address vToken = IPrime(prime).vTokenForAsset(asset);
 
         if (vToken != address(0) && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
-            schema = Schema.DEFAULT;
+            schema = Schema.Schema.SPREAD_PRIME_CORE;
         }
     }
 
@@ -364,6 +361,14 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
                 totalPercentages[schemaValue] == MAX_PERCENT || totalPercentages[schemaValue] == 0,
                 "ProtocolShareReserve: Total Percentage must be 0 or 100"
             );
+        }
+    }
+
+    function _getUnderlying(address vToken) internal view returns (address) {
+        if (vToken == vBNB) {
+            return WBNB;
+        } else {
+            return IVToken(vToken).underlying();
         }
     }
 }
