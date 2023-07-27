@@ -149,7 +149,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         _checkAccessAllowed("addOrUpdateDistributionConfigs(DistributionConfig)");
 
         //we need to accrue and release funds to prime before updating the distribution configuration
-        //because prime relies on getUnreleasedFunds and it's return value may change after config update
+        //because prime relies on getUnreleasedFunds and its return value may change after config update
         _accrueAndReleaseFundsToPrime();
 
         for (uint i = 0; i < configs.length; ++i) {
