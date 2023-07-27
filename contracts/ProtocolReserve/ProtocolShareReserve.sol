@@ -298,27 +298,26 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     }
 
     function _releaseFund(address comptroller, address asset) internal {
-        uint256 schemaOneBalance = assetsReserves[comptroller][asset][Schema.DEFAULT];
-        uint256 schemaTwoBalance = assetsReserves[comptroller][asset][Schema.SPREAD_PRIME_CORE];
+        uint256 totalSchemas = uint256(type(Schema).max) + 1;
+        uint[] memory schemaBalances = new uint[](totalSchemas);
+        uint256 totalBalance;
 
-        if (schemaOneBalance + schemaTwoBalance == 0) {
+        for (uint schemaValue = 0; schemaValue <= totalSchemas - 1; ++schemaValue) {
+            schemaBalances[schemaValue] = assetsReserves[comptroller][asset][Schema(schemaValue)];
+            totalBalance = schemaBalances[schemaValue];
+        }
+
+        if (totalBalance == 0) {
             return;
         }
 
-        uint256 schemaOneTotalTransferAmount;
-        uint256 schemaTwoTotalTransferAmount;
+        uint[] memory totalTransferAmounts = new uint[](totalSchemas);
 
         for (uint i = 0; i < distributionTargets.length; ++i) {
             DistributionConfig memory _config = distributionTargets[i];
 
-            uint256 transferAmount;
-            if (_config.schema == Schema.DEFAULT) {
-                transferAmount = (schemaOneBalance * _config.percentage) / MAX_PERCENT;
-                schemaOneTotalTransferAmount += transferAmount;
-            } else {
-                transferAmount = (schemaTwoBalance * _config.percentage) / MAX_PERCENT;
-                schemaTwoTotalTransferAmount += transferAmount;
-            }
+            uint256 transferAmount = schemaBalances[uint256(_config.schema)] * _config.percentage / MAX_PERCENT;
+            totalTransferAmounts[uint256(_config.schema)] += transferAmount;
 
             IERC20Upgradeable(asset).safeTransfer(_config.destination, transferAmount);
             IIncomeDestination(_config.destination).updateAssetsState(comptroller, asset);
@@ -326,20 +325,14 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             emit AssetReleased(_config.destination, asset, _config.schema, _config.percentage, transferAmount);
         }
 
-        uint oldSchemaOneBalance = schemaOneBalance;
-        uint oldSchemaTwoBalance = schemaTwoBalance;
-        uint newSchemaOneBalance = schemaOneBalance - schemaOneTotalTransferAmount;
-        uint newSchemaTwoBalance = schemaTwoBalance - schemaTwoTotalTransferAmount;
+        uint[] memory newSchemaBalances = new uint[](totalSchemas);
+        for (uint schemaValue = 0; schemaValue <= totalSchemas - 1; ++schemaValue) {
+            newSchemaBalances[schemaValue] = schemaBalances[schemaValue] - totalTransferAmounts[schemaValue];
+            assetsReserves[comptroller][asset][Schema(schemaValue)] = newSchemaBalances[schemaValue];
+            totalAssetReserve[asset] = totalAssetReserve[asset] - totalTransferAmounts[schemaValue];
 
-        assetsReserves[comptroller][asset][Schema.DEFAULT] = newSchemaOneBalance;
-        assetsReserves[comptroller][asset][Schema.SPREAD_PRIME_CORE] = newSchemaTwoBalance;
-        totalAssetReserve[asset] =
-            totalAssetReserve[asset] -
-            schemaOneTotalTransferAmount -
-            schemaTwoTotalTransferAmount;
-
-        emit ReservesUpdated(comptroller, asset, Schema.DEFAULT, oldSchemaOneBalance, newSchemaOneBalance);
-        emit ReservesUpdated(comptroller, asset, Schema.SPREAD_PRIME_CORE, oldSchemaTwoBalance, newSchemaTwoBalance);
+            emit ReservesUpdated(comptroller, asset, Schema(schemaValue), schemaBalances[schemaValue], newSchemaBalances[schemaValue]);
+        }
     }
 
     function _getUnderlying(address vToken) internal view returns (address) {
