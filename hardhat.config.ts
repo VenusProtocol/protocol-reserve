@@ -24,13 +24,13 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 });
 
 function isFork() {
-  return process.env.FORK_MAINNET === "true"
+  return process.env.FORK_MAINNET === "true" || process.env.FORK_TESTNET === "true"
     ? {
         allowUnlimitedContractSize: false,
         loggingEnabled: false,
         forking: {
           url: `${process.env.BSC_ARCHIVE_NODE}`,
-          blockNumber: 21068448,
+          blockNumber: 31918256,
         },
         accounts: {
           accountsBalance: "1000000000000000000",
@@ -100,7 +100,7 @@ const config: HardhatUserConfig = {
   },
   paths: {
     sources: "./contracts",
-    tests: "./tests",
+    tests: "./tests/hardhat",
     cache: "./cache",
     artifacts: "./artifacts",
   },
