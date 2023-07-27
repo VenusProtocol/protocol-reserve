@@ -20,8 +20,8 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     /// The first schema is for spread income from prime markets in core protocol
     /// The second schema is for all other sources and types of income
     enum Schema {
-        ONE,
-        TWO
+        DEFAULT,
+        SPREAD_PRIME_CORE
     }
 
     struct DistributionConfig {
@@ -199,7 +199,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         for (uint i = 0; i < distributionTargets.length; ++i) {
             DistributionConfig storage config = distributionTargets[i];
 
-            if (config.schema == Schema.ONE) {
+            if (config.schema == Schema.DEFAULT) {
                 totalSchemaOnePercentage += config.percentage;
             } else {
                 totalSchemaTwoPercentage += config.percentage;
@@ -314,8 +314,8 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     }
 
     function _releaseFund(address comptroller, address asset) internal {
-        uint256 schemaOneBalance = assetsReserves[comptroller][asset][Schema.ONE];
-        uint256 schemaTwoBalance = assetsReserves[comptroller][asset][Schema.TWO];
+        uint256 schemaOneBalance = assetsReserves[comptroller][asset][Schema.DEFAULT];
+        uint256 schemaTwoBalance = assetsReserves[comptroller][asset][Schema.SPREAD_PRIME_CORE];
 
         if (schemaOneBalance + schemaTwoBalance == 0) {
             return;
@@ -328,7 +328,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             DistributionConfig memory _config = distributionTargets[i];
 
             uint256 transferAmount;
-            if (_config.schema == Schema.ONE) {
+            if (_config.schema == Schema.DEFAULT) {
                 transferAmount = (schemaOneBalance * _config.percentage) / MAX_PERCENT;
                 schemaOneTotalTransferAmount += transferAmount;
             } else {
@@ -347,15 +347,15 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         uint newSchemaOneBalance = schemaOneBalance - schemaOneTotalTransferAmount;
         uint newSchemaTwoBalance = schemaTwoBalance - schemaTwoTotalTransferAmount;
 
-        assetsReserves[comptroller][asset][Schema.ONE] = newSchemaOneBalance;
-        assetsReserves[comptroller][asset][Schema.TWO] = newSchemaTwoBalance;
+        assetsReserves[comptroller][asset][Schema.DEFAULT] = newSchemaOneBalance;
+        assetsReserves[comptroller][asset][Schema.SPREAD_PRIME_CORE] = newSchemaTwoBalance;
         totalAssetReserve[asset] =
             totalAssetReserve[asset] -
             schemaOneTotalTransferAmount -
             schemaTwoTotalTransferAmount;
 
-        emit ReservesUpdated(comptroller, asset, Schema.ONE, oldSchemaOneBalance, newSchemaOneBalance);
-        emit ReservesUpdated(comptroller, asset, Schema.TWO, oldSchemaTwoBalance, newSchemaTwoBalance);
+        emit ReservesUpdated(comptroller, asset, Schema.DEFAULT, oldSchemaOneBalance, newSchemaOneBalance);
+        emit ReservesUpdated(comptroller, asset, Schema.SPREAD_PRIME_CORE, oldSchemaTwoBalance, newSchemaTwoBalance);
     }
 
     function _getUnderlying(address vToken) internal view returns (address) {
@@ -367,11 +367,11 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     }
 
     function getSchema(address comptroller, address asset, IncomeType incomeType) internal returns (Schema schema) {
-        schema = Schema.TWO;
+        schema = Schema.SPREAD_PRIME_CORE;
         address vToken = IPrime(prime).vTokenForAsset(asset);
 
         if (vToken != address(0) && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
-            schema = Schema.ONE;
+            schema = Schema.DEFAULT;
         }
     }
 }
