@@ -1155,7 +1155,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nomicfoundation/ethereumjs-block@npm:4.2.2, @nomicfoundation/ethereumjs-block@npm:^4.0.0":
+"@nomicfoundation/ethereumjs-block@npm:4.2.2":
   version: 4.2.2
   resolution: "@nomicfoundation/ethereumjs-block@npm:4.2.2"
   dependencies:
@@ -1184,7 +1184,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nomicfoundation/ethereumjs-blockchain@npm:6.2.2, @nomicfoundation/ethereumjs-blockchain@npm:^6.0.0":
+"@nomicfoundation/ethereumjs-blockchain@npm:6.2.2":
   version: 6.2.2
   resolution: "@nomicfoundation/ethereumjs-blockchain@npm:6.2.2"
   dependencies:
@@ -1225,7 +1225,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nomicfoundation/ethereumjs-common@npm:3.1.2, @nomicfoundation/ethereumjs-common@npm:^3.0.0":
+"@nomicfoundation/ethereumjs-common@npm:3.1.2":
   version: 3.1.2
   resolution: "@nomicfoundation/ethereumjs-common@npm:3.1.2"
   dependencies:
@@ -1273,7 +1273,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nomicfoundation/ethereumjs-evm@npm:1.3.2, @nomicfoundation/ethereumjs-evm@npm:^1.0.0, @nomicfoundation/ethereumjs-evm@npm:^1.0.0-rc.3":
+"@nomicfoundation/ethereumjs-evm@npm:1.3.2, @nomicfoundation/ethereumjs-evm@npm:^1.0.0-rc.3":
   version: 1.3.2
   resolution: "@nomicfoundation/ethereumjs-evm@npm:1.3.2"
   dependencies:
@@ -1305,7 +1305,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nomicfoundation/ethereumjs-rlp@npm:4.0.3, @nomicfoundation/ethereumjs-rlp@npm:^4.0.0":
+"@nomicfoundation/ethereumjs-rlp@npm:4.0.3":
   version: 4.0.3
   resolution: "@nomicfoundation/ethereumjs-rlp@npm:4.0.3"
   bin:
@@ -1323,7 +1323,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nomicfoundation/ethereumjs-statemanager@npm:1.0.5, @nomicfoundation/ethereumjs-statemanager@npm:^1.0.0":
+"@nomicfoundation/ethereumjs-statemanager@npm:1.0.5":
   version: 1.0.5
   resolution: "@nomicfoundation/ethereumjs-statemanager@npm:1.0.5"
   dependencies:
@@ -1352,7 +1352,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nomicfoundation/ethereumjs-trie@npm:5.0.5, @nomicfoundation/ethereumjs-trie@npm:^5.0.0":
+"@nomicfoundation/ethereumjs-trie@npm:5.0.5":
   version: 5.0.5
   resolution: "@nomicfoundation/ethereumjs-trie@npm:5.0.5"
   dependencies:
@@ -1377,7 +1377,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nomicfoundation/ethereumjs-tx@npm:4.1.2, @nomicfoundation/ethereumjs-tx@npm:^4.0.0":
+"@nomicfoundation/ethereumjs-tx@npm:4.1.2":
   version: 4.1.2
   resolution: "@nomicfoundation/ethereumjs-tx@npm:4.1.2"
   dependencies:
@@ -1403,7 +1403,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nomicfoundation/ethereumjs-util@npm:8.0.6, @nomicfoundation/ethereumjs-util@npm:^8.0.0, @nomicfoundation/ethereumjs-util@npm:^8.0.0-rc.3":
+"@nomicfoundation/ethereumjs-util@npm:8.0.6, @nomicfoundation/ethereumjs-util@npm:^8.0.0-rc.3":
   version: 8.0.6
   resolution: "@nomicfoundation/ethereumjs-util@npm:8.0.6"
   dependencies:
@@ -1445,7 +1445,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nomicfoundation/ethereumjs-vm@npm:^6.0.0, @nomicfoundation/ethereumjs-vm@npm:^6.0.0-rc.3":
+"@nomicfoundation/ethereumjs-vm@npm:^6.0.0-rc.3":
   version: 6.4.2
   resolution: "@nomicfoundation/ethereumjs-vm@npm:6.4.2"
   dependencies:
@@ -2017,6 +2017,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@openzeppelin/contracts-upgradeable@npm:^4.8.3":
+  version: 4.9.2
+  resolution: "@openzeppelin/contracts-upgradeable@npm:4.9.2"
+  checksum: 88df083e886006b9fac61848edf224a725b99e1b8a302173165a857e3bbc1d00d61cb9c71590b37d955b179fe23652fc157347a086dbaad8f66ce8470603f151
+  languageName: node
+  linkType: hard
+
 "@openzeppelin/contracts-v0.7@npm:@openzeppelin/contracts@v3.4.2":
   version: 3.4.2
   resolution: "@openzeppelin/contracts@npm:3.4.2"
@@ -2024,7 +2031,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@openzeppelin/contracts@npm:^4.3.3, @openzeppelin/contracts@npm:^4.6.0, @openzeppelin/contracts@npm:^4.8.0":
+"@openzeppelin/contracts@npm:^4.3.3, @openzeppelin/contracts@npm:^4.6.0":
   version: 4.8.3
   resolution: "@openzeppelin/contracts@npm:4.8.3"
   checksum: aea130d38d46840c5cbe3adbaa9a7ac645e4bd66ad3f3baf2fa78588c408d1a686170b3408c9e2e5e05530fba22ecdc00d7efb6b27852a8b29f91accbc0af255
@@ -2035,6 +2042,13 @@ __metadata:
   version: 4.8.2
   resolution: "@openzeppelin/contracts@npm:4.8.2"
   checksum: 1d362f0b9c880549cb82544e23fb70270fbbbe24a69e10bd5aa07649fd82347686173998ae484defafdc473d04004d519f839e3cd3d3e7733d0895b950622243
+  languageName: node
+  linkType: hard
+
+"@openzeppelin/contracts@npm:^4.8.3":
+  version: 4.9.2
+  resolution: "@openzeppelin/contracts@npm:4.9.2"
+  checksum: 0538b18fe222e5414a5a539c240b155e0bef2a23c5182fb8e137d71a0c390fe899160f2d55701f75b127f54cc61aee4375370acc832475f19829368ac65c1fc6
   languageName: node
   linkType: hard
 
@@ -2889,17 +2903,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/isolated-pools@npm:^0.1.0-develop.3":
-  version: 0.1.0-develop.3
-  resolution: "@venusprotocol/isolated-pools@npm:0.1.0-develop.3"
+"@venusprotocol/isolated-pools@npm:^1.3.0":
+  version: 1.3.0
+  resolution: "@venusprotocol/isolated-pools@npm:1.3.0"
   dependencies:
-    "@openzeppelin/contracts": ^4.8.0
-    "@openzeppelin/contracts-upgradeable": ^4.8.0
+    "@openzeppelin/contracts": ^4.8.3
+    "@openzeppelin/contracts-upgradeable": ^4.8.3
     "@openzeppelin/hardhat-upgrades": ^1.21.0
     "@solidity-parser/parser": ^0.13.2
     ethers: ^5.7.0
     hardhat-deploy: ^0.11.14
-  checksum: a30684e99ae9db993abeb9c673300febdd47cbf55b7568859fe5be5458b6d901aa2be126e862cd01423f00161a5cbe12c4d9dc50c0bdeeb2d3de1cc0e9bcef70
+    module-alias: ^2.2.2
+  checksum: 6f676d3cbd1bd132db329c429081c10796aa9602c97213e0e625a031e6c39e0b369c88c50b225a7d156eec65c595888b657ef012b1cadf4ab854847f39d9b5c4
   languageName: node
   linkType: hard
 
@@ -2954,7 +2969,7 @@ __metadata:
     "@types/node": ^18.16.3
     "@typescript-eslint/eslint-plugin": ^5.44.0
     "@typescript-eslint/parser": ^5.44.0
-    "@venusprotocol/isolated-pools": ^0.1.0-develop.3
+    "@venusprotocol/isolated-pools": ^1.3.0
     "@venusprotocol/oracle": 1.6.12-dev.4
     "@venusprotocol/venus-protocol": ^0.7.0
     bignumber.js: ^9.1.1
@@ -2967,7 +2982,7 @@ __metadata:
     eslint-config-prettier: ^8.5.0
     ethers: ^5.7.2
     fs-extra: ^10.1.0
-    hardhat: ^2.12.2
+    hardhat: ^2.16.1
     hardhat-dependency-compiler: ^1.1.3
     hardhat-deploy: ^0.11.23
     hardhat-docgen: ^1.3.0
@@ -7124,74 +7139,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hardhat@npm:^2.12.2":
-  version: 2.13.0
-  resolution: "hardhat@npm:2.13.0"
-  dependencies:
-    "@ethersproject/abi": ^5.1.2
-    "@metamask/eth-sig-util": ^4.0.0
-    "@nomicfoundation/ethereumjs-block": ^4.0.0
-    "@nomicfoundation/ethereumjs-blockchain": ^6.0.0
-    "@nomicfoundation/ethereumjs-common": ^3.0.0
-    "@nomicfoundation/ethereumjs-evm": ^1.0.0
-    "@nomicfoundation/ethereumjs-rlp": ^4.0.0
-    "@nomicfoundation/ethereumjs-statemanager": ^1.0.0
-    "@nomicfoundation/ethereumjs-trie": ^5.0.0
-    "@nomicfoundation/ethereumjs-tx": ^4.0.0
-    "@nomicfoundation/ethereumjs-util": ^8.0.0
-    "@nomicfoundation/ethereumjs-vm": ^6.0.0
-    "@nomicfoundation/solidity-analyzer": ^0.1.0
-    "@sentry/node": ^5.18.1
-    "@types/bn.js": ^5.1.0
-    "@types/lru-cache": ^5.1.0
-    abort-controller: ^3.0.0
-    adm-zip: ^0.4.16
-    aggregate-error: ^3.0.0
-    ansi-escapes: ^4.3.0
-    chalk: ^2.4.2
-    chokidar: ^3.4.0
-    ci-info: ^2.0.0
-    debug: ^4.1.1
-    enquirer: ^2.3.0
-    env-paths: ^2.2.0
-    ethereum-cryptography: ^1.0.3
-    ethereumjs-abi: ^0.6.8
-    find-up: ^2.1.0
-    fp-ts: 1.19.3
-    fs-extra: ^7.0.1
-    glob: 7.2.0
-    immutable: ^4.0.0-rc.12
-    io-ts: 1.10.4
-    keccak: ^3.0.2
-    lodash: ^4.17.11
-    mnemonist: ^0.38.0
-    mocha: ^10.0.0
-    p-map: ^4.0.0
-    qs: ^6.7.0
-    raw-body: ^2.4.1
-    resolve: 1.17.0
-    semver: ^6.3.0
-    solc: 0.7.3
-    source-map-support: ^0.5.13
-    stacktrace-parser: ^0.1.10
-    tsort: 0.0.1
-    undici: ^5.14.0
-    uuid: ^8.3.2
-    ws: ^7.4.6
-  peerDependencies:
-    ts-node: "*"
-    typescript: "*"
-  peerDependenciesMeta:
-    ts-node:
-      optional: true
-    typescript:
-      optional: true
-  bin:
-    hardhat: internal/cli/bootstrap.js
-  checksum: a69813120e5e8f05cefb9ae9c7ff2e2fd06aa8802baf6bb81778810b3ea879d6cb31f04c5719ebe6c0289cc2bd72d1e1f00d65afcf1a049ed3130c35025046e1
-  languageName: node
-  linkType: hard
-
 "hardhat@npm:^2.16.1":
   version: 2.17.0
   resolution: "hardhat@npm:2.17.0"
@@ -10933,7 +10880,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"qs@npm:^6.4.0, qs@npm:^6.7.0, qs@npm:^6.9.4":
+"qs@npm:^6.4.0, qs@npm:^6.9.4":
   version: 6.11.1
   resolution: "qs@npm:6.11.1"
   dependencies:
