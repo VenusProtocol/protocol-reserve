@@ -24,7 +24,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 });
 
 function isFork() {
-  return process.env.FORK_MAINNET === "true" || process.env.FORK_TESTNET === "true"
+  return process.env.FORK_MAINNET === "true"
     ? {
         allowUnlimitedContractSize: false,
         loggingEnabled: false,
@@ -100,7 +100,7 @@ const config: HardhatUserConfig = {
   },
   paths: {
     sources: "./contracts",
-    tests: "./tests/hardhat",
+    tests: "./tests",
     cache: "./cache",
     artifacts: "./artifacts",
   },

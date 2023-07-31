@@ -16,6 +16,10 @@ contract MockToken is ERC20 {
         _mint(msg.sender, amount);
     }
 
+    function allocateTo(address owner, uint256 amount) external {
+        _mint(owner, amount);
+    }
+
     function decimals() public view virtual override returns (uint8) {
         return _decimals;
     }
