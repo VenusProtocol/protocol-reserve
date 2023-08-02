@@ -338,7 +338,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         }
     }
 
-    function getSchema(address comptroller, address asset, IncomeType incomeType) internal returns (Schema schema) {
+    function getSchema(address comptroller, address asset, IncomeType incomeType) internal view returns (Schema schema) {
         schema = Schema.DEFAULT;
         address vToken = IPrime(prime).vTokenForAsset(asset);
 
@@ -347,7 +347,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         }
     }
 
-    function _ensurePercentages() internal {
+    function _ensurePercentages() internal view {
         uint256 totalSchemas = uint256(type(Schema).max) + 1;
         uint[] memory totalPercentages = new uint[](totalSchemas);
 
