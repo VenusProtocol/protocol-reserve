@@ -304,7 +304,7 @@ forking(32038478, () => {
         });
       });
 
-      describe("transformForExactTokens", () => {
+      describe("transformForExactTokens()", () => {
         it("should revert when transformtion is paused", async () => {
           await riskFundTransformer.pauseTransformation();
           await expect(
@@ -350,6 +350,5 @@ forking(32038478, () => {
 
       //TODO: Need to write test cases for supporting fee methods once protocol share reserve V1 deployed to mainnet
     });
-
   }
 });

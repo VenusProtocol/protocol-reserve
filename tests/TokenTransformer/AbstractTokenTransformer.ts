@@ -212,6 +212,120 @@ describe("MockTransformer: tests", () => {
     });
   });
 
+  describe("Transform exact tokens for tokens with supporting fee", async () => {
+    beforeEach(async () => {
+      await tokenInDeflationary.connect(owner).approve(transformer.address, convertToUnit("1", 18));
+      await tokenIn.connect(owner).approve(transformer.address, convertToUnit("1", 18));
+      await tokenOut.transfer(transformer.address, convertToUnit("1.5", 18));
+
+      await oracle.getPrice.whenCalledWith(tokenInDeflationary.address).returns(TOKEN_IN_PRICE);
+      await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
+      await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
+    });
+
+    it("Revert on lower amount out than expected", async () => {
+      await transformer.setTransformationConfig(TransformationConfig);
+      await expect(
+        transformer.transformExactTokensSupportingFeeOnTransferTokens(
+          convertToUnit(".5", 18),
+          convertToUnit("1.5", 18),
+          tokenIn.address,
+          tokenOut.address,
+          await to.getAddress(),
+        ),
+      ).to.be.revertedWithCustomError(transformer, "AmountOutLowerThanMinRequired");
+    });
+
+    it("Success on transform exact tokens with supporting fee", async () => {
+      const TransformationConfig = {
+        tokenAddressIn: tokenInDeflationary.address,
+        tokenAddressOut: tokenOut.address,
+        incentive: INCENTIVE,
+        enabled: true,
+      };
+
+      await transformer.setTransformationConfig(TransformationConfig);
+
+      // Calculation for token transfer to transformer after fees deduction.
+      const amountDeductedInTransfer = parseUnits(".25", 18).div(100);
+      const amountTransferredAfterFees = parseUnits(".25", 18).sub(amountDeductedInTransfer);
+
+      const expectedResults = await transformer.callStatic.getAmountOut(
+        convertToUnit(".25", 18),
+        tokenInDeflationary.address,
+        tokenOut.address,
+      );
+
+      await expect(
+        transformer.transformExactTokensSupportingFeeOnTransferTokens(
+          convertToUnit(".25", 18),
+          convertToUnit(".5", 18),
+          tokenInDeflationary.address,
+          tokenOut.address,
+          await to.getAddress(),
+        ),
+      )
+        .to.emit(transformer, "TransformExactTokensSupportingFeeOnTransferTokens")
+        .withArgs(amountTransferredAfterFees, expectedResults[1]);
+    });
+  });
+
+  describe("Transform tokens for exact tokens with supporting fee", async () => {
+    beforeEach(async () => {
+      await tokenInDeflationary.connect(owner).approve(transformer.address, convertToUnit("1", 18));
+      await tokenIn.connect(owner).approve(transformer.address, convertToUnit("1", 18));
+      await tokenOut.transfer(transformer.address, convertToUnit("1.5", 18));
+
+      await oracle.getPrice.whenCalledWith(tokenInDeflationary.address).returns(TOKEN_IN_PRICE);
+      await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
+      await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
+    });
+
+    it("Revert on lower amount out than expected", async () => {
+      await transformer.setTransformationConfig(TransformationConfig);
+      await expect(
+        transformer.transformForExactTokensSupportingFeeOnTransferTokens(
+          convertToUnit(".5", 18),
+          convertToUnit("1.5", 18),
+          tokenIn.address,
+          tokenOut.address,
+          await to.getAddress(),
+        ),
+      ).to.be.revertedWithCustomError(transformer, "AmountInHigherThanMax");
+    });
+
+    it("Success on transform exact tokens with supporting fee", async () => {
+      const TransformationConfig = {
+        tokenAddressIn: tokenInDeflationary.address,
+        tokenAddressOut: tokenOut.address,
+        incentive: INCENTIVE,
+        enabled: true,
+      };
+
+      await transformer.setTransformationConfig(TransformationConfig);
+
+      const expectedResults = await transformer.callStatic.getAmountIn(
+        convertToUnit(".5", 18),
+        tokenInDeflationary.address,
+        tokenOut.address,
+      );
+      // Calculation for Token Transferred to transformer.
+      const amountTransferredAfterFees = expectedResults[1].sub(expectedResults[1].div(100));
+
+      await expect(
+        transformer.transformForExactTokensSupportingFeeOnTransferTokens(
+          convertToUnit(".25", 18),
+          convertToUnit(".5", 18),
+          tokenInDeflationary.address,
+          tokenOut.address,
+          await to.getAddress(),
+        ),
+      )
+        .to.emit(transformer, "TransformForExactTokensSupportingFeeOnTransferTokens")
+        .withArgs(amountTransferredAfterFees, expectedResults[0]);
+    });
+  });
+
   describe("Set transform configurations", () => {
     beforeEach(async () => {
       accessControl.isAllowedToCall.returns(true);
@@ -423,98 +537,6 @@ describe("MockTransformer: tests", () => {
 
       expect(results[0]).to.equal(TOKEN_OUT_MAX);
       expect(results[1]).to.equal(amountIn);
-    });
-  });
-
-  describe("Transform exact tokens for tokens with supporting fee", async () => {
-    beforeEach(async () => {
-      await tokenInDeflationary.connect(owner).approve(transformer.address, convertToUnit("1", 18));
-      await tokenIn.connect(owner).approve(transformer.address, convertToUnit("1", 18));
-      await tokenOut.transfer(transformer.address, convertToUnit("1.5", 18));
-
-      await oracle.getPrice.whenCalledWith(tokenInDeflationary.address).returns(TOKEN_IN_PRICE);
-      await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
-      await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-    });
-
-    it("Revert on lower amount out than expected", async () => {
-      await transformer.setTransformationConfig(TransformationConfig);
-      await expect(
-        transformer.transformExactTokens(
-          convertToUnit(".5", 18),
-          convertToUnit("1.5", 18),
-          tokenIn.address,
-          tokenOut.address,
-          await to.getAddress(),
-        ),
-      ).to.be.revertedWithCustomError(transformer, "AmountOutLowerThanMinRequired");
-    });
-
-    it("Success on transform exact tokens with supporting fee", async () => {
-      const TransformationConfig = {
-        tokenAddressIn: tokenInDeflationary.address,
-        tokenAddressOut: tokenOut.address,
-        incentive: INCENTIVE,
-        enabled: true,
-      };
-
-      await transformer.setTransformationConfig(TransformationConfig);
-
-      await expect(
-        transformer.transformExactTokensSupportingFeeOnTransferTokens(
-          convertToUnit(".25", 18),
-          convertToUnit(".5", 18),
-          tokenInDeflationary.address,
-          tokenOut.address,
-          await to.getAddress(),
-        ),
-      ).to.emit(transformer, "TransformExactTokensSupportingFeeOnTransferTokens");
-    });
-  });
-
-  describe("Transform tokens for exact tokens", async () => {
-    beforeEach(async () => {
-      await tokenInDeflationary.connect(owner).approve(transformer.address, convertToUnit("1", 18));
-      await tokenIn.connect(owner).approve(transformer.address, convertToUnit("1", 18));
-      await tokenOut.transfer(transformer.address, convertToUnit("1.5", 18));
-
-      await oracle.getPrice.whenCalledWith(tokenInDeflationary.address).returns(TOKEN_IN_PRICE);
-      await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
-      await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-    });
-
-    it("Revert on lower amount out than expected", async () => {
-      await transformer.setTransformationConfig(TransformationConfig);
-      await expect(
-        transformer.transformForExactTokens(
-          convertToUnit(".5", 18),
-          convertToUnit("1.5", 18),
-          tokenIn.address,
-          tokenOut.address,
-          await to.getAddress(),
-        ),
-      ).to.be.revertedWithCustomError(transformer, "AmountInHigherThanMax");
-    });
-
-    it("Success on transform exact tokens with supporting fee", async () => {
-      const TransformationConfig = {
-        tokenAddressIn: tokenInDeflationary.address,
-        tokenAddressOut: tokenOut.address,
-        incentive: INCENTIVE,
-        enabled: true,
-      };
-
-      await transformer.setTransformationConfig(TransformationConfig);
-
-      await expect(
-        transformer.transformForExactTokensSupportingFeeOnTransferTokens(
-          convertToUnit(".25", 18),
-          convertToUnit(".5", 18),
-          tokenInDeflationary.address,
-          tokenOut.address,
-          await to.getAddress(),
-        ),
-      ).to.emit(transformer, "TransformForExactTokensSupportingFeeOnTransferTokens");
     });
   });
 
