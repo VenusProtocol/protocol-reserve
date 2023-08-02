@@ -2,5 +2,11 @@
 pragma solidity 0.8.13;
 
 interface IProtocolShareReserve {
-    function updateAssetsState(address comptroller, address asset) external;
+    /// @notice it represents the type of vToken income
+    enum IncomeType {
+        SPREAD,
+        LIQUIDATION
+    }
+
+    function updateAssetsState(address comptroller, address asset, IncomeType incomeType) external;
 }
