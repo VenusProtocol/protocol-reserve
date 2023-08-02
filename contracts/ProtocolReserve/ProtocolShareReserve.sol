@@ -11,6 +11,10 @@ import { IPrime } from "../Interfaces/IPrime.sol";
 import { IVToken } from "../Interfaces/IVToken.sol";
 import { IIncomeDestination } from "../Interfaces/IIncomeDestination.sol";
 
+error InvalidAddress();
+error UnsupportedAsset();
+error InvalidTotalPercentage();
+
 contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -107,9 +111,10 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address _corePoolComptroller, address _wbnb, address _vbnb) {
-        require(_corePoolComptroller != address(0), "ProtocolShareReserve: Core pool comptroller address invalid");
-        require(_wbnb != address(0), "ProtocolShareReserve: WBNB address invalid");
-        require(_vbnb != address(0), "ProtocolShareReserve: vBNB address invalid");
+        if (_corePoolComptroller == address(0)) revert InvalidAddress();
+        if (_wbnb == address(0)) revert InvalidAddress();
+        if (_vbnb == address(0)) revert InvalidAddress();
+
         CORE_POOL_COMPTROLLER = _corePoolComptroller;
         WBNB = _wbnb;
         vBNB = _vbnb;
@@ -133,8 +138,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      */
     function setPoolRegistry(address _poolRegistry) external {
         _checkAccessAllowed("setPoolRegistry(address)");
-
-        require(_poolRegistry != address(0), "ProtocolShareReserve: Pool registry address invalid");
+        if (_poolRegistry == address(0)) revert InvalidAddress();
         address oldPoolRegistry = poolRegistry;
         poolRegistry = _poolRegistry;
         emit PoolRegistryUpdated(oldPoolRegistry, poolRegistry);
@@ -146,8 +150,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      */
     function setPrime(address _prime) external {
         _checkAccessAllowed("setPrime(address)");
-
-        require(_prime != address(0), "ProtocolShareReserve: Prime address invalid");
+        if (_prime == address(0)) revert InvalidAddress();
         address oldPrime = prime;
         prime = _prime;
         emit PrimeUpdated(oldPrime, prime);
@@ -245,13 +248,12 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         address asset,
         IncomeType incomeType
     ) public override(IProtocolShareReserve) {
-        require(ComptrollerInterface(comptroller).isComptroller(), "ProtocolShareReserve: Comptroller address invalid");
-        require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
-        require(
-            comptroller == CORE_POOL_COMPTROLLER ||
-                PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0),
-            "ProtocolShareReserve: The pool doesn't support the asset"
-        );
+        if (!ComptrollerInterface(comptroller).isComptroller()) revert InvalidAddress();
+        if (asset == address(0)) revert InvalidAddress();
+        if (
+            comptroller != CORE_POOL_COMPTROLLER &&
+            PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) == address(0)
+        ) revert InvalidAddress();
 
         Schema schema = getSchema(comptroller, asset, incomeType);
         uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
@@ -338,7 +340,11 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         }
     }
 
-    function getSchema(address comptroller, address asset, IncomeType incomeType) internal view returns (Schema schema) {
+    function getSchema(
+        address comptroller,
+        address asset,
+        IncomeType incomeType
+    ) internal view returns (Schema schema) {
         schema = Schema.DEFAULT;
         address vToken = IPrime(prime).vTokenForAsset(asset);
 
@@ -357,10 +363,8 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         }
 
         for (uint schemaValue = 0; schemaValue <= totalSchemas - 1; ++schemaValue) {
-            require(
-                totalPercentages[schemaValue] == MAX_PERCENT || totalPercentages[schemaValue] == 0,
-                "ProtocolShareReserve: Total Percentage must be 0 or 100"
-            );
+            if (totalPercentages[schemaValue] != MAX_PERCENT && totalPercentages[schemaValue] != 0)
+                revert InvalidTotalPercentage();
         }
     }
 
