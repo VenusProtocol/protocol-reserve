@@ -8,12 +8,12 @@ import { ethers } from "hardhat";
 
 import {
   IAccessControlManagerV8,
+  MockConverter,
+  MockConverter__factory,
   MockDeflatingToken,
   MockDeflatingToken__factory,
   MockToken,
   MockToken__factory,
-  MockTransformer,
-  MockTransformer__factory,
   ResilientOracle,
 } from "../../typechain";
 import { convertToUnit } from "../utils";
@@ -22,7 +22,7 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 let accessControl: FakeContract<IAccessControlManagerV8>;
-let transformer: MockContract<MockTransformer>;
+let converter: MockContract<MockConverter>;
 let tokenIn: MockContract<MockToken>;
 let tokenOut: MockContract<MockToken>;
 let oracle: FakeContract<ResilientOracle>;
@@ -30,7 +30,7 @@ let tokenInDeflationary: MockContract<MockDeflatingToken>;
 let to: Signer;
 let destination: Signer;
 let owner: Signer;
-let TransformationConfig: {
+let ConversionConfig: {
   tokenAddressIn: string;
   tokenAddressOut: string;
   incentive: string;
@@ -45,7 +45,7 @@ const MANTISSA_ONE = convertToUnit("1", 18);
 
 async function fixture(): Promise<void> {
   [owner, destination, to] = await ethers.getSigners();
-  const Transformer = await smock.mock<MockTransformer__factory>("MockTransformer");
+  const Converter = await smock.mock<MockConverter__factory>("MockConverter");
 
   accessControl = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
   oracle = await smock.fake<ResilientOracle>("ResilientOracle");
@@ -60,15 +60,11 @@ async function fixture(): Promise<void> {
   tokenOut = await MockToken.deploy("TokenOut", "tokenOut", 18);
   await tokenOut.faucet(parseUnits("1000", 18));
 
-  transformer = await Transformer.deploy();
-  await transformer.AbstractTokenTransformer_init(
-    accessControl.address,
-    oracle.address,
-    await destination.getAddress(),
-  );
+  converter = await Converter.deploy();
+  await converter.AbstractTokenConverter_init(accessControl.address, oracle.address, await destination.getAddress());
   accessControl.isAllowedToCall.returns(true);
 
-  TransformationConfig = {
+  ConversionConfig = {
     tokenAddressIn: tokenIn.address,
     tokenAddressOut: tokenOut.address,
     incentive: INCENTIVE,
@@ -76,29 +72,29 @@ async function fixture(): Promise<void> {
   };
 }
 
-describe("MockTransformer: tests", () => {
+describe("MockConverter: tests", () => {
   beforeEach(async () => {
     await loadFixture(fixture);
   });
 
-  describe("Transform tokens for exact tokens", async () => {
+  describe("Convert tokens for exact tokens", async () => {
     beforeEach(async () => {
-      await tokenInDeflationary.connect(owner).approve(transformer.address, convertToUnit("1", 18));
-      await tokenIn.connect(owner).approve(transformer.address, convertToUnit("1", 18));
-      await tokenOut.transfer(transformer.address, convertToUnit("1.5", 18));
+      await tokenInDeflationary.connect(owner).approve(converter.address, convertToUnit("1", 18));
+      await tokenIn.connect(owner).approve(converter.address, convertToUnit("1", 18));
+      await tokenOut.transfer(converter.address, convertToUnit("1.5", 18));
 
       await oracle.getPrice.whenCalledWith(tokenInDeflationary.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
     });
 
-    it("Success on transform exact tokens", async () => {
+    it("Success on convert exact tokens", async () => {
       const MAX_AMOUNT_IN = convertToUnit(".25", 18);
       const AMOUNT_OUT = convertToUnit(".5", 18);
-      await transformer.setTransformationConfig(TransformationConfig);
-      const expectedResults = await transformer.callStatic.getAmountIn(AMOUNT_OUT, tokenIn.address, tokenOut.address);
+      await converter.setConversionConfig(ConversionConfig);
+      const expectedResults = await converter.callStatic.getAmountIn(AMOUNT_OUT, tokenIn.address, tokenOut.address);
 
-      const tx = await transformer.transformForExactTokens(
+      const tx = await converter.convertForExactTokens(
         MAX_AMOUNT_IN,
         AMOUNT_OUT,
         tokenIn.address,
@@ -108,63 +104,63 @@ describe("MockTransformer: tests", () => {
 
       await tx.wait();
 
-      await expect(tx).to.emit(transformer, "TransformForExactTokens").withArgs(expectedResults[1], expectedResults[0]);
+      await expect(tx).to.emit(converter, "ConvertForExactTokens").withArgs(expectedResults[1], expectedResults[0]);
     });
 
     it("Revert on lower amount out than expected", async () => {
-      await transformer.setTransformationConfig(TransformationConfig);
+      await converter.setConversionConfig(ConversionConfig);
       await expect(
-        transformer.transformForExactTokens(
+        converter.convertForExactTokens(
           convertToUnit(".5", 18),
           convertToUnit("1.5", 18),
           tokenIn.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.be.revertedWithCustomError(transformer, "AmountInHigherThanMax");
+      ).to.be.revertedWithCustomError(converter, "AmountInHigherThanMax");
     });
 
     it("Revert on deflationary token transfer", async () => {
-      const TransformationConfig = {
+      const ConversionConfig = {
         tokenAddressIn: tokenInDeflationary.address,
         tokenAddressOut: tokenOut.address,
         incentive: INCENTIVE,
         enabled: true,
       };
 
-      await transformer.setTransformationConfig(TransformationConfig);
+      await converter.setConversionConfig(ConversionConfig);
 
       await expect(
-        transformer.transformForExactTokens(
+        converter.convertForExactTokens(
           convertToUnit(".25", 18),
           convertToUnit(".5", 18),
           tokenInDeflationary.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.be.revertedWithCustomError(transformer, "AmountInOrAmountOutMismatched");
+      ).to.be.revertedWithCustomError(converter, "AmountInOrAmountOutMismatched");
     });
   });
 
-  describe("Transform exact tokens for tokens", async () => {
+  describe("Convert exact tokens for tokens", async () => {
     beforeEach(async () => {
-      await tokenInDeflationary.connect(owner).approve(transformer.address, convertToUnit("1", 18));
-      await tokenIn.connect(owner).approve(transformer.address, convertToUnit("1", 18));
-      await tokenOut.transfer(transformer.address, convertToUnit("1.5", 18));
+      await tokenInDeflationary.connect(owner).approve(converter.address, convertToUnit("1", 18));
+      await tokenIn.connect(owner).approve(converter.address, convertToUnit("1", 18));
+      await tokenOut.transfer(converter.address, convertToUnit("1.5", 18));
 
       await oracle.getPrice.whenCalledWith(tokenInDeflationary.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
     });
 
-    it("Success on transform exact tokens", async () => {
+    it("Success on convert exact tokens", async () => {
       const AMOUNT_IN = convertToUnit(".25", 18);
       const MIN_AMOUNT_OUT = convertToUnit(".5", 18);
-      await transformer.setTransformationConfig(TransformationConfig);
+      await converter.setConversionConfig(ConversionConfig);
 
-      const expectedResults = await transformer.callStatic.getAmountOut(AMOUNT_IN, tokenIn.address, tokenOut.address);
+      const expectedResults = await converter.callStatic.getAmountOut(AMOUNT_IN, tokenIn.address, tokenOut.address);
 
-      const tx = await transformer.transformExactTokens(
+      const tx = await converter.convertExactTokens(
         AMOUNT_IN,
         MIN_AMOUNT_OUT,
         tokenIn.address,
@@ -174,49 +170,49 @@ describe("MockTransformer: tests", () => {
 
       await tx.wait();
 
-      await expect(tx).to.emit(transformer, "TransformExactTokens").withArgs(expectedResults[0], expectedResults[1]);
+      await expect(tx).to.emit(converter, "ConvertExactTokens").withArgs(expectedResults[0], expectedResults[1]);
     });
 
     it("Revert on lower amount out than expected", async () => {
-      await transformer.setTransformationConfig(TransformationConfig);
+      await converter.setConversionConfig(ConversionConfig);
       await expect(
-        transformer.transformExactTokens(
+        converter.convertExactTokens(
           convertToUnit(".5", 18),
           convertToUnit("1.5", 18),
           tokenIn.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.be.revertedWithCustomError(transformer, "AmountOutLowerThanMinRequired");
+      ).to.be.revertedWithCustomError(converter, "AmountOutLowerThanMinRequired");
     });
 
     it("Revert on deflationary token transfer", async () => {
-      const TransformationConfig = {
+      const ConversionConfig = {
         tokenAddressIn: tokenInDeflationary.address,
         tokenAddressOut: tokenOut.address,
         incentive: INCENTIVE,
         enabled: true,
       };
 
-      await transformer.setTransformationConfig(TransformationConfig);
+      await converter.setConversionConfig(ConversionConfig);
 
       await expect(
-        transformer.transformExactTokens(
+        converter.convertExactTokens(
           convertToUnit(".25", 18),
           convertToUnit(".5", 18),
           tokenInDeflationary.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.be.revertedWithCustomError(transformer, "AmountInOrAmountOutMismatched");
+      ).to.be.revertedWithCustomError(converter, "AmountInOrAmountOutMismatched");
     });
   });
 
-  describe("Transform exact tokens for tokens with supporting fee", async () => {
+  describe("Convert exact tokens for tokens with supporting fee", async () => {
     beforeEach(async () => {
-      await tokenInDeflationary.connect(owner).approve(transformer.address, convertToUnit("1", 18));
-      await tokenIn.connect(owner).approve(transformer.address, convertToUnit("1", 18));
-      await tokenOut.transfer(transformer.address, convertToUnit("1.5", 18));
+      await tokenInDeflationary.connect(owner).approve(converter.address, convertToUnit("1", 18));
+      await tokenIn.connect(owner).approve(converter.address, convertToUnit("1", 18));
+      await tokenOut.transfer(converter.address, convertToUnit("1.5", 18));
 
       await oracle.getPrice.whenCalledWith(tokenInDeflationary.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
@@ -224,40 +220,40 @@ describe("MockTransformer: tests", () => {
     });
 
     it("Revert on lower amount out than expected", async () => {
-      await transformer.setTransformationConfig(TransformationConfig);
+      await converter.setConversionConfig(ConversionConfig);
       await expect(
-        transformer.transformExactTokensSupportingFeeOnTransferTokens(
+        converter.convertExactTokensSupportingFeeOnTransferTokens(
           convertToUnit(".5", 18),
           convertToUnit("1.5", 18),
           tokenIn.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.be.revertedWithCustomError(transformer, "AmountOutLowerThanMinRequired");
+      ).to.be.revertedWithCustomError(converter, "AmountOutLowerThanMinRequired");
     });
 
-    it("Success on transform exact tokens with supporting fee", async () => {
-      const TransformationConfig = {
+    it("Success on convert exact tokens with supporting fee", async () => {
+      const ConversionConfig = {
         tokenAddressIn: tokenInDeflationary.address,
         tokenAddressOut: tokenOut.address,
         incentive: INCENTIVE,
         enabled: true,
       };
 
-      await transformer.setTransformationConfig(TransformationConfig);
+      await converter.setConversionConfig(ConversionConfig);
 
-      // Calculation for token transfer to transformer after fees deduction.
+      // Calculation for token transfer to converter after fees deduction.
       const amountDeductedInTransfer = parseUnits(".25", 18).div(100);
       const amountTransferredAfterFees = parseUnits(".25", 18).sub(amountDeductedInTransfer);
 
-      const expectedResults = await transformer.callStatic.getAmountOut(
+      const expectedResults = await converter.callStatic.getAmountOut(
         convertToUnit(".25", 18),
         tokenInDeflationary.address,
         tokenOut.address,
       );
 
       await expect(
-        transformer.transformExactTokensSupportingFeeOnTransferTokens(
+        converter.convertExactTokensSupportingFeeOnTransferTokens(
           convertToUnit(".25", 18),
           convertToUnit(".5", 18),
           tokenInDeflationary.address,
@@ -265,16 +261,16 @@ describe("MockTransformer: tests", () => {
           await to.getAddress(),
         ),
       )
-        .to.emit(transformer, "TransformExactTokensSupportingFeeOnTransferTokens")
+        .to.emit(converter, "ConvertExactTokensSupportingFeeOnTransferTokens")
         .withArgs(amountTransferredAfterFees, expectedResults[1]);
     });
   });
 
-  describe("Transform tokens for exact tokens with supporting fee", async () => {
+  describe("Convert tokens for exact tokens with supporting fee", async () => {
     beforeEach(async () => {
-      await tokenInDeflationary.connect(owner).approve(transformer.address, convertToUnit("1", 18));
-      await tokenIn.connect(owner).approve(transformer.address, convertToUnit("1", 18));
-      await tokenOut.transfer(transformer.address, convertToUnit("1.5", 18));
+      await tokenInDeflationary.connect(owner).approve(converter.address, convertToUnit("1", 18));
+      await tokenIn.connect(owner).approve(converter.address, convertToUnit("1", 18));
+      await tokenOut.transfer(converter.address, convertToUnit("1.5", 18));
 
       await oracle.getPrice.whenCalledWith(tokenInDeflationary.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
@@ -282,38 +278,38 @@ describe("MockTransformer: tests", () => {
     });
 
     it("Revert on lower amount out than expected", async () => {
-      await transformer.setTransformationConfig(TransformationConfig);
+      await converter.setConversionConfig(ConversionConfig);
       await expect(
-        transformer.transformForExactTokensSupportingFeeOnTransferTokens(
+        converter.convertForExactTokensSupportingFeeOnTransferTokens(
           convertToUnit(".5", 18),
           convertToUnit("1.5", 18),
           tokenIn.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.be.revertedWithCustomError(transformer, "AmountInHigherThanMax");
+      ).to.be.revertedWithCustomError(converter, "AmountInHigherThanMax");
     });
 
-    it("Success on transform exact tokens with supporting fee", async () => {
-      const TransformationConfig = {
+    it("Success on convert exact tokens with supporting fee", async () => {
+      const ConversionConfig = {
         tokenAddressIn: tokenInDeflationary.address,
         tokenAddressOut: tokenOut.address,
         incentive: INCENTIVE,
         enabled: true,
       };
 
-      await transformer.setTransformationConfig(TransformationConfig);
+      await converter.setConversionConfig(ConversionConfig);
 
-      const expectedResults = await transformer.callStatic.getAmountIn(
+      const expectedResults = await converter.callStatic.getAmountIn(
         convertToUnit(".5", 18),
         tokenInDeflationary.address,
         tokenOut.address,
       );
-      // Calculation for Token Transferred to transformer.
+      // Calculation for Token Transferred to converter.
       const amountTransferredAfterFees = expectedResults[1].sub(expectedResults[1].div(100));
 
       await expect(
-        transformer.transformForExactTokensSupportingFeeOnTransferTokens(
+        converter.convertForExactTokensSupportingFeeOnTransferTokens(
           convertToUnit(".25", 18),
           convertToUnit(".5", 18),
           tokenInDeflationary.address,
@@ -321,75 +317,75 @@ describe("MockTransformer: tests", () => {
           await to.getAddress(),
         ),
       )
-        .to.emit(transformer, "TransformForExactTokensSupportingFeeOnTransferTokens")
+        .to.emit(converter, "ConvertForExactTokensSupportingFeeOnTransferTokens")
         .withArgs(amountTransferredAfterFees, expectedResults[0]);
     });
   });
 
-  describe("Set transform configurations", () => {
+  describe("Set convert configurations", () => {
     beforeEach(async () => {
       accessControl.isAllowedToCall.returns(true);
     });
 
-    it("Revert on not access to set transform configurations", async () => {
+    it("Revert on not access to set convert configurations", async () => {
       accessControl.isAllowedToCall.reset;
       accessControl.isAllowedToCall.returns(false);
 
-      await expect(transformer.setTransformationConfig(TransformationConfig)).to.be.revertedWithCustomError(
-        transformer,
+      await expect(converter.setConversionConfig(ConversionConfig)).to.be.revertedWithCustomError(
+        converter,
         "Unauthorized",
       );
     });
 
     it("Revert on invalid tokenIn address", async () => {
-      const TransformerConfig = {
-        ...TransformationConfig,
+      const ConverterConfig = {
+        ...ConversionConfig,
         tokenAddressIn: ethers.constants.AddressZero,
       };
 
-      await expect(transformer.setTransformationConfig(TransformerConfig)).to.be.revertedWithCustomError(
-        transformer,
+      await expect(converter.setConversionConfig(ConverterConfig)).to.be.revertedWithCustomError(
+        converter,
         "ZeroAddressNotAllowed",
       );
     });
 
     it("Revert on invalid tokenOut address", async () => {
-      const TransformerConfig = {
-        ...TransformationConfig,
+      const ConverterConfig = {
+        ...ConversionConfig,
         tokenAddressOut: ethers.constants.AddressZero,
       };
 
-      await expect(transformer.setTransformationConfig(TransformerConfig)).to.be.revertedWithCustomError(
-        transformer,
+      await expect(converter.setConversionConfig(ConverterConfig)).to.be.revertedWithCustomError(
+        converter,
         "ZeroAddressNotAllowed",
       );
     });
 
     it("Revert on high incentive percentage", async () => {
-      const TransformerConfig = {
-        ...TransformationConfig,
+      const ConverterConfig = {
+        ...ConversionConfig,
         incentive: convertToUnit("6", 18), // more than MAX_INCENTIVE = 5e18
       };
 
-      await expect(transformer.setTransformationConfig(TransformerConfig)).to.be.revertedWithCustomError(
-        transformer,
+      await expect(converter.setConversionConfig(ConverterConfig)).to.be.revertedWithCustomError(
+        converter,
         "IncentiveTooHigh",
       );
     });
 
-    it("Set transform config for first time", async () => {
-      let isExist = await transformer.transformConfigurations(tokenIn.address, tokenOut.address);
+    it("Set converter config for first time", async () => {
+      let isExist = await converter.convertConfigurations(tokenIn.address, tokenOut.address);
 
       expect(isExist[0]).to.equal(ethers.constants.AddressZero);
       expect(isExist[1]).to.equal(ethers.constants.AddressZero);
       expect(isExist[2]).to.equal(0);
       expect(isExist[3]).to.equal(false);
 
-      await expect(transformer.setTransformationConfig(TransformationConfig))
-        .to.emit(transformer, "TransformationConfigUpdated")
+      await expect(converter.setConversionConfig(ConversionConfig))
+        .to.emit(converter, "ConversionConfigUpdated")
         .withArgs(tokenIn.address, tokenOut.address, 0, INCENTIVE, false, true);
 
-      isExist = await transformer.transformConfigurations(tokenIn.address, tokenOut.address);
+      isExist = await converter.convertConfigurations(tokenIn.address, tokenOut.address);
 
       expect(isExist[0]).to.equal(tokenIn.address);
       expect(isExist[1]).to.equal(tokenOut.address);
@@ -400,18 +396,18 @@ describe("MockTransformer: tests", () => {
     it("Update the incentive", async () => {
       const NEW_INCENTIVE = convertToUnit("2", 17);
 
-      await transformer.setTransformationConfig(TransformationConfig);
+      await converter.setConversionConfig(ConversionConfig);
 
-      const TransformerConfig = {
-        ...TransformationConfig,
+      const ConverterConfig = {
+        ...ConversionConfig,
         incentive: NEW_INCENTIVE,
       };
 
-      await expect(transformer.setTransformationConfig(TransformerConfig))
-        .to.emit(transformer, "TransformationConfigUpdated")
+      await expect(converter.setConversionConfig(ConverterConfig))
+        .to.emit(converter, "ConversionConfigUpdated")
         .withArgs(tokenIn.address, tokenOut.address, INCENTIVE, NEW_INCENTIVE, true, true);
 
-      const isExist = await transformer.transformConfigurations(tokenIn.address, tokenOut.address);
+      const isExist = await converter.convertConfigurations(tokenIn.address, tokenOut.address);
       expect(isExist[2]).to.equal(NEW_INCENTIVE);
     });
   });
@@ -421,33 +417,33 @@ describe("MockTransformer: tests", () => {
     const AMOUNT_IN_OVER = convertToUnit("1", 18);
 
     beforeEach(async () => {
-      await tokenIn.connect(owner).approve(transformer.address, convertToUnit("1", 18));
-      await tokenOut.transfer(transformer.address, convertToUnit("1.5", 18));
+      await tokenIn.connect(owner).approve(converter.address, convertToUnit("1", 18));
+      await tokenOut.transfer(converter.address, convertToUnit("1.5", 18));
     });
 
-    const setTransformationConfig = async () => {
-      await transformer.setTransformationConfig(TransformationConfig);
+    const setConversionConfig = async () => {
+      await converter.setConversionConfig(ConversionConfig);
       await tokenOut.balanceOf.returns(TOKEN_OUT_MAX);
     };
 
     it("Revert on zero amountIn value", async () => {
-      await expect(transformer.getAmountOut(0, tokenIn.address, tokenOut.address)).to.be.revertedWithCustomError(
-        transformer,
+      await expect(converter.getAmountOut(0, tokenIn.address, tokenOut.address)).to.be.revertedWithCustomError(
+        converter,
         "InsufficientInputAmount",
       );
     });
 
-    it("Revert on no config or disabled transform for tokens pair", async () => {
+    it("Revert on no config or disabled convert for tokens pair", async () => {
       await expect(
-        transformer.getAmountOut(TOKEN_OUT_MAX, tokenIn.address, tokenOut.address),
-      ).to.be.revertedWithCustomError(transformer, "TransformationConfigNotEnabled");
+        converter.getAmountOut(TOKEN_OUT_MAX, tokenIn.address, tokenOut.address),
+      ).to.be.revertedWithCustomError(converter, "ConversionConfigNotEnabled");
     });
 
-    it("Success on transforming tokenIn to tokenOut for under tokenOut liquidity", async () => {
-      await setTransformationConfig();
+    it("Success on converting tokenIn to tokenOut for under tokenOut liquidity", async () => {
+      await setConversionConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await transformer.callStatic.getAmountOut(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address);
+      const results = await converter.callStatic.getAmountOut(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address);
       const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
       const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
       const amountOut = new BigNumber(AMOUNT_IN_UNDER)
@@ -460,11 +456,11 @@ describe("MockTransformer: tests", () => {
       expect(results[1]).to.equal(amountOut);
     });
 
-    it("Success on transforming tokenIn to tokenOut for over tokenOut liquidity", async () => {
-      await setTransformationConfig();
+    it("Success on converting tokenIn to tokenOut for over tokenOut liquidity", async () => {
+      await setConversionConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await transformer.callStatic.getAmountOut(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
+      const results = await converter.callStatic.getAmountOut(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
       const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
       const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
       const amountIn = new BigNumber(TOKEN_OUT_MAX)
@@ -483,33 +479,33 @@ describe("MockTransformer: tests", () => {
     const AMOUNT_IN_OVER = convertToUnit("2", 18);
 
     beforeEach(async () => {
-      await tokenIn.connect(owner).approve(transformer.address, convertToUnit("1", 18));
-      await tokenOut.transfer(transformer.address, convertToUnit("1.5", 18));
+      await tokenIn.connect(owner).approve(converter.address, convertToUnit("1", 18));
+      await tokenOut.transfer(converter.address, convertToUnit("1.5", 18));
     });
 
-    const setTransformationConfig = async () => {
-      await transformer.setTransformationConfig(TransformationConfig);
+    const setConversionConfig = async () => {
+      await converter.setConversionConfig(ConversionConfig);
       await tokenOut.balanceOf.returns(TOKEN_OUT_MAX);
     };
 
     it("Revert on zero amountIn value", async () => {
-      await expect(transformer.getAmountIn(0, tokenIn.address, tokenOut.address)).to.be.revertedWithCustomError(
-        transformer,
+      await expect(converter.getAmountIn(0, tokenIn.address, tokenOut.address)).to.be.revertedWithCustomError(
+        converter,
         "InsufficientInputAmount",
       );
     });
 
-    it("Revert on no config or disabled transform for tokens pair", async () => {
+    it("Revert on no config or disabled convert for tokens pair", async () => {
       await expect(
-        transformer.getAmountIn(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address),
-      ).to.be.revertedWithCustomError(transformer, "TransformationConfigNotEnabled");
+        converter.getAmountIn(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address),
+      ).to.be.revertedWithCustomError(converter, "ConversionConfigNotEnabled");
     });
 
-    it("Success on transforming tokenIn to tokenOut for under tokenOut liquidity", async () => {
-      await setTransformationConfig();
+    it("Success on conversing tokenIn to tokenOut for under tokenOut liquidity", async () => {
+      await setConversionConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await transformer.callStatic.getAmountIn(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address);
+      const results = await converter.callStatic.getAmountIn(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address);
       const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
       const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
       const amountIn = new BigNumber(AMOUNT_IN_UNDER)
@@ -522,11 +518,11 @@ describe("MockTransformer: tests", () => {
       expect(results[1]).to.equal(amountIn);
     });
 
-    it("Success on transforming tokenIn to tokenOut for over tokenOut liquidity", async () => {
-      await setTransformationConfig();
+    it("Success on conversing tokenIn to tokenOut for over tokenOut liquidity", async () => {
+      await setConversionConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await transformer.callStatic.getAmountIn(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
+      const results = await converter.callStatic.getAmountIn(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
       const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
       const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
       const amountIn = new BigNumber(TOKEN_OUT_MAX)
@@ -550,21 +546,21 @@ describe("MockTransformer: tests", () => {
     it("Revert on non-owner call", async () => {
       const [, nonOwner] = await ethers.getSigners();
 
-      await expect(transformer.connect(nonOwner).setPriceOracle(newOracle.address)).to.be.revertedWith(
+      await expect(converter.connect(nonOwner).setPriceOracle(newOracle.address)).to.be.revertedWith(
         "Ownable: caller is not the owner",
       );
     });
 
     it("Revert on invalid oracle address", async () => {
-      await expect(transformer.setPriceOracle(ethers.constants.AddressZero)).to.be.revertedWithCustomError(
-        transformer,
+      await expect(converter.setPriceOracle(ethers.constants.AddressZero)).to.be.revertedWithCustomError(
+        converter,
         "ZeroAddressNotAllowed",
       );
     });
 
     it("Success on new price oracle update", async () => {
-      await expect(transformer.setPriceOracle(newOracle.address))
-        .to.emit(transformer, "PriceOracleUpdated")
+      await expect(converter.setPriceOracle(newOracle.address))
+        .to.emit(converter, "PriceOracleUpdated")
         .withArgs(oracle.address, newOracle.address);
     });
   });
@@ -575,96 +571,84 @@ describe("MockTransformer: tests", () => {
       accessControl.isAllowedToCall.returns(true);
     });
 
-    it("Revert on pauseTransformation for non owner call", async () => {
+    it("Revert on pauseConversion for non owner call", async () => {
       accessControl.isAllowedToCall.reset;
       accessControl.isAllowedToCall.returns(false);
 
-      await expect(transformer.connect(to).pauseTransformation()).to.be.revertedWithCustomError(
-        transformer,
-        "Unauthorized",
-      );
+      await expect(converter.connect(to).pauseConversion()).to.be.revertedWithCustomError(converter, "Unauthorized");
     });
 
-    it("Success on pauseTransformation", async () => {
-      await expect(transformer.pauseTransformation()).to.emit(transformer, "TransformationPaused");
+    it("Success on pauseConversion", async () => {
+      await expect(converter.pauseConversion()).to.emit(converter, "ConversionPaused");
     });
 
-    it("Revert on when transform is already paused", async () => {
-      await transformer.pauseTransformation();
-      await expect(transformer.pauseTransformation()).to.be.revertedWithCustomError(
-        transformer,
-        "TransformationTokensPaused",
-      );
+    it("Revert on when convert is already paused", async () => {
+      await converter.pauseConversion();
+      await expect(converter.pauseConversion()).to.be.revertedWithCustomError(converter, "ConversionTokensPaused");
     });
 
-    it("Transform methods should revert on transform pause", async () => {
+    it("Convert methods should revert on convert pause", async () => {
       const Value_1 = convertToUnit(".25", 18);
       const VALUE_2 = convertToUnit(".5", 18);
-      await transformer.pauseTransformation();
+      await converter.pauseConversion();
 
       await expect(
-        transformer.transformExactTokens(Value_1, VALUE_2, tokenIn.address, tokenOut.address, await to.getAddress()),
-      ).to.be.revertedWithCustomError(transformer, "TransformationTokensPaused");
+        converter.convertExactTokens(Value_1, VALUE_2, tokenIn.address, tokenOut.address, await to.getAddress()),
+      ).to.be.revertedWithCustomError(converter, "ConversionTokensPaused");
 
       await expect(
-        transformer.transformForExactTokens(Value_1, VALUE_2, tokenIn.address, tokenOut.address, await to.getAddress()),
-      ).to.be.revertedWithCustomError(transformer, "TransformationTokensPaused");
+        converter.convertForExactTokens(Value_1, VALUE_2, tokenIn.address, tokenOut.address, await to.getAddress()),
+      ).to.be.revertedWithCustomError(converter, "ConversionTokensPaused");
 
       await expect(
-        transformer.transformExactTokensSupportingFeeOnTransferTokens(
+        converter.convertExactTokensSupportingFeeOnTransferTokens(
           Value_1,
           VALUE_2,
           tokenIn.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.be.revertedWithCustomError(transformer, "TransformationTokensPaused");
+      ).to.be.revertedWithCustomError(converter, "ConversionTokensPaused");
 
       await expect(
-        transformer.transformForExactTokensSupportingFeeOnTransferTokens(
+        converter.convertForExactTokensSupportingFeeOnTransferTokens(
           Value_1,
           VALUE_2,
           tokenIn.address,
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.be.revertedWithCustomError(transformer, "TransformationTokensPaused");
+      ).to.be.revertedWithCustomError(converter, "ConversionTokensPaused");
     });
 
-    it("Revert on resumeTransformation for non owner call", async () => {
+    it("Revert on resumeConversion for non owner call", async () => {
       accessControl.isAllowedToCall.reset;
       accessControl.isAllowedToCall.returns(false);
 
-      await expect(transformer.connect(to).resumeTransformation()).to.be.revertedWithCustomError(
-        transformer,
-        "Unauthorized",
-      );
+      await expect(converter.connect(to).resumeConversion()).to.be.revertedWithCustomError(converter, "Unauthorized");
     });
 
-    it("Success on resumeTransformation", async () => {
-      await transformer.pauseTransformation();
-      await expect(transformer.resumeTransformation()).to.emit(transformer, "TransformationResumed");
+    it("Success on resumeConversion", async () => {
+      await converter.pauseConversion();
+      await expect(converter.resumeConversion()).to.emit(converter, "ConversionResumed");
     });
 
-    it("Revert on when transform is already active", async () => {
-      await expect(transformer.resumeTransformation()).to.be.revertedWithCustomError(
-        transformer,
-        "TransformationTokensActive",
-      );
+    it("Revert on when convert is already active", async () => {
+      await expect(converter.resumeConversion()).to.be.revertedWithCustomError(converter, "ConversionTokensActive");
     });
   });
 
-  describe("SweepTokens abstract transformer", () => {
+  describe("SweepTokens abstract converter", () => {
     it("Transfer sweep tokens", async () => {
-      expect(await tokenIn.balanceOf(transformer.address)).to.equals(0);
-      await expect(tokenIn.transfer(transformer.address, 1000)).to.changeTokenBalances(
+      expect(await tokenIn.balanceOf(converter.address)).to.equals(0);
+      await expect(tokenIn.transfer(converter.address, 1000)).to.changeTokenBalances(
         tokenIn,
-        [await owner.getAddress(), transformer.address],
+        [await owner.getAddress(), converter.address],
         [-1000, 1000],
       );
-      await expect(transformer.sweepToken(tokenIn.address, await owner.getAddress(), 1000)).to.changeTokenBalances(
+      await expect(converter.sweepToken(tokenIn.address, await owner.getAddress(), 1000)).to.changeTokenBalances(
         tokenIn,
-        [await owner.getAddress(), transformer.address],
+        [await owner.getAddress(), converter.address],
         [1000, -1000],
       );
     });

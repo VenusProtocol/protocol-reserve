@@ -20,8 +20,8 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
     /// @notice Emitted when convertible base asset address is updated
     event ConvertibleBaseAssetUpdated(address indexed oldConvertibleBaseAsset, address indexed newConvertibleBaseAsset);
 
-    /// @notice Emitted when pool registry address is updated
-    event RiskFundTransformerUpdated(address indexed oldRiskFundTransformer, address indexed newRiskFundTransformer);
+    /// @notice Emitted when risk fund converter address is updated
+    event RiskFundConverterUpdated(address indexed oldRiskFundConverter, address indexed newRiskFundConverter);
 
     /// @notice Emitted when shortfall contract address is updated
     event ShortfallContractUpdated(address indexed oldShortfallContract, address indexed newShortfallContract);
@@ -32,8 +32,8 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
     /// @notice Emitted when pool states is updated with amount transferred to this contract
     event PoolStateUpdated(address comptroller, uint256 amount);
 
-    /// @notice Error is thrown when updatePoolState is not called by riskFundTransformer
-    error InvalidRiskFundTransformer();
+    /// @notice Error is thrown when updatePoolState is not called by riskFundConverter
+    error InvalidRiskFundConverter();
 
     /// @notice Error is thrown when transferReserveForAuction is called by non shortfall address
     error InvalidShortfallAddress();
@@ -44,7 +44,7 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
     /// @dev Convertible base asset setter
     /// @param convertibleBaseAsset_ Address of the convertible base asset
     /// @custom:event ConvertibleBaseAssetUpdated emit on success
-    /// @custom:error ZeroAddressNotAllowed is thrown when risk fund transformer address is zero
+    /// @custom:error ZeroAddressNotAllowed is thrown when risk fund converter address is zero
     function setConvertibleBaseAsset(address convertibleBaseAsset_) external onlyOwner {
         ensureNonzeroAddress(convertibleBaseAsset_);
         address oldConvertibleBaseAsset = convertibleBaseAsset;
@@ -52,15 +52,15 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
         emit ConvertibleBaseAssetUpdated(oldConvertibleBaseAsset, convertibleBaseAsset_);
     }
 
-    /// @dev Risk fund transformer setter
-    /// @param riskFundTransformer_ Address of the risk fund transformer
-    /// @custom:event RiskFundTransformerUpdated emit on success
-    /// @custom:error ZeroAddressNotAllowed is thrown when risk fund transformer address is zero
-    function setRiskFundTransformer(address riskFundTransformer_) external onlyOwner {
-        ensureNonzeroAddress(riskFundTransformer_);
-        address oldRiskFundTransformer = riskFundTransformer;
-        riskFundTransformer = riskFundTransformer_;
-        emit RiskFundTransformerUpdated(oldRiskFundTransformer, riskFundTransformer_);
+    /// @dev Risk fund converter setter
+    /// @param riskFundConverter_ Address of the risk fund converter
+    /// @custom:event RiskFundConverterUpdated emit on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when risk fund converter address is zero
+    function setRiskFundConverter(address riskFundConverter_) external onlyOwner {
+        ensureNonzeroAddress(riskFundConverter_);
+        address oldRiskFundConverter = riskFundConverter;
+        riskFundConverter = riskFundConverter_;
+        emit RiskFundConverterUpdated(oldRiskFundConverter, riskFundConverter_);
     }
 
     /// @dev Shortfall contract address setter
@@ -108,8 +108,8 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
     /// @param comptroller Comptroller address (pool)
     /// @param amount Amount transferred for the pool
     function updatePoolState(address comptroller, uint256 amount) public {
-        if (msg.sender != riskFundTransformer) {
-            revert InvalidRiskFundTransformer();
+        if (msg.sender != riskFundConverter) {
+            revert InvalidRiskFundConverter();
         }
 
         poolReserves[comptroller] += amount;

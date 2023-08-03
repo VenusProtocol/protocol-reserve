@@ -5,14 +5,14 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
 
-import { AbstractTokenTransformer } from "./AbstractTokenTransformer.sol";
+import { AbstractTokenConverter } from "./AbstractTokenConverter.sol";
 import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 import { IPoolRegistry } from "../Interfaces/IPoolRegistry.sol";
 import { IComptroller } from "../Interfaces/IComptroller.sol";
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
 import { EXP_SCALE } from "../Utils/Constants.sol";
 
-contract RiskFundTransformer is AbstractTokenTransformer {
+contract RiskFundConverter is AbstractTokenConverter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools).
@@ -65,8 +65,8 @@ contract RiskFundTransformer is AbstractTokenTransformer {
         ResilientOracle priceOracle_,
         address destinationAddress_
     ) public initializer {
-        // Initialize AbstractTokenTransformer
-        __AbstractTokenTransformer_init(accessControlManager_, priceOracle_, destinationAddress_);
+        // Initialize AbstractTokenConverter
+        __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
     }
 
     /// @dev Update the reserve of the asset for the specific pool after transferring to risk fund
@@ -121,12 +121,12 @@ contract RiskFundTransformer is AbstractTokenTransformer {
         return assetsReserves[tokenAddress];
     }
 
-    /// @notice Hook to perform after transforming tokens
+    /// @notice Hook to perform after converting tokens
     /// @dev After transfromation poolsAssetsReserves are settled by pool's reserves fraction
     /// @param tokenInAddress Address of the tokenIn
-    /// @param amountIn Amount of tokenIn transformered
-    /// @param amountOut Amount of tokenOut transformered
-    function postTransformationHook(address tokenInAddress, uint256 amountIn, uint256 amountOut) internal override {
+    /// @param amountIn Amount of tokenIn transferred
+    /// @param amountOut Amount of tokenOut transferred
+    function postConversionHook(address tokenInAddress, uint256 amountIn, uint256 amountOut) internal override {
         address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenInAddress);
         uint256 assetReserve = assetsReserves[tokenInAddress];
         for (uint256 i; i < pools.length; ++i) {

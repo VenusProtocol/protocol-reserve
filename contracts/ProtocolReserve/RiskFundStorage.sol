@@ -44,6 +44,6 @@ contract RiskFundV1Storage is ReserveHelpersStorage, MaxLoopsLimitHelpersStorage
 /// @author Venus
 /// @dev Risk fund V2 storage
 contract RiskFundV2Storage is RiskFundV1Storage {
-    /// Risk fund transformer address
-    address public riskFundTransformer;
+    /// Risk fund converter address
+    address public riskFundConverter;
 }

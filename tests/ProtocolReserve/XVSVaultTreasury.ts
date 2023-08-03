@@ -49,7 +49,7 @@ describe("XVS vault treasury: tests", () => {
   });
 
   describe("setXVSVault", async function () {
-    it("reverts on invalid transformer address", async function () {
+    it("reverts on invalid vault address", async function () {
       await expect(xvsVaultTreasury.setXVSVault(constants.AddressZero)).to.be.revertedWithCustomError(
         xvsVaultTreasury,
         "ZeroAddressNotAllowed",

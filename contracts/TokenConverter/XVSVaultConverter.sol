@@ -5,9 +5,9 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
 
-import { AbstractTokenTransformer } from "./AbstractTokenTransformer.sol";
+import { AbstractTokenConverter } from "./AbstractTokenConverter.sol";
 
-contract XVSVaultTransformer is AbstractTokenTransformer {
+contract XVSVaultConverter is AbstractTokenConverter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @param accessControlManager_ Access control manager contract address
@@ -18,8 +18,8 @@ contract XVSVaultTransformer is AbstractTokenTransformer {
         ResilientOracle priceOracle_,
         address destinationAddress_
     ) public initializer {
-        // Initialize AbstractTokenTransformer
-        __AbstractTokenTransformer_init(accessControlManager_, priceOracle_, destinationAddress_);
+        // Initialize AbstractTokenConverter
+        __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
     }
 
     /// @notice Get the balance for specific token

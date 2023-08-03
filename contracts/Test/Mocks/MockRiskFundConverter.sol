@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import { RiskFundTransformer } from "../../TokenTransformer/RiskFundTransformer.sol";
+import { RiskFundConverter } from "../../TokenConverter/RiskFundConverter.sol";
 
-contract MockRiskFundTransformer is RiskFundTransformer {
-    function postTransformationHookMock(address tokenInAddress, uint256 amountIn, uint256 amountOut) external {
-        super.postTransformationHook(tokenInAddress, amountIn, amountOut);
+contract MockRiskFundConverter is RiskFundConverter {
+    function postConversionHookMock(address tokenInAddress, uint256 amountIn, uint256 amountOut) external {
+        super.postConversionHook(tokenInAddress, amountIn, amountOut);
     }
 
     function setAssetsReserves(address asset, uint256 amount) external {

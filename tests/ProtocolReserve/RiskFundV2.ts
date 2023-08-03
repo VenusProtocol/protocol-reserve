@@ -11,12 +11,12 @@ import {
   IShortfall,
   MockToken,
   MockToken__factory,
-  RiskFundTransformer,
+  RiskFundConverter,
   RiskFundV2,
   RiskFundV2__factory,
 } from "../../typechain";
 
-let riskFundTransformer: FakeContract<RiskFundTransformer>;
+let riskFundConverter: FakeContract<RiskFundConverter>;
 let shortfall: FakeContract<IShortfall>;
 let riskFund: MockContract<RiskFundV2>;
 let tokenA: MockContract<MockToken>;
@@ -32,7 +32,7 @@ const riskFundFixture = async (): Promise<void> => {
   riskFund = await RiskFund.deploy();
 
   shortfall = await smock.fake<IShortfall>("IShortfall");
-  riskFundTransformer = await smock.fake<RiskFundTransformer>("RiskFundTransformer");
+  riskFundConverter = await smock.fake<RiskFundConverter>("RiskFundConverter");
   comptrollerA = await smock.fake<IComptroller>("IComptroller");
 
   const MockToken = await smock.mock<MockToken__factory>("MockToken");
@@ -40,7 +40,7 @@ const riskFundFixture = async (): Promise<void> => {
   await tokenA.faucet(parseUnits("1000", 18));
 
   await riskFund.setVariable("_owner", await admin.getAddress());
-  await riskFund.setVariable("riskFundTransformer", riskFundTransformer.address);
+  await riskFund.setVariable("riskFundConverter", riskFundConverter.address);
   await riskFund.setVariable("shortfall", shortfall.address);
 };
 
@@ -71,26 +71,26 @@ describe("Risk Fund: Tests", function () {
       });
     });
 
-    describe("setRiskFundTransformer", async function () {
-      it("reverts on invalid transformer address", async function () {
-        await expect(riskFund.setRiskFundTransformer(constants.AddressZero)).to.be.revertedWithCustomError(
+    describe("setRiskFundConverter", async function () {
+      it("reverts on invalid converter address", async function () {
+        await expect(riskFund.setRiskFundConverter(constants.AddressZero)).to.be.revertedWithCustomError(
           riskFund,
           "ZeroAddressNotAllowed",
         );
       });
 
       it("fails if called by a non-owner", async function () {
-        await expect(riskFund.connect(nonAdmin).setRiskFundTransformer(riskFundTransformer.address)).to.be.revertedWith(
+        await expect(riskFund.connect(nonAdmin).setRiskFundConverter(riskFundConverter.address)).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
       });
 
-      it("emits RiskFundTransformerUpdated event", async function () {
-        const newTransformer = await smock.fake<RiskFundTransformer>("RiskFundTransformer");
-        const tx = riskFund.setRiskFundTransformer(newTransformer.address);
+      it("emits RiskFundConverterUpdated event", async function () {
+        const newConverter = await smock.fake<RiskFundConverter>("RiskFundConverter");
+        const tx = riskFund.setRiskFundConverter(newConverter.address);
         await expect(tx)
-          .to.emit(riskFund, "RiskFundTransformerUpdated")
-          .withArgs(riskFundTransformer.address, newTransformer.address);
+          .to.emit(riskFund, "RiskFundConverterUpdated")
+          .withArgs(riskFundConverter.address, newConverter.address);
       });
     });
 
@@ -163,7 +163,7 @@ describe("Risk Fund: Tests", function () {
       const COMPTROLLER_A_AMOUNT = convertToUnit(10, 18);
       const beforePoolReserve = await riskFund.poolReserves(comptrollerA.address);
 
-      await riskFund.setVariable("riskFundTransformer", await admin.getAddress());
+      await riskFund.setVariable("riskFundConverter", await admin.getAddress());
       await riskFund.connect(admin).updatePoolState(comptrollerA.address, COMPTROLLER_A_AMOUNT);
 
       const afterPoolReserve = await riskFund.poolReserves(comptrollerA.address);

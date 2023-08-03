@@ -3,27 +3,27 @@ pragma solidity 0.8.13;
 
 import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
 
-interface IAbstractTokenTransformer {
-    struct TransformationConfig {
+interface IAbstractTokenConverter {
+    struct ConversionConfig {
         /// tokenIn address
         address tokenAddressIn;
         /// tokenOut address
         address tokenAddressOut;
-        /// incentive on transformation of tokens in mantissa i.e 10% incentive would be 0.1 * 1e18
+        /// incentive on conversion of tokens in mantissa i.e 10% incentive would be 0.1 * 1e18
         uint256 incentive;
-        /// whether the transformation is enabled
+        /// whether the conversion is enabled
         bool enabled;
     }
 
-    function pauseTransformation() external;
+    function pauseConversion() external;
 
-    function resumeTransformation() external;
+    function resumeConversion() external;
 
     function setPriceOracle(ResilientOracle priceOracle_) external;
 
-    function setTransformationConfig(TransformationConfig calldata transformationConfig) external;
+    function setConversionConfig(ConversionConfig calldata conversionConfig) external;
 
-    function transformExactTokens(
+    function convertExactTokens(
         uint256 amountInMantissa,
         uint256 amountOutMinMantissa,
         address tokenAddressIn,
@@ -31,7 +31,7 @@ interface IAbstractTokenTransformer {
         address to
     ) external;
 
-    function transformForExactTokens(
+    function convertForExactTokens(
         uint256 amountInMaxMantissa,
         uint256 amountOutMantissa,
         address tokenAddressIn,
@@ -39,7 +39,7 @@ interface IAbstractTokenTransformer {
         address to
     ) external;
 
-    function transformExactTokensSupportingFeeOnTransferTokens(
+    function convertExactTokensSupportingFeeOnTransferTokens(
         uint256 amountInMantissa,
         uint256 amountOutMinMantissa,
         address tokenAddressIn,
@@ -47,7 +47,7 @@ interface IAbstractTokenTransformer {
         address to
     ) external;
 
-    function transformForExactTokensSupportingFeeOnTransferTokens(
+    function convertForExactTokensSupportingFeeOnTransferTokens(
         uint256 amountInMaxMantissa,
         uint256 amountOutMantissa,
         address tokenAddressIn,
