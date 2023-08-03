@@ -36,16 +36,6 @@ contract RiskFundTransformer is AbstractTokenTransformer {
     // amount -> reserve increased by amount.
     event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
 
-    /// @dev Get the Amount of the asset in the risk fund for the specific pool.
-    /// @param comptroller Comptroller address (pool)
-    /// @param asset Asset address.
-    /// @return Asset's reserve in risk fund.
-    function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256) {
-        require(IComptroller(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
-        require(asset != address(0), "ReserveHelpers: Asset address invalid");
-        return poolsAssetsReserves[comptroller][asset];
-    }
-
     /// @dev Pool registry setter
     /// @param poolRegistry_ Address of the pool registry
     /// @custom:event PoolRegistryUpdated emits on success
@@ -57,10 +47,14 @@ contract RiskFundTransformer is AbstractTokenTransformer {
         emit PoolRegistryUpdated(oldPoolRegistry, poolRegistry_);
     }
 
-    /// @notice Get the balance for specific token
-    /// @param tokenAddress Address of the token
-    function balanceOf(address tokenAddress) public view override returns (uint256 tokenBalance) {
-        return assetsReserves[tokenAddress];
+    /// @dev Get the Amount of the asset in the risk fund for the specific pool.
+    /// @param comptroller Comptroller address (pool)
+    /// @param asset Asset address.
+    /// @return Asset's reserve in risk fund.
+    function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256) {
+        require(IComptroller(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
+        require(asset != address(0), "ReserveHelpers: Asset address invalid");
+        return poolsAssetsReserves[comptroller][asset];
     }
 
     /// @param accessControlManager_ Access control manager contract address
@@ -101,25 +95,6 @@ contract RiskFundTransformer is AbstractTokenTransformer {
         }
     }
 
-    /// @notice Hook to perform after transforming tokens
-    /// @dev After transfromation poolsAssetsReserves are settled by pool's reserves fraction
-    /// @param tokenInAddress Address of the tokenIn
-    /// @param amountIn Amount of tokenIn transformered
-    /// @param amountOut Amount of tokenOut transformered
-    function postTransformationHook(address tokenInAddress, uint256 amountIn, uint256 amountOut) internal override {
-        address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenInAddress);
-        uint256 assetReserve = assetsReserves[tokenInAddress];
-        for (uint256 i; i < pools.length; ++i) {
-            uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenInAddress] * EXP_SCALE) / assetReserve;
-            if (poolShare == 0) continue;
-            updatePoolAssetsReserve(pools[i], tokenInAddress, amountIn, poolShare);
-            uint256 poolAmountOutShare = (poolShare * amountOut) / EXP_SCALE;
-            IRiskFund(destinationAddress).updatePoolState(pools[i], poolAmountOutShare);
-        }
-
-        assetsReserves[tokenInAddress] -= amountIn;
-    }
-
     /// @notice Operations to perform after sweepToken
     /// @param tokenAddress Address of the token
     /// @param amount Amount transferred to address(to)
@@ -138,6 +113,31 @@ contract RiskFundTransformer is AbstractTokenTransformer {
             }
             assetsReserves[tokenAddress] -= amountDiff;
         }
+    }
+
+    /// @notice Get the balance for specific token
+    /// @param tokenAddress Address of the token
+    function balanceOf(address tokenAddress) public view override returns (uint256 tokenBalance) {
+        return assetsReserves[tokenAddress];
+    }
+
+    /// @notice Hook to perform after transforming tokens
+    /// @dev After transfromation poolsAssetsReserves are settled by pool's reserves fraction
+    /// @param tokenInAddress Address of the tokenIn
+    /// @param amountIn Amount of tokenIn transformered
+    /// @param amountOut Amount of tokenOut transformered
+    function postTransformationHook(address tokenInAddress, uint256 amountIn, uint256 amountOut) internal override {
+        address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenInAddress);
+        uint256 assetReserve = assetsReserves[tokenInAddress];
+        for (uint256 i; i < pools.length; ++i) {
+            uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenInAddress] * EXP_SCALE) / assetReserve;
+            if (poolShare == 0) continue;
+            updatePoolAssetsReserve(pools[i], tokenInAddress, amountIn, poolShare);
+            uint256 poolAmountOutShare = (poolShare * amountOut) / EXP_SCALE;
+            IRiskFund(destinationAddress).updatePoolState(pools[i], poolAmountOutShare);
+        }
+
+        assetsReserves[tokenInAddress] -= amountIn;
     }
 
     /// @notice Update the poolAssetsResreves upon transferring the tokens

@@ -368,30 +368,6 @@ abstract contract AbstractTokenTransformer is
     /// @param amount Amount transferred to address(to)
     function postSweepToken(address token, uint256 amount) public virtual {}
 
-    /// @param accessControlManager_ Access control manager contract address
-    /// @param priceOracle_ Resilient oracle address
-    /// @param destinationAddress_  Address at all incoming tokens will transferred to
-    function __AbstractTokenTransformer_init(
-        address accessControlManager_,
-        ResilientOracle priceOracle_,
-        address destinationAddress_
-    ) internal onlyInitializing {
-        __AccessControlled_init(accessControlManager_);
-        __ReentrancyGuard_init();
-        __AbstractTokenTransformer_init_unchained(priceOracle_, destinationAddress_);
-    }
-
-    /// @param priceOracle_ Resilient oracle address
-    /// @param destinationAddress_  Address at all incoming tokens will transferred to
-    function __AbstractTokenTransformer_init_unchained(
-        ResilientOracle priceOracle_,
-        address destinationAddress_
-    ) internal onlyInitializing {
-        _setPriceOracle(priceOracle_);
-        _setDestination(destinationAddress_);
-        transformationPaused = false;
-    }
-
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param tokenAddressIn Address of the token to transform
@@ -626,6 +602,30 @@ abstract contract AbstractTokenTransformer is
     /// @param amountIn Amount of tokenIn transformed
     /// @param amountOut Amount of tokenOut transformed
     function postTransformationHook(address tokenInAddress, uint256 amountIn, uint256 amountOut) internal virtual {}
+
+    /// @param accessControlManager_ Access control manager contract address
+    /// @param priceOracle_ Resilient oracle address
+    /// @param destinationAddress_  Address at all incoming tokens will transferred to
+    function __AbstractTokenTransformer_init(
+        address accessControlManager_,
+        ResilientOracle priceOracle_,
+        address destinationAddress_
+    ) internal onlyInitializing {
+        __AccessControlled_init(accessControlManager_);
+        __ReentrancyGuard_init();
+        __AbstractTokenTransformer_init_unchained(priceOracle_, destinationAddress_);
+    }
+
+    /// @param priceOracle_ Resilient oracle address
+    /// @param destinationAddress_  Address at all incoming tokens will transferred to
+    function __AbstractTokenTransformer_init_unchained(
+        ResilientOracle priceOracle_,
+        address destinationAddress_
+    ) internal onlyInitializing {
+        _setPriceOracle(priceOracle_);
+        _setDestination(destinationAddress_);
+        transformationPaused = false;
+    }
 
     /// @notice To check, is transform paused
     function _checkTransformationPaused() internal view {

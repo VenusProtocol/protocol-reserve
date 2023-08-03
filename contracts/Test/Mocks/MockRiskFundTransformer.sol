@@ -8,19 +8,19 @@ contract MockRiskFundTransformer is RiskFundTransformer {
         super.postTransformationHook(tokenInAddress, amountIn, amountOut);
     }
 
-    function getPoolsAssetsReserves(address comptroller, address asset) external view returns (uint256) {
-        return poolsAssetsReserves[comptroller][asset];
-    }
-
-    function getAssetsReserves(address asset) external view returns (uint256) {
-        return assetsReserves[asset];
-    }
-
     function setAssetsReserves(address asset, uint256 amount) external {
         assetsReserves[asset] = amount;
     }
 
     function setPoolsAssetsReserves(address comptroller, address asset, uint256 amount) external {
         poolsAssetsReserves[comptroller][asset] = amount;
+    }
+
+    function getPoolsAssetsReserves(address comptroller, address asset) external view returns (uint256) {
+        return poolsAssetsReserves[comptroller][asset];
+    }
+
+    function getAssetsReserves(address asset) external view returns (uint256) {
+        return assetsReserves[asset];
     }
 }

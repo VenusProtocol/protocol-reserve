@@ -18,6 +18,36 @@ contract MockACM is AccessControl {
     }
 
     /**
+     * @notice Gives a function call permission to one single account
+     * @dev this function can be called only from Role Admin or DEFAULT_ADMIN_ROLE
+     * @param contractAddress address of contract for which call permissions will be granted
+     * @dev if contractAddress is zero address, the account can access the specified function
+     *      on **any** contract managed by this ACL
+     * @param functionSig signature e.g. "functionName(uint256,bool)"
+     * @param accountToPermit account that will be given access to the contract function
+     * @custom:event Emits a {RoleGranted} and {PermissionGranted} events.
+     */
+    function giveCallPermission(address contractAddress, string memory functionSig, address accountToPermit) public {
+        bytes32 role = keccak256(abi.encodePacked(contractAddress, functionSig));
+        grantRole(role, accountToPermit);
+        emit PermissionGranted(accountToPermit, contractAddress, functionSig);
+    }
+
+    /**
+     * @notice Revokes an account's permission to a particular function call
+     * @dev this function can be called only from Role Admin or DEFAULT_ADMIN_ROLE
+     * 		May emit a {RoleRevoked} event.
+     * @param contractAddress address of contract for which call permissions will be revoked
+     * @param functionSig signature e.g. "functionName(uint256,bool)"
+     * @custom:event Emits {RoleRevoked} and {PermissionRevoked} events.
+     */
+    function revokeCallPermission(address contractAddress, string memory functionSig, address accountToRevoke) public {
+        bytes32 role = keccak256(abi.encodePacked(contractAddress, functionSig));
+        revokeRole(role, accountToRevoke);
+        emit PermissionRevoked(accountToRevoke, contractAddress, functionSig);
+    }
+
+    /**
      * @notice Verifies if the given account can call a contract's guarded function
      * @dev Since restricted contracts using this function as a permission hook, we can get contracts address with msg.sender
      * @param account for which call permissions will be checked
@@ -51,35 +81,5 @@ contract MockACM is AccessControl {
     ) public view returns (bool) {
         bytes32 role = keccak256(abi.encodePacked(contractAddress, functionSig));
         return hasRole(role, account);
-    }
-
-    /**
-     * @notice Gives a function call permission to one single account
-     * @dev this function can be called only from Role Admin or DEFAULT_ADMIN_ROLE
-     * @param contractAddress address of contract for which call permissions will be granted
-     * @dev if contractAddress is zero address, the account can access the specified function
-     *      on **any** contract managed by this ACL
-     * @param functionSig signature e.g. "functionName(uint256,bool)"
-     * @param accountToPermit account that will be given access to the contract function
-     * @custom:event Emits a {RoleGranted} and {PermissionGranted} events.
-     */
-    function giveCallPermission(address contractAddress, string memory functionSig, address accountToPermit) public {
-        bytes32 role = keccak256(abi.encodePacked(contractAddress, functionSig));
-        grantRole(role, accountToPermit);
-        emit PermissionGranted(accountToPermit, contractAddress, functionSig);
-    }
-
-    /**
-     * @notice Revokes an account's permission to a particular function call
-     * @dev this function can be called only from Role Admin or DEFAULT_ADMIN_ROLE
-     * 		May emit a {RoleRevoked} event.
-     * @param contractAddress address of contract for which call permissions will be revoked
-     * @param functionSig signature e.g. "functionName(uint256,bool)"
-     * @custom:event Emits {RoleRevoked} and {PermissionRevoked} events.
-     */
-    function revokeCallPermission(address contractAddress, string memory functionSig, address accountToRevoke) public {
-        bytes32 role = keccak256(abi.encodePacked(contractAddress, functionSig));
-        revokeRole(role, accountToRevoke);
-        emit PermissionRevoked(accountToRevoke, contractAddress, functionSig);
     }
 }

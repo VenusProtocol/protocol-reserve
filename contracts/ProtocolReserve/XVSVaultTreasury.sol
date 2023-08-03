@@ -46,21 +46,6 @@ contract XVSVaultTreasury is AccessControlledV8 {
         _setXVSAddress(xvsAddress_);
     }
 
-    /// @param accessControlManager_ Access control manager contract address
-    /// @param xvsVault_ XVSVault address
-    /// @param xvsAddress_ XVS address
-    function initialize(
-        address accessControlManager_,
-        address xvsVault_,
-        address xvsAddress_
-    ) public virtual initializer {
-        __AccessControlled_init(accessControlManager_);
-
-        _setXVSVault(xvsVault_);
-
-        _setXVSAddress(xvsAddress_);
-    }
-
     function fundXVSVault(uint256 amountMantissa) external {
         _checkAccessAllowed("fundXVSVault(amountMantissa)");
 
@@ -80,6 +65,21 @@ contract XVSVaultTreasury is AccessControlledV8 {
     /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address.
     function updateAssetsState(address comptroller, address asset) public {}
+
+    /// @param accessControlManager_ Access control manager contract address
+    /// @param xvsVault_ XVSVault address
+    /// @param xvsAddress_ XVS address
+    function initialize(
+        address accessControlManager_,
+        address xvsVault_,
+        address xvsAddress_
+    ) public virtual initializer {
+        __AccessControlled_init(accessControlManager_);
+
+        _setXVSVault(xvsVault_);
+
+        _setXVSAddress(xvsAddress_);
+    }
 
     /// @dev XVS vault setter
     /// @param xvsVault_ Address of the XVS vault
