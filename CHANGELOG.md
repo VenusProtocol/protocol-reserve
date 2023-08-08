@@ -1,3 +1,10 @@
+## [1.0.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v1.0.0-dev.1...v1.0.0-dev.2) (2023-08-08)
+
+
+### Features
+
+* remove unneeded dependencies ([3d81f0b](https://github.com/VenusProtocol/protocol-reserve/commit/3d81f0b92528eea0d322cce6e13d6f94e2cc5bfc))
+
 ## 1.0.0-dev.1 (2023-08-08)
 
 
