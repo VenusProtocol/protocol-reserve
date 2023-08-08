@@ -116,13 +116,6 @@ const config: HardhatUserConfig = {
       default: 0, // here this will by default take the first account as deployer
     },
   },
-  external: {
-    contracts: [
-      {
-        artifacts: "./node_modules/@venusprotocol/venus-protocol/artifacts",
-      },
-    ],
-  },
   docgen: {
     outputDir: "./docgen-docs",
     pages: "files",
