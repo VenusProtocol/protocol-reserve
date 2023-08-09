@@ -1,3 +1,10 @@
+## [1.0.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v1.0.0-dev.2...v1.0.0-dev.3) (2023-08-09)
+
+
+### Bug Fixes
+
+* remove unused event ([12d87b2](https://github.com/VenusProtocol/protocol-reserve/commit/12d87b2be9ad750345e6163cb79e2902f328de74))
+
 ## [1.0.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v1.0.0-dev.1...v1.0.0-dev.2) (2023-08-08)
 
 
