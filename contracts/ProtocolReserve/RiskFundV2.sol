@@ -30,7 +30,7 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
     event TransferredReserveForAuction(address indexed comptroller, uint256 amount);
 
     /// @notice Emitted when pool states is updated with amount transferred to this contract
-    event PoolStateUpdated(address comptroller, uint256 amount);
+    event PoolStateUpdated(address indexed comptroller, uint256 amount);
 
     /// @notice Error is thrown when updatePoolState is not called by riskFundConverter
     error InvalidRiskFundConverter();
@@ -47,9 +47,8 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
     /// @custom:error ZeroAddressNotAllowed is thrown when risk fund converter address is zero
     function setConvertibleBaseAsset(address convertibleBaseAsset_) external onlyOwner {
         ensureNonzeroAddress(convertibleBaseAsset_);
-        address oldConvertibleBaseAsset = convertibleBaseAsset;
+        emit ConvertibleBaseAssetUpdated(convertibleBaseAsset, convertibleBaseAsset_);
         convertibleBaseAsset = convertibleBaseAsset_;
-        emit ConvertibleBaseAssetUpdated(oldConvertibleBaseAsset, convertibleBaseAsset_);
     }
 
     /// @dev Risk fund converter setter
@@ -58,9 +57,8 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
     /// @custom:error ZeroAddressNotAllowed is thrown when risk fund converter address is zero
     function setRiskFundConverter(address riskFundConverter_) external onlyOwner {
         ensureNonzeroAddress(riskFundConverter_);
-        address oldRiskFundConverter = riskFundConverter;
+        emit RiskFundConverterUpdated(riskFundConverter, riskFundConverter_);
         riskFundConverter = riskFundConverter_;
-        emit RiskFundConverterUpdated(oldRiskFundConverter, riskFundConverter_);
     }
 
     /// @dev Shortfall contract address setter
@@ -68,9 +66,8 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
     /// @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
     function setShortfallContractAddress(address shortfallContractAddress_) external onlyOwner {
         ensureNonzeroAddress(shortfallContractAddress_);
-        address oldShortfallContractAddress = shortfall;
+        emit ShortfallContractUpdated(shortfall, shortfallContractAddress_);
         shortfall = shortfallContractAddress_;
-        emit ShortfallContractUpdated(oldShortfallContractAddress, shortfallContractAddress_);
     }
 
     /// @dev Transfer tokens for auction
