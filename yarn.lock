@@ -28,11 +28,12 @@ __metadata:
   linkType: hard
 
 "@aws-sdk/types@npm:^3.1.0":
-  version: 3.329.0
-  resolution: "@aws-sdk/types@npm:3.329.0"
+  version: 3.391.0
+  resolution: "@aws-sdk/types@npm:3.391.0"
   dependencies:
+    "@smithy/types": ^2.2.0
     tslib: ^2.5.0
-  checksum: 2bbcd8e6ba2f813dc220c60e7ac0fa0d0990d49f88030fd8235479586716016c8f9d7aeaf1f4c1a64694275f33690bd1dd4ed46e127983201061e063da73f426
+  checksum: 3539807ba0d515e0788da7e234c83578b761cf02b4bc2ede04755a39e44cc22dfc2edd0a48d333a090dc87c0f540cef957cd3c8009a12f38017438b50563fcbb
   languageName: node
   linkType: hard
 
@@ -2114,17 +2115,20 @@ __metadata:
   linkType: hard
 
 "@openzeppelin/upgrades-core@npm:^1.26.0":
-  version: 1.26.0
-  resolution: "@openzeppelin/upgrades-core@npm:1.26.0"
+  version: 1.28.0
+  resolution: "@openzeppelin/upgrades-core@npm:1.28.0"
   dependencies:
-    cbor: ^8.0.0
+    cbor: ^9.0.0
     chalk: ^4.1.0
-    compare-versions: ^5.0.0
+    compare-versions: ^6.0.0
     debug: ^4.1.1
     ethereumjs-util: ^7.0.3
+    minimist: ^1.2.7
     proper-lockfile: ^4.1.1
-    solidity-ast: ^0.4.15
-  checksum: 7bc90d2157fc887be24f1351ca00904203f28bca138f89ff9f7ac6ac18910feca889f0b59766bd9ff4a8698ec58aec35348c504fd37fe48a4311156b81802d00
+    solidity-ast: ^0.4.26
+  bin:
+    openzeppelin-upgrades-core: dist/cli/cli.js
+  checksum: 9da2e057bc16375a5eab7e65a4b13f478ab964e7f96b3d5480f798b241bb8a3590e16339fe23cde08d5ffdb01964be6a829f50a9baee85783f18cb5fb8a41421
   languageName: node
   linkType: hard
 
@@ -2387,6 +2391,15 @@ __metadata:
     "@sentry/types": 5.30.0
     tslib: ^1.9.3
   checksum: 27b259a136c664427641dd32ee3dc490553f3b5e92986accfa829d14063ebc69b191e92209ac9c40fbc367f74cfa17dc93b4c40981d666711fd57b4d51a82062
+  languageName: node
+  linkType: hard
+
+"@smithy/types@npm:^2.2.0":
+  version: 2.2.1
+  resolution: "@smithy/types@npm:2.2.1"
+  dependencies:
+    tslib: ^2.5.0
+  checksum: cd06347fce5ccf31464fef57a7943a3b5858aad6efc0169a9871c4e8dd11c542936f35ebac92c9d82e3cdd9668f23001400f5a1a015fff3f59e021a27fec32cb
   languageName: node
   linkType: hard
 
@@ -2918,9 +2931,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/oracle@npm:1.6.12-dev.4":
-  version: 1.6.12-dev.4
-  resolution: "@venusprotocol/oracle@npm:1.6.12-dev.4"
+"@venusprotocol/oracle@npm:^1.7.2":
+  version: 1.7.2
+  resolution: "@venusprotocol/oracle@npm:1.7.2"
   dependencies:
     "@chainlink/contracts": ^0.5.1
     "@defi-wonderland/smock": ^2.3.4
@@ -2934,7 +2947,7 @@ __metadata:
     hardhat-deploy: ^0.11.14
     module-alias: ^2.2.2
     solidity-docgen: ^0.6.0-beta.29
-  checksum: 152ffb3f754cb47c9698771fb8c13d8a24db8acac982773f582d143a99b4611226de67e6dc1bfd372b5ea28f8c653329f19bad5f414891017d556f3a63aa3f5a
+  checksum: 71dc7faf761e110cda526dabbe2ac7bdda40849cccb6473647cf80edd6940e1cbe02528c270f83e9d14c7815cdfaf736a1acef3c8896cf04926f72a8c53ff9df
   languageName: node
   linkType: hard
 
@@ -2970,7 +2983,7 @@ __metadata:
     "@typescript-eslint/eslint-plugin": ^5.44.0
     "@typescript-eslint/parser": ^5.44.0
     "@venusprotocol/isolated-pools": ^1.3.0
-    "@venusprotocol/oracle": 1.6.12-dev.4
+    "@venusprotocol/oracle": ^1.7.2
     "@venusprotocol/venus-protocol": ^0.7.0
     bignumber.js: ^9.1.1
     chai: ^4.3.7
@@ -3385,15 +3398,15 @@ __metadata:
   linkType: hard
 
 "amazon-cognito-identity-js@npm:^6.0.1":
-  version: 6.2.0
-  resolution: "amazon-cognito-identity-js@npm:6.2.0"
+  version: 6.3.2
+  resolution: "amazon-cognito-identity-js@npm:6.3.2"
   dependencies:
     "@aws-crypto/sha256-js": 1.2.2
     buffer: 4.9.2
     fast-base64-decode: ^1.0.0
     isomorphic-unfetch: ^3.0.0
     js-cookie: ^2.2.1
-  checksum: 9b976ceac2a2648bfa707190d683214168cf1a70083152355b36e5b87b1aedbbb38dab8b71904ee968de25e90ebcf1e86ffaa21d809373d31acd73f62b6c7c1c
+  checksum: e1855b1671bbe1017fd0c0204efef77586a5f1962e14942dc4a468060386e2e81a33f211b1a3560f3a6fecca591415aa725025ee91a6911be1985a346ac15a6a
   languageName: node
   linkType: hard
 
@@ -4238,6 +4251,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cbor@npm:^9.0.0":
+  version: 9.0.1
+  resolution: "cbor@npm:9.0.1"
+  dependencies:
+    nofilter: ^3.1.0
+  checksum: 42333ac3d42cc3f6fcc7a529e68417a2dd8099eda43ca4be1304cdc5bc7494efe058e2db8a3d3b46ae60d69c7331ea813c22dbd019c4ac592d23e599d72bbcc9
+  languageName: node
+  linkType: hard
+
 "chai-as-promised@npm:^7.1.1":
   version: 7.1.1
   resolution: "chai-as-promised@npm:7.1.1"
@@ -4733,6 +4755,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"compare-versions@npm:^6.0.0":
+  version: 6.1.0
+  resolution: "compare-versions@npm:6.1.0"
+  checksum: d4e2a45706a023d8d0b6680338b66b79e20bd02d1947f0ac6531dab634cbed89fa373b3f03d503c5e489761194258d6e1bae67a07f88b1efc61648454f2d47e7
+  languageName: node
+  linkType: hard
+
 "concat-map@npm:0.0.1":
   version: 0.0.1
   resolution: "concat-map@npm:0.0.1"
@@ -5190,28 +5219,28 @@ __metadata:
   linkType: hard
 
 "defender-admin-client@npm:^1.39.0":
-  version: 1.43.0
-  resolution: "defender-admin-client@npm:1.43.0"
+  version: 1.44.0
+  resolution: "defender-admin-client@npm:1.44.0"
   dependencies:
     axios: ^0.21.2
-    defender-base-client: 1.43.0
+    defender-base-client: 1.44.0
     ethers: ^5.7.2
     lodash: ^4.17.19
     node-fetch: ^2.6.0
-  checksum: 489e1f9822d5f36d04b2668eee411f7b46747a88128e4184ac4b6c9fd2fc6caacfac3541429ffa086b3639c3aeb4fc5b87f53bc0e151790c27de5db5804dca61
+  checksum: 3e89e58b5fceb100f4d97f4d90ac3a07a703a9d4284f58c2ea5f678719a15b0431363e231e7111318c3f020f7bf0c17409d4ed8fc1216bd0af88c88550526c79
   languageName: node
   linkType: hard
 
-"defender-base-client@npm:1.43.0, defender-base-client@npm:^1.40.0":
-  version: 1.43.0
-  resolution: "defender-base-client@npm:1.43.0"
+"defender-base-client@npm:1.44.0, defender-base-client@npm:^1.40.0":
+  version: 1.44.0
+  resolution: "defender-base-client@npm:1.44.0"
   dependencies:
     amazon-cognito-identity-js: ^6.0.1
     async-retry: ^1.3.3
     axios: ^0.21.2
     lodash: ^4.17.19
     node-fetch: ^2.6.0
-  checksum: e0862837112fd8e00252e11dc32b7f7afa1e25b48ca0ad0cd8b2d443024fa3bf17b683bc0922e8464251b7919378925ce36e8227f7355a7978ef303db7b2ba77
+  checksum: 68485f71a926338b01ff8d5ed5fcc42b1a7a19d3c89bff86a373d75bdd3b03cb6f82324016cd3f3809823278e7acfd19019bf2aac8c8f567c7164558fadcecdc
   languageName: node
   linkType: hard
 
@@ -9257,7 +9286,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"minimist@npm:^1.2.0, minimist@npm:^1.2.3, minimist@npm:^1.2.5, minimist@npm:^1.2.6":
+"minimist@npm:^1.2.0, minimist@npm:^1.2.3, minimist@npm:^1.2.5, minimist@npm:^1.2.6, minimist@npm:^1.2.7":
   version: 1.2.8
   resolution: "minimist@npm:1.2.8"
   checksum: 75a6d645fb122dad29c06a7597bddea977258957ed88d7a6df59b5cd3fe4a527e253e9bbf2e783e4b73657f9098b96a5fe96ab8a113655d4109108577ecf85b0
@@ -9663,8 +9692,8 @@ __metadata:
   linkType: hard
 
 "node-fetch@npm:^2.6.0, node-fetch@npm:^2.6.1":
-  version: 2.6.11
-  resolution: "node-fetch@npm:2.6.11"
+  version: 2.6.12
+  resolution: "node-fetch@npm:2.6.12"
   dependencies:
     whatwg-url: ^5.0.0
   peerDependencies:
@@ -9672,7 +9701,7 @@ __metadata:
   peerDependenciesMeta:
     encoding:
       optional: true
-  checksum: 249d0666a9497553384d46b5ab296ba223521ac88fed4d8a17d6ee6c2efb0fc890f3e8091cafe7f9fba8151a5b8d925db2671543b3409a56c3cd522b468b47b3
+  checksum: 3bc1655203d47ee8e313c0d96664b9673a3d4dd8002740318e9d27d14ef306693a4b2ef8d6525775056fd912a19e23f3ac0d7111ad8925877b7567b29a625592
   languageName: node
   linkType: hard
 
@@ -11907,6 +11936,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"solidity-ast@npm:^0.4.26":
+  version: 0.4.49
+  resolution: "solidity-ast@npm:0.4.49"
+  checksum: f5b0354ddfa882346cf12d33f79c6123796a07637b248ceb9cfeec9f81540e270407f6fca660cf75666e1ba1866270319ab3fbe54b01491dbd35adffd1405243
+  languageName: node
+  linkType: hard
+
 "solidity-comments-extractor@npm:^0.0.7":
   version: 0.0.7
   resolution: "solidity-comments-extractor@npm:0.0.7"
@@ -12773,10 +12809,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tslib@npm:^2.0.3, tslib@npm:^2.1.0, tslib@npm:^2.3.1, tslib@npm:^2.5.0":
+"tslib@npm:^2.0.3, tslib@npm:^2.1.0":
   version: 2.5.0
   resolution: "tslib@npm:2.5.0"
   checksum: ae3ed5f9ce29932d049908ebfdf21b3a003a85653a9a140d614da6b767a93ef94f460e52c3d787f0e4f383546981713f165037dc2274df212ea9f8a4541004e1
+  languageName: node
+  linkType: hard
+
+"tslib@npm:^2.3.1, tslib@npm:^2.5.0":
+  version: 2.6.1
+  resolution: "tslib@npm:2.6.1"
+  checksum: b0d176d176487905b66ae4d5856647df50e37beea7571c53b8d10ba9222c074b81f1410fb91da13debaf2cbc970663609068bdebafa844ea9d69b146527c38fe
   languageName: node
   linkType: hard
 

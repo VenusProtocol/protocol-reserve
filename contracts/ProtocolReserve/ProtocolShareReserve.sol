@@ -77,9 +77,6 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         Schema schema
     );
 
-    /// @notice Event emitted after a income distribution target is configured
-    event DestinationConfigured(address indexed destination, uint percent, Schema schema);
-
     /// @notice Event emitted when an asset is released to a target
     event AssetReleased(
         address indexed destination,
