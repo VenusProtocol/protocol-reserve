@@ -32,9 +32,10 @@ let poolRegistry: FakeContract<IPoolRegistry>;
 let riskFund: FakeContract<RiskFundV2>;
 let tokenInDeflationary: MockContract<MockDeflatingToken>;
 let unKnown: Signer;
+let corePool: Signer;
 
 async function fixture(): Promise<void> {
-  [, unKnown] = await ethers.getSigners();
+  [, unKnown, corePool] = await ethers.getSigners();
   poolRegistry = await smock.fake<IPoolRegistry>("IPoolRegistry");
   const converterFactory = await smock.mock<MockRiskFundConverter__factory>("MockRiskFundConverter");
 
@@ -53,7 +54,7 @@ async function fixture(): Promise<void> {
   tokenOut = await MockToken.deploy("TokenOut", "tokenOut", 18);
   await tokenOut.faucet(parseUnits("1000", 18));
 
-  converter = await converterFactory.deploy();
+  converter = await converterFactory.deploy(await corePool.getAddress());
   await converter.initialize(accessControl.address, oracle.address, riskFund.address);
 }
 
@@ -101,32 +102,43 @@ describe("Risk fund Converter: tests", () => {
     const POOL_A_AMOUNT = convertToUnit(10, 18);
     const POOL_B_AMOUNT = convertToUnit(20, 18);
     const POOL_C_AMOUNT = convertToUnit(30, 18);
-    const TOTAL_ASSESTS_RESERVES = convertToUnit(60, 18);
+    const CORE_POOL_AMOUNT = convertToUnit(40, 18);
+    const TOTAL_ASSESTS_RESERVES = convertToUnit(100, 18);
     const AMOUNT_IN = convertToUnit(20, 18);
     const AMOUNT_OUT = convertToUnit(18, 18);
-    const MANTISSA_ONE = convertToUnit("1", 18);
-    const [, poolA, poolB, poolC] = await ethers.getSigners();
+    const [, , , poolA, poolB, poolC] = await ethers.getSigners();
 
     await tokenIn.transfer(poolA.address, POOL_A_AMOUNT);
     await tokenIn.transfer(poolB.address, POOL_B_AMOUNT);
     await tokenIn.transfer(poolC.address, POOL_C_AMOUNT);
+    await tokenIn.transfer(await corePool.getAddress(), CORE_POOL_AMOUNT);
 
-    await converter.setPoolsAssetsReserves(poolA.address, tokenIn.address, POOL_A_AMOUNT);
-    await converter.setPoolsAssetsReserves(poolB.address, tokenIn.address, POOL_B_AMOUNT);
-    await converter.setPoolsAssetsReserves(poolC.address, tokenIn.address, POOL_C_AMOUNT);
-
+    await converter.setVariable("poolsAssetsReserves", {
+      [poolA.address]: {
+        [tokenIn.address]: POOL_A_AMOUNT,
+      },
+      [poolB.address]: {
+        [tokenIn.address]: POOL_B_AMOUNT,
+      },
+      [poolC.address]: {
+        [tokenIn.address]: POOL_C_AMOUNT,
+      },
+      [await corePool.getAddress()]: {
+        [tokenIn.address]: CORE_POOL_AMOUNT,
+      },
+    });
     poolRegistry.getPoolsSupportedByAsset.returns([
       await poolA.getAddress(),
       await poolB.getAddress(),
       await poolC.getAddress(),
     ]);
-
     await converter.setAssetsReserves(tokenIn.address, TOTAL_ASSESTS_RESERVES);
     await converter.postConversionHookMock(tokenIn.address, AMOUNT_IN, AMOUNT_OUT);
 
     const poolAShare = new BigNumber(POOL_A_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_IN);
     const poolBShare = new BigNumber(POOL_B_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_IN);
     const poolCShare = new BigNumber(POOL_C_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_IN);
+    const corePoolShare = new BigNumber(CORE_POOL_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_IN);
 
     expect(await converter.callStatic.getAssetsReserves(tokenIn.address)).to.equals(
       String(Number(TOTAL_ASSESTS_RESERVES) - Number(AMOUNT_IN)),
@@ -141,6 +153,10 @@ describe("Risk fund Converter: tests", () => {
     );
     expect(await converter.callStatic.getPoolsAssetsReserves(poolC.address, tokenIn.address)).to.closeTo(
       String(Number(POOL_C_AMOUNT) - Number(poolCShare)),
+      1000,
+    );
+    expect(await converter.callStatic.getPoolsAssetsReserves(await corePool.getAddress(), tokenIn.address)).to.closeTo(
+      String(Number(CORE_POOL_AMOUNT) - Number(corePoolShare)),
       1000,
     );
   });

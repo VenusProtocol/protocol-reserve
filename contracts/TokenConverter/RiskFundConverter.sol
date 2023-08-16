@@ -43,10 +43,6 @@ contract RiskFundConverter is AbstractTokenConverter {
     constructor(address corePoolComptroller_) {
         ensureNonzeroAddress(corePoolComptroller_);
         corePoolComptroller = corePoolComptroller_;
-
-        // Note that the contract is upgradeable. Use initialize() or reinitializers
-        // to set the state variables
-        _disableInitializers();
     }
 
     /// @dev Pool registry setter
@@ -165,8 +161,15 @@ contract RiskFundConverter is AbstractTokenConverter {
 
     /// @notice Get the array of all pools addresses
     /// @param tokenAddress Address of the token
-    function getPools(address tokenAddress) internal view returns (address[] memory pools) {
-        pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenAddress);
-        pools[pools.length] = corePoolComptroller;
+    function getPools(address tokenAddress) internal view returns (address[] memory) {
+        address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenAddress);
+        uint256 poolsLength = pools.length;
+        address[] memory poolsWithCore = new address[](poolsLength + 1);
+
+        for (uint256 i; i < poolsLength; ++i) {
+            poolsWithCore[i] = pools[i];
+        }
+        poolsWithCore[poolsLength] = corePoolComptroller;
+        return poolsWithCore;
     }
 }
