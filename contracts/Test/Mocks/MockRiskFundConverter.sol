@@ -4,6 +4,8 @@ pragma solidity 0.8.13;
 import { RiskFundConverter } from "../../TokenConverter/RiskFundConverter.sol";
 
 contract MockRiskFundConverter is RiskFundConverter {
+    constructor(address corePoolComptroller_) RiskFundConverter(corePoolComptroller_) {}
+
     function postConversionHookMock(address tokenInAddress, uint256 amountIn, uint256 amountOut) external {
         super.postConversionHook(tokenInAddress, amountIn, amountOut);
     }

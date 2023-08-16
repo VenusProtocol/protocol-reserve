@@ -15,26 +15,39 @@ import { EXP_SCALE } from "../Utils/Constants.sol";
 contract RiskFundConverter is AbstractTokenConverter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    // Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools).
+    /// @notice Address of the core pool comptroller
+    address public immutable corePoolComptroller;
+
+    /// @notice Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools)
     mapping(address => uint256) internal assetsReserves;
 
-    // Store the asset's reserve per pool in the ProtocolShareReserve.
-    // Comptroller(pool) -> Asset -> amount
+    /// @notice Store the asset's reserve per pool in the ProtocolShareReserve
+    /// @dev Comptroller(pool) -> Asset -> amount
     mapping(address => mapping(address => uint256)) internal poolsAssetsReserves;
 
-    // Address of pool registry contract
+    /// @notice Address of pool registry contract
     address public poolRegistry;
 
     /// @dev This empty reserved space is put in place to allow future versions to add new
-    /// variables without shifting down storage in the inheritance chain.
+    /// variables without shifting down storage in the inheritance chain
     uint256[47] private __gap;
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
 
-    // Event emitted after the updation of the assets reserves.
-    // amount -> reserve increased by amount.
+    // Event emitted after the updation of the assets reserves
+    // amount -> reserve increased by amount
     event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor(address corePoolComptroller_) {
+        ensureNonzeroAddress(corePoolComptroller_);
+        corePoolComptroller = corePoolComptroller_;
+
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables
+        _disableInitializers();
+    }
 
     /// @dev Pool registry setter
     /// @param poolRegistry_ Address of the pool registry
@@ -47,10 +60,10 @@ contract RiskFundConverter is AbstractTokenConverter {
         emit PoolRegistryUpdated(oldPoolRegistry, poolRegistry_);
     }
 
-    /// @dev Get the Amount of the asset in the risk fund for the specific pool.
+    /// @dev Get the Amount of the asset in the risk fund for the specific pool
     /// @param comptroller Comptroller address (pool)
-    /// @param asset Asset address.
-    /// @return Asset's reserve in risk fund.
+    /// @param asset Asset address
+    /// @return Asset's reserve in risk fund
     function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256) {
         require(IComptroller(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         require(asset != address(0), "ReserveHelpers: Asset address invalid");
@@ -72,7 +85,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @dev Update the reserve of the asset for the specific pool after transferring to risk fund
     /// and transferring funds to the protocol share reserve
     /// @param comptroller Comptroller address (pool)
-    /// @param asset Asset address.
+    /// @param asset Asset address
     function updateAssetsState(address comptroller, address asset) public {
         require(IComptroller(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         require(asset != address(0), "ReserveHelpers: Asset address invalid");
@@ -104,7 +117,7 @@ contract RiskFundConverter is AbstractTokenConverter {
 
         uint256 amountDiff = amount - balanceDiff;
         if (amountDiff > 0) {
-            address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenAddress);
+            address[] memory pools = getPools(tokenAddress);
             uint256 assetReserve = assetsReserves[tokenAddress];
             for (uint256 i; i < pools.length; ++i) {
                 uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenAddress] * EXP_SCALE) / assetReserve;
@@ -127,7 +140,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param amountIn Amount of tokenIn transferred
     /// @param amountOut Amount of tokenOut transferred
     function postConversionHook(address tokenInAddress, uint256 amountIn, uint256 amountOut) internal override {
-        address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenInAddress);
+        address[] memory pools = getPools(tokenInAddress);
         uint256 assetReserve = assetsReserves[tokenInAddress];
         for (uint256 i; i < pools.length; ++i) {
             uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenInAddress] * EXP_SCALE) / assetReserve;
@@ -148,5 +161,12 @@ contract RiskFundConverter is AbstractTokenConverter {
     function updatePoolAssetsReserve(address pool, address tokenAddress, uint256 amount, uint256 poolShare) internal {
         uint256 poolAmountShare = (poolShare * amount) / EXP_SCALE;
         poolsAssetsReserves[pool][tokenAddress] -= poolAmountShare;
+    }
+
+    /// @notice Get the array of all pools addresses
+    /// @param tokenAddress Address of the token
+    function getPools(address tokenAddress) internal view returns (address[] memory pools) {
+        pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenAddress);
+        pools[pools.length] = corePoolComptroller;
     }
 }
