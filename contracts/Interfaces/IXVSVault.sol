@@ -5,5 +5,5 @@ pragma solidity 0.8.13;
 /// @author Venus
 /// @notice Interface implemented by `XVSVault`.
 interface IXVSVault {
-    function xvsStore() external returns (address);
+    function xvsStore() external view returns (address);
 }

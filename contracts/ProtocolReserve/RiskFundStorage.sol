@@ -2,14 +2,17 @@
 pragma solidity 0.8.13;
 
 contract ReserveHelpersStorage {
-    /// Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools).
+    /// @notice Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools).
+    /// @notice This state is deprecated, using it to prevent storage collision
     mapping(address => uint256) internal assetsReserves;
 
-    /// Store the asset's reserve per pool in the ProtocolShareReserve.
+    /// @notice Store the asset's reserve per pool in the ProtocolShareReserve.
     /// Comptroller(pool) -> Asset -> amount
+    /// @notice This state is deprecated, using it to prevent storage collision
     mapping(address => mapping(address => uint256)) internal poolsAssetsReserves;
 
-    /// Address of pool registry contract
+    /// @notice Address of pool registry contract
+    /// @notice This state is deprecated, using it to prevent storage collision
     address internal poolRegistry;
 
     /// @dev This empty reserved space is put in place to allow future versions to add new
@@ -18,7 +21,8 @@ contract ReserveHelpersStorage {
 }
 
 contract MaxLoopsLimitHelpersStorage {
-    /// Limit for the loops to avoid the DOS
+    /// @notice Limit for the loops to avoid the DOS
+    /// @notice This state is deprecated, using it to prevent storage collision
     uint256 public maxLoopsLimit;
 
     /// @dev This empty reserved space is put in place to allow future versions to add new
@@ -31,12 +35,15 @@ contract MaxLoopsLimitHelpersStorage {
 /// @author Venus
 /// @dev Risk fund V1 storage
 contract RiskFundV1Storage is ReserveHelpersStorage, MaxLoopsLimitHelpersStorage {
+    /// @notice This state is deprecated, using it to prevent storage collision
     address private pancakeSwapRouter;
+    /// @notice This state is deprecated, using it to prevent storage collision
     uint256 private minAmountToConvert;
+
     address public convertibleBaseAsset;
     address public shortfall;
 
-    /// Store base asset's reserve for specific pool
+    /// @notice Store base asset's reserve for specific pool
     mapping(address => uint256) public poolReserves;
 }
 
@@ -44,6 +51,6 @@ contract RiskFundV1Storage is ReserveHelpersStorage, MaxLoopsLimitHelpersStorage
 /// @author Venus
 /// @dev Risk fund V2 storage
 contract RiskFundV2Storage is RiskFundV1Storage {
-    /// Risk fund converter address
+    /// @notice Risk fund converter address
     address public riskFundConverter;
 }

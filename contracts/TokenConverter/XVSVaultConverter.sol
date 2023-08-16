@@ -22,6 +22,11 @@ contract XVSVaultConverter is AbstractTokenConverter {
         __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
     }
 
+    /// @dev This function is called by protocolShareReserve
+    /// @param comptroller Comptroller address (pool)
+    /// @param asset Asset address.
+    function updateAssetsState(address comptroller, address asset) public {}
+
     /// @notice Get the balance for specific token
     /// @param tokenAddress Address of the token
     function balanceOf(address tokenAddress) public view override returns (uint256 tokenBalance) {

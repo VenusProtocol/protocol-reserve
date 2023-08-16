@@ -3,7 +3,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
 import { Signer, constants } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 import {
   IAccessControlManagerV8,
@@ -38,9 +38,9 @@ async function fixture(): Promise<void> {
   xvs = await MockToken.deploy("XVS", "xvs", 18);
   await xvs.faucet(parseUnits("1000", 18));
 
-  xvsVaultTreasury = await XVSVaultTreasury.deploy();
-
-  await xvsVaultTreasury.initialize(accessControl.address, xvsVault.address, xvs.address);
+  xvsVaultTreasury = await upgrades.deployProxy(XVSVaultTreasury, [accessControl.address, xvsVault.address], {
+    constructorArgs: [xvs.address],
+  });
 }
 
 describe("XVS vault treasury: tests", () => {
@@ -66,27 +66,6 @@ describe("XVS vault treasury: tests", () => {
       const newTreasury = await smock.fake<XVSVaultTreasury>("XVSVaultTreasury");
       const tx = xvsVaultTreasury.setXVSVault(newTreasury.address);
       await expect(tx).to.emit(xvsVaultTreasury, "XVSVaultUpdated").withArgs(xvsVault.address, newTreasury.address);
-    });
-  });
-
-  describe("setXVSAddress", async function () {
-    it("Reverts on invalid Auction contract address", async function () {
-      await expect(xvsVaultTreasury.setXVSAddress(constants.AddressZero)).to.be.revertedWithCustomError(
-        xvsVaultTreasury,
-        "ZeroAddressNotAllowed",
-      );
-    });
-
-    it("fails if called by a non-owner", async function () {
-      await expect(xvsVaultTreasury.connect(nonAdmin).setXVSAddress(xvs.address)).to.be.revertedWith(
-        "Ownable: caller is not the owner",
-      );
-    });
-
-    it("emits XVSAddressUpdated event", async function () {
-      const newXVS = await smock.fake<MockToken>("MockToken");
-      const tx = xvsVaultTreasury.setXVSAddress(newXVS.address);
-      await expect(tx).to.emit(xvsVaultTreasury, "XVSAddressUpdated").withArgs(xvs.address, newXVS.address);
     });
   });
 

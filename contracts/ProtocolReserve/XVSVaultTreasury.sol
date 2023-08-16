@@ -11,11 +11,12 @@ import { IXVSVault } from "../Interfaces/IXVSVault.sol";
 contract XVSVaultTreasury is AccessControlledV8 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    /// @notice The xvs token address
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address public immutable xvsAddress;
+
     /// @notice The xvsvault address
     address public xvsVault;
-
-    /// @notice The xvs token address
-    address public xvsAddress;
 
     /// @dev This empty reserved space is put in place to allow future versions to add new
     /// variables without shifting down storage in the inheritance chain.
@@ -25,25 +26,26 @@ contract XVSVaultTreasury is AccessControlledV8 {
     /// @notice Emitted when XVS vault address is updated
     event XVSVaultUpdated(address indexed oldXVSVault, address indexed newXVSVault);
 
-    /// @notice Emitted when XVS vault address is updated
-    event XVSAddressUpdated(address indexed oldXVSVault, address indexed newXVSVault);
-
     /// @notice Emitted when funds transferred to XVSStore address
     event FundsTransferredToXVSStore(address indexed xvsStore, uint256 amountMantissa);
 
     /// @notice Thrown when given input amount is zero
     error InsufficientBalance();
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor(address xvsAddress_) {
+        ensureNonzeroAddress(xvsAddress_);
+        xvsAddress = xvsAddress_;
+
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables.
+        _disableInitializers();
+    }
+
     /// @dev XVS vault setter
     /// @param xvsVault_ Address of the XVS vault
     function setXVSVault(address xvsVault_) external onlyOwner {
         _setXVSVault(xvsVault_);
-    }
-
-    /// @dev xvs address setter
-    /// @param xvsAddress_ Address of the xvs address
-    function setXVSAddress(address xvsAddress_) external onlyOwner {
-        _setXVSAddress(xvsAddress_);
     }
 
     function fundXVSVault(uint256 amountMantissa) external {
@@ -61,24 +63,12 @@ contract XVSVaultTreasury is AccessControlledV8 {
         emit FundsTransferredToXVSStore(xvsStore, amountMantissa);
     }
 
-    /// @dev This function is called by protocolShareReserve
-    /// @param comptroller Comptroller address (pool)
-    /// @param asset Asset address.
-    function updateAssetsState(address comptroller, address asset) public {}
-
     /// @param accessControlManager_ Access control manager contract address
     /// @param xvsVault_ XVSVault address
-    /// @param xvsAddress_ XVS address
-    function initialize(
-        address accessControlManager_,
-        address xvsVault_,
-        address xvsAddress_
-    ) public virtual initializer {
+    function initialize(address accessControlManager_, address xvsVault_) public virtual initializer {
         __AccessControlled_init(accessControlManager_);
 
         _setXVSVault(xvsVault_);
-
-        _setXVSAddress(xvsAddress_);
     }
 
     /// @dev XVS vault setter
@@ -90,16 +80,5 @@ contract XVSVaultTreasury is AccessControlledV8 {
         address oldXVSVault = xvsVault;
         xvsVault = xvsVault_;
         emit XVSVaultUpdated(oldXVSVault, xvsVault_);
-    }
-
-    /// @dev xvs address setter
-    /// @param xvsAddress_ Address of the xvs address
-    /// @custom:event XVSAddressUpdated emits on success
-    /// @custom:error ZeroAddressNotAllowed is thrown when xvs address is zero
-    function _setXVSAddress(address xvsAddress_) internal {
-        ensureNonzeroAddress(xvsAddress_);
-        address oldXVSAddress = xvsAddress;
-        xvsAddress = xvsAddress_;
-        emit XVSAddressUpdated(oldXVSAddress, xvsAddress_);
     }
 }
