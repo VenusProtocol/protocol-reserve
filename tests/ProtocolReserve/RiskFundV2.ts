@@ -170,4 +170,22 @@ describe("Risk Fund: Tests", function () {
       expect(afterPoolReserve).equals(String(Number(beforePoolReserve) + Number(COMPTROLLER_A_AMOUNT)));
     });
   });
+
+  describe("SweepTokens", () => {
+    it("Transfer sweep tokens to owner", async () => {
+      await riskFund.connect(admin).setConvertibleBaseAsset(tokenA.address);
+
+      const COMPTROLLER_A_AMOUNT = convertToUnit(10, 18);
+
+      await tokenA.transfer(riskFund.address, COMPTROLLER_A_AMOUNT);
+      await riskFund.setVariable("riskFundConverter", await admin.getAddress());
+      await riskFund.connect(admin).updatePoolState(comptrollerA.address, COMPTROLLER_A_AMOUNT);
+
+      await expect(riskFund.sweepToken(comptrollerA.address, 1000)).to.changeTokenBalances(
+        tokenA,
+        [await riskFund.owner(), riskFund.address],
+        [1000, -1000],
+      );
+    });
+  });
 });
