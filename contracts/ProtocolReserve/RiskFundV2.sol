@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
 import { ensureNonzeroAddress } from "../Utils/Validators.sol";
@@ -14,7 +15,13 @@ import { RiskFundV2Storage } from "./RiskFundStorage.sol";
 /// @author Venus
 /// @notice Contract with basic features to hold base asset for different Comptrollers
 /// @dev This contract does not support BNB
-contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2Storage, IRiskFund {
+contract RiskFundV2 is
+    Ownable2StepUpgradeable,
+    AccessControlledV8,
+    RiskFundV2Storage,
+    IRiskFund,
+    ReentrancyGuardUpgradeable
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Emitted when convertible base asset address is updated
@@ -32,6 +39,9 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
     /// @notice Emitted when pool states is updated with amount transferred to this contract
     event PoolStateUpdated(address indexed comptroller, uint256 amount);
 
+    /// @notice Event emitted when tokens are swept
+    event SweepToken(address indexed comptroller, uint256 amount);
+
     /// @notice Error is thrown when updatePoolState is not called by riskFundConverter
     error InvalidRiskFundConverter();
 
@@ -39,7 +49,7 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
     error InvalidShortfallAddress();
 
     /// @notice Error is thrown when pool reserve is less than the amount needed
-    error InsufficientPoolReserve(uint256 amount, uint256 poolReserve);
+    error InsufficientPoolReserve(address comptroller, uint256 amount, uint256 poolReserve);
 
     /// @dev Convertible base asset setter
     /// @param convertibleBaseAsset_ Address of the convertible base asset
@@ -88,7 +98,7 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
             revert InvalidShortfallAddress();
         }
         if (amount > poolReserve) {
-            revert InsufficientPoolReserve(amount, poolReserve);
+            revert InsufficientPoolReserve(comptroller, amount, poolReserve);
         }
 
         unchecked {
@@ -99,6 +109,28 @@ contract RiskFundV2 is Ownable2StepUpgradeable, AccessControlledV8, RiskFundV2St
         emit TransferredReserveForAuction(comptroller, amount);
 
         return amount;
+    }
+
+    /// @notice Function to sweep baseAsset for pool, Tokens are sent to admin (timelock)
+    /// @param comptroller The address of the pool for the amount need to be sweeped
+    /// @param amount Amount need to sweep for the pool
+    /// @custom:event Emits SweepToken event on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/to address is zero
+    /// @custom:error InsufficientPoolReserve is thrown when pool reserve is less than the amount needed
+    /// @custom:access Only Governance
+    function sweepToken(address comptroller, uint256 amount) external onlyOwner nonReentrant {
+        ensureNonzeroAddress(comptroller);
+
+        uint256 poolReserve = poolReserves[comptroller];
+        if (amount > poolReserve) {
+            revert InsufficientPoolReserve(comptroller, amount, poolReserve);
+        }
+        poolReserves[comptroller] = poolReserve - amount;
+
+        IERC20Upgradeable token = IERC20Upgradeable(convertibleBaseAsset);
+        token.safeTransfer(owner(), amount);
+
+        emit SweepToken(comptroller, amount);
     }
 
     /// @dev Update the reserve of the asset for the specific pool after transferring to risk fund
