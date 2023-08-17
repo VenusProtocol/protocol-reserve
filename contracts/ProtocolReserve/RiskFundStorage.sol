@@ -53,4 +53,8 @@ contract RiskFundV1Storage is ReserveHelpersStorage, MaxLoopsLimitHelpersStorage
 contract RiskFundV2Storage is RiskFundV1Storage {
     /// @notice Risk fund converter address
     address public riskFundConverter;
+
+    /// @notice Available asset's fund per pool in RiskFund
+    /// Comptroller(pool) -> Asset -> amount
+    mapping(address => mapping(address => uint256)) public poolAssetsFunds;
 }

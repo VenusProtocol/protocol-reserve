@@ -34,13 +34,13 @@ contract RiskFundV2 is
     event ShortfallContractUpdated(address indexed oldShortfallContract, address indexed newShortfallContract);
 
     /// @notice Emitted when reserves are transferred for auction
-    event TransferredReserveForAuction(address indexed comptroller, uint256 amount);
+    event TransferredReserveForAuction(address indexed comptroller, address indexed asset, uint256 amount);
 
     /// @notice Emitted when pool states is updated with amount transferred to this contract
-    event PoolStateUpdated(address indexed comptroller, uint256 amount);
+    event PoolStateUpdated(address indexed comptroller, address indexed asset, uint256 amount);
 
     /// @notice Event emitted when tokens are swept
-    event SweepToken(address indexed comptroller, uint256 amount);
+    event SweepToken(address indexed comptroller, address indexed asset, uint256 amount);
 
     /// @notice Error is thrown when updatePoolState is not called by riskFundConverter
     error InvalidRiskFundConverter();
@@ -50,16 +50,6 @@ contract RiskFundV2 is
 
     /// @notice Error is thrown when pool reserve is less than the amount needed
     error InsufficientPoolReserve(address comptroller, uint256 amount, uint256 poolReserve);
-
-    /// @dev Convertible base asset setter
-    /// @param convertibleBaseAsset_ Address of the convertible base asset
-    /// @custom:event ConvertibleBaseAssetUpdated emit on success
-    /// @custom:error ZeroAddressNotAllowed is thrown when risk fund converter address is zero
-    function setConvertibleBaseAsset(address convertibleBaseAsset_) external onlyOwner {
-        ensureNonzeroAddress(convertibleBaseAsset_);
-        emit ConvertibleBaseAssetUpdated(convertibleBaseAsset, convertibleBaseAsset_);
-        convertibleBaseAsset = convertibleBaseAsset_;
-    }
 
     /// @dev Risk fund converter setter
     /// @param riskFundConverter_ Address of the risk fund converter
@@ -82,6 +72,7 @@ contract RiskFundV2 is
 
     /// @dev Transfer tokens for auction
     /// @param comptroller Comptroller of the pool
+    /// @param asset Address of the asset(token)
     /// @param bidder Amount transferred to bidder address
     /// @param amount Amount to be transferred to auction contract
     /// @return Number reserved tokens.
@@ -89,10 +80,11 @@ contract RiskFundV2 is
     /// @custom:error InsufficientPoolReserve is thrown when pool reserve is less than the amount needed
     function transferReserveForAuction(
         address comptroller,
+        address asset,
         address bidder,
         uint256 amount
     ) external override returns (uint256) {
-        uint256 poolReserve = poolReserves[comptroller];
+        uint256 poolReserve = poolAssetsFunds[comptroller][asset];
 
         if (msg.sender != shortfall) {
             revert InvalidShortfallAddress();
@@ -102,46 +94,48 @@ contract RiskFundV2 is
         }
 
         unchecked {
-            poolReserves[comptroller] = poolReserve - amount;
+            poolAssetsFunds[comptroller][asset] = poolReserve - amount;
         }
 
-        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(bidder, amount);
-        emit TransferredReserveForAuction(comptroller, amount);
+        IERC20Upgradeable(asset).safeTransfer(bidder, amount);
+        emit TransferredReserveForAuction(comptroller, asset, amount);
 
         return amount;
     }
 
     /// @notice Function to sweep baseAsset for pool, Tokens are sent to admin (timelock)
     /// @param comptroller The address of the pool for the amount need to be sweeped
+    /// @param asset Address of the asset(token)
     /// @param amount Amount need to sweep for the pool
     /// @custom:event Emits SweepToken event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/to address is zero
     /// @custom:error InsufficientPoolReserve is thrown when pool reserve is less than the amount needed
     /// @custom:access Only Governance
-    function sweepToken(address comptroller, uint256 amount) external onlyOwner nonReentrant {
+    function sweepToken(address comptroller, address asset, uint256 amount) external onlyOwner nonReentrant {
         ensureNonzeroAddress(comptroller);
 
-        uint256 poolReserve = poolReserves[comptroller];
+        uint256 poolReserve = poolAssetsFunds[comptroller][asset];
         if (amount > poolReserve) {
             revert InsufficientPoolReserve(comptroller, amount, poolReserve);
         }
-        poolReserves[comptroller] = poolReserve - amount;
+        poolAssetsFunds[comptroller][asset] = poolReserve - amount;
 
-        IERC20Upgradeable token = IERC20Upgradeable(convertibleBaseAsset);
+        IERC20Upgradeable token = IERC20Upgradeable(asset);
         token.safeTransfer(owner(), amount);
 
-        emit SweepToken(comptroller, amount);
+        emit SweepToken(comptroller, asset, amount);
     }
 
     /// @dev Update the reserve of the asset for the specific pool after transferring to risk fund
     /// @param comptroller Comptroller address (pool)
+    /// @param asset Address of the asset(token)
     /// @param amount Amount transferred for the pool
-    function updatePoolState(address comptroller, uint256 amount) public {
+    function updatePoolState(address comptroller, address asset, uint256 amount) public {
         if (msg.sender != riskFundConverter) {
             revert InvalidRiskFundConverter();
         }
 
-        poolReserves[comptroller] += amount;
-        emit PoolStateUpdated(comptroller, amount);
+        poolAssetsFunds[comptroller][asset] += amount;
+        emit PoolStateUpdated(comptroller, asset, amount);
     }
 }

@@ -28,6 +28,10 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @notice Address of pool registry contract
     address public poolRegistry;
 
+    /// @notice This mapping would contain the assets for the pool which would be send to RiskFund directly
+    /// @dev Comptroller(pool) -> Asset -> bool(should transfer directly on true)
+    mapping(address => mapping(address => bool)) public poolsAssetsDirectTransfer;
+
     /// @dev This empty reserved space is put in place to allow future versions to add new
     /// variables without shifting down storage in the inheritance chain
     uint256[47] private __gap;
@@ -38,6 +42,9 @@ contract RiskFundConverter is AbstractTokenConverter {
     // Event emitted after the updation of the assets reserves
     // amount -> reserve increased by amount
     event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
+
+    // Event emitted after the funds transferred to the destination address
+    event AssetTransferredToDestination(address indexed comptroller, address indexed asset, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address corePoolComptroller_) {
@@ -91,16 +98,23 @@ contract RiskFundConverter is AbstractTokenConverter {
             "ReserveHelpers: The pool doesn't support the asset"
         );
 
-        uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
+        IERC20Upgradeable token = IERC20Upgradeable(asset);
+        uint256 currentBalance = token.balanceOf(address(this));
         uint256 assetReserve = assetsReserves[asset];
         if (currentBalance > assetReserve) {
             uint256 balanceDifference;
             unchecked {
                 balanceDifference = currentBalance - assetReserve;
             }
-            assetsReserves[asset] += balanceDifference;
-            poolsAssetsReserves[comptroller][asset] += balanceDifference;
-            emit AssetsReservesUpdated(comptroller, asset, balanceDifference);
+            if (poolsAssetsDirectTransfer[comptroller][asset]) {
+                token.safeTransfer(destinationAddress, balanceDifference);
+                emit AssetTransferredToDestination(comptroller, asset, balanceDifference);
+                IRiskFund(destinationAddress).updatePoolState(comptroller, asset, balanceDifference);
+            } else {
+                assetsReserves[asset] += balanceDifference;
+                poolsAssetsReserves[comptroller][asset] += balanceDifference;
+                emit AssetsReservesUpdated(comptroller, asset, balanceDifference);
+            }
         }
     }
 
@@ -133,9 +147,15 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @notice Hook to perform after converting tokens
     /// @dev After transfromation poolsAssetsReserves are settled by pool's reserves fraction
     /// @param tokenInAddress Address of the tokenIn
+    /// @param tokenOutAddress Address of the tokenOut
     /// @param amountIn Amount of tokenIn transferred
     /// @param amountOut Amount of tokenOut transferred
-    function postConversionHook(address tokenInAddress, uint256 amountIn, uint256 amountOut) internal override {
+    function postConversionHook(
+        address tokenInAddress,
+        address tokenOutAddress,
+        uint256 amountIn,
+        uint256 amountOut
+    ) internal override {
         address[] memory pools = getPools(tokenInAddress);
         uint256 assetReserve = assetsReserves[tokenInAddress];
         for (uint256 i; i < pools.length; ++i) {
@@ -143,7 +163,7 @@ contract RiskFundConverter is AbstractTokenConverter {
             if (poolShare == 0) continue;
             updatePoolAssetsReserve(pools[i], tokenInAddress, amountIn, poolShare);
             uint256 poolAmountOutShare = (poolShare * amountOut) / EXP_SCALE;
-            IRiskFund(destinationAddress).updatePoolState(pools[i], poolAmountOutShare);
+            IRiskFund(destinationAddress).updatePoolState(pools[i], tokenOutAddress, poolAmountOutShare);
         }
 
         assetsReserves[tokenInAddress] -= amountIn;

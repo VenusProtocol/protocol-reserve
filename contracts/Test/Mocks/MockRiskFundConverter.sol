@@ -6,8 +6,13 @@ import { RiskFundConverter } from "../../TokenConverter/RiskFundConverter.sol";
 contract MockRiskFundConverter is RiskFundConverter {
     constructor(address corePoolComptroller_) RiskFundConverter(corePoolComptroller_) {}
 
-    function postConversionHookMock(address tokenInAddress, uint256 amountIn, uint256 amountOut) external {
-        super.postConversionHook(tokenInAddress, amountIn, amountOut);
+    function postConversionHookMock(
+        address tokenInAddress,
+        address tokenOutAddress,
+        uint256 amountIn,
+        uint256 amountOut
+    ) external {
+        super.postConversionHook(tokenInAddress, tokenOutAddress, amountIn, amountOut);
     }
 
     function setAssetsReserves(address asset, uint256 amount) external {

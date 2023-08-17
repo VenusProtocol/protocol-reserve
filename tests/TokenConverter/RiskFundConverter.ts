@@ -133,7 +133,7 @@ describe("Risk fund Converter: tests", () => {
       await poolC.getAddress(),
     ]);
     await converter.setAssetsReserves(tokenIn.address, TOTAL_ASSESTS_RESERVES);
-    await converter.postConversionHookMock(tokenIn.address, AMOUNT_IN, AMOUNT_OUT);
+    await converter.postConversionHookMock(tokenIn.address, tokenOut.address, AMOUNT_IN, AMOUNT_OUT);
 
     const poolAShare = new BigNumber(POOL_A_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_IN);
     const poolBShare = new BigNumber(POOL_B_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_IN);
