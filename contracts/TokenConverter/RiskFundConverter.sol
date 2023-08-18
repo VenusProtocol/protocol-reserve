@@ -34,7 +34,7 @@ contract RiskFundConverter is AbstractTokenConverter {
 
     /// @dev This empty reserved space is put in place to allow future versions to add new
     /// variables without shifting down storage in the inheritance chain
-    uint256[47] private __gap;
+    uint256[46] private __gap;
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
