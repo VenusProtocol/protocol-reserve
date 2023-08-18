@@ -46,6 +46,12 @@ contract RiskFundConverter is AbstractTokenConverter {
     // Event emitted after the funds transferred to the destination address
     event AssetTransferredToDestination(address indexed comptroller, address indexed asset, uint256 amount);
 
+    // Event emitted after the poolsAssetsDirectTransfer mapping is updated
+    event PoolAssetsDirectTransferUpdated(address indexed comptrollers, address indexed assets);
+
+    // Error thrown when comptrollers array length is not equal to assets array length
+    error InvalidComptrollersAndAssets();
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address corePoolComptroller_) {
         ensureNonzeroAddress(corePoolComptroller_);
@@ -61,6 +67,30 @@ contract RiskFundConverter is AbstractTokenConverter {
         address oldPoolRegistry = poolRegistry;
         poolRegistry = poolRegistry_;
         emit PoolRegistryUpdated(oldPoolRegistry, poolRegistry_);
+    }
+
+    /// @notice Update the poolsAssetsDirectTransfer mapping
+    /// @param comptrollers Addresses of the pools
+    /// @param assets Addresses of the assets need to be added for direct transfer
+    /// @custom:error InvalidComptrollersAndAssets thrown when comptrollers array length is not equal to assets array length
+    /// @custom:access Restricted by ACM
+    function setPoolsAssetsDirectTransfer(address[] calldata comptrollers, address[][] calldata assets) external {
+        _checkAccessAllowed("setPoolsAssetsDirectTransfer(address[], address[][])");
+
+        uint256 comptrollersLength = comptrollers.length;
+        uint256 assetsLength = assets.length;
+
+        if (comptrollersLength != assetsLength) {
+            revert InvalidComptrollersAndAssets();
+        }
+
+        for (uint256 i; i < comptrollersLength; ++i) {
+            address[] memory poolAssets = assets[i];
+            for (uint256 j; j < poolAssets.length; ++j) {
+                poolsAssetsDirectTransfer[comptrollers[i]][poolAssets[j]] = true;
+                emit PoolAssetsDirectTransferUpdated(comptrollers[i], poolAssets[j]);
+            }
+        }
     }
 
     /// @dev Get the Amount of the asset in the risk fund for the specific pool
