@@ -120,6 +120,7 @@ describe("Risk fund Converter: tests", () => {
     await tokenIn.transfer(poolB.address, POOL_B_AMOUNT);
     await tokenIn.transfer(poolC.address, POOL_C_AMOUNT);
     await tokenIn.transfer(corePool.address, CORE_POOL_AMOUNT);
+    corePool.markets.returns(true);
 
     await converter.setVariable("poolsAssetsReserves", {
       [poolA.address]: {

@@ -123,10 +123,7 @@ contract RiskFundConverter is AbstractTokenConverter {
         require(IComptroller(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         require(asset != address(0), "ReserveHelpers: Asset address invalid");
         require(poolRegistry != address(0), "ReserveHelpers: Pool Registry address is not set");
-        require(
-            IPoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0),
-            "ReserveHelpers: The pool doesn't support the asset"
-        );
+        require(ensureAssetListed(comptroller, asset), "ReserveHelpers: The pool doesn't support the asset");
 
         IERC20Upgradeable token = IERC20Upgradeable(asset);
         uint256 currentBalance = token.balanceOf(address(this));
@@ -213,13 +210,26 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param tokenAddress Address of the token
     function getPools(address tokenAddress) internal view returns (address[] memory) {
         address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenAddress);
-        uint256 poolsLength = pools.length;
-        address[] memory poolsWithCore = new address[](poolsLength + 1);
 
-        for (uint256 i; i < poolsLength; ++i) {
-            poolsWithCore[i] = pools[i];
+        if (IComptroller(corePoolComptroller).markets(tokenAddress)) {
+            uint256 poolsLength = pools.length;
+            address[] memory poolsWithCore = new address[](poolsLength + 1);
+
+            for (uint256 i; i < poolsLength; ++i) {
+                poolsWithCore[i] = pools[i];
+            }
+            poolsWithCore[poolsLength] = corePoolComptroller;
+            return poolsWithCore;
         }
-        poolsWithCore[poolsLength] = corePoolComptroller;
-        return poolsWithCore;
+
+        return pools;
+    }
+
+    function ensureAssetListed(address comptroller, address asset) internal view returns (bool) {
+        if (comptroller == corePoolComptroller) {
+            return IComptroller(corePoolComptroller).markets(asset);
+        }
+
+        return IPoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0);
     }
 }
