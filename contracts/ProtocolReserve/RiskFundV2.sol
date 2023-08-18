@@ -34,7 +34,7 @@ contract RiskFundV2 is
     event ShortfallContractUpdated(address indexed oldShortfallContract, address indexed newShortfallContract);
 
     /// @notice Emitted when reserves are transferred for auction
-    event TransferredReserveForAuction(address indexed comptroller, address indexed asset, uint256 amount);
+    event TransferredReserveForAuction(address indexed comptroller, uint256 amount);
 
     /// @notice Emitted when pool states is updated with amount transferred to this contract
     event PoolStateUpdated(address indexed comptroller, address indexed asset, uint256 amount);
@@ -50,6 +50,16 @@ contract RiskFundV2 is
 
     /// @notice Error is thrown when pool reserve is less than the amount needed
     error InsufficientPoolReserve(address comptroller, uint256 amount, uint256 poolReserve);
+
+    /// @dev Convertible base asset setter
+    /// @param convertibleBaseAsset_ Address of the convertible base asset
+    /// @custom:event ConvertibleBaseAssetUpdated emit on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when risk fund converter address is zero
+    function setConvertibleBaseAsset(address convertibleBaseAsset_) external onlyOwner {
+        ensureNonzeroAddress(convertibleBaseAsset_);
+        emit ConvertibleBaseAssetUpdated(convertibleBaseAsset, convertibleBaseAsset_);
+        convertibleBaseAsset = convertibleBaseAsset_;
+    }
 
     /// @dev Risk fund converter setter
     /// @param riskFundConverter_ Address of the risk fund converter
@@ -72,7 +82,6 @@ contract RiskFundV2 is
 
     /// @dev Transfer tokens for auction
     /// @param comptroller Comptroller of the pool
-    /// @param asset Address of the asset(token)
     /// @param bidder Amount transferred to bidder address
     /// @param amount Amount to be transferred to auction contract
     /// @return Number reserved tokens.
@@ -80,11 +89,10 @@ contract RiskFundV2 is
     /// @custom:error InsufficientPoolReserve is thrown when pool reserve is less than the amount needed
     function transferReserveForAuction(
         address comptroller,
-        address asset,
         address bidder,
         uint256 amount
     ) external override returns (uint256) {
-        uint256 poolReserve = poolAssetsFunds[comptroller][asset];
+        uint256 poolReserve = poolAssetsFunds[comptroller][convertibleBaseAsset];
 
         if (msg.sender != shortfall) {
             revert InvalidShortfallAddress();
@@ -94,11 +102,11 @@ contract RiskFundV2 is
         }
 
         unchecked {
-            poolAssetsFunds[comptroller][asset] = poolReserve - amount;
+            poolAssetsFunds[comptroller][convertibleBaseAsset] = poolReserve - amount;
         }
 
-        IERC20Upgradeable(asset).safeTransfer(bidder, amount);
-        emit TransferredReserveForAuction(comptroller, asset, amount);
+        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(bidder, amount);
+        emit TransferredReserveForAuction(comptroller, amount);
 
         return amount;
     }
