@@ -225,7 +225,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         emit ConvertExactTokens(actualAmountIn, actualAmountOut);
 
-        postConversionHook(tokenAddressIn, actualAmountIn, actualAmountOut);
+        postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
     }
 
     /// @notice Convert tokens for tokenAddressIn for exact amount of tokenAddressOut
@@ -268,7 +268,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             );
         }
 
-        postConversionHook(tokenAddressIn, actualAmountIn, actualAmountOut);
+        postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
 
         emit ConvertForExactTokens(actualAmountIn, actualAmountOut);
     }
@@ -302,7 +302,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             to
         );
 
-        postConversionHook(tokenAddressIn, actualAmountIn, actualAmountOut);
+        postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
 
         emit ConvertExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
@@ -336,7 +336,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             to
         );
 
-        postConversionHook(tokenAddressIn, actualAmountIn, actualAmountOut);
+        postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
 
         emit ConvertForExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
@@ -595,7 +595,12 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param tokenInAddress Address of the token
     /// @param amountIn Amount of tokenIn converted
     /// @param amountOut Amount of tokenOut converted
-    function postConversionHook(address tokenInAddress, uint256 amountIn, uint256 amountOut) internal virtual {}
+    function postConversionHook(
+        address tokenInAddress,
+        address tokenAddressOut,
+        uint256 amountIn,
+        uint256 amountOut
+    ) internal virtual {}
 
     /// @param accessControlManager_ Access control manager contract address
     /// @param priceOracle_ Resilient oracle address

@@ -2,22 +2,17 @@
 pragma solidity 0.8.13;
 
 contract ReserveHelpersStorage {
-    /// @notice Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools).
-    /// @notice This state is deprecated, using it to prevent storage collision
-    mapping(address => uint256) internal assetsReserves;
+    bytes32 private __deprecatedSlot1;
+    bytes32 private __deprecatedSlot2;
+    bytes32 private __deprecatedSlot3;
 
-    /// @notice Store the asset's reserve per pool in the ProtocolShareReserve.
+    /// @notice Available asset's fund per pool in RiskFund
     /// Comptroller(pool) -> Asset -> amount
-    /// @notice This state is deprecated, using it to prevent storage collision
-    mapping(address => mapping(address => uint256)) internal poolsAssetsReserves;
-
-    /// @notice Address of pool registry contract
-    /// @notice This state is deprecated, using it to prevent storage collision
-    address internal poolRegistry;
+    mapping(address => mapping(address => uint256)) public poolAssetsFunds;
 
     /// @dev This empty reserved space is put in place to allow future versions to add new
     /// variables without shifting down storage in the inheritance chain.
-    uint256[47] private __gap;
+    uint256[46] private __gap;
 }
 
 contract MaxLoopsLimitHelpersStorage {

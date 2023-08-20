@@ -142,8 +142,8 @@ describe("Risk Fund: Tests", function () {
       const COMPTROLLER_A_AMOUNT = convertToUnit(30, 18);
 
       await tokenA.transfer(riskFund.address, COMPTROLLER_A_AMOUNT);
-      await riskFund.setVariable("poolReserves", {
-        [comptrollerA.address]: COMPTROLLER_A_AMOUNT,
+      await riskFund.setVariable("poolAssetsFunds", {
+        [comptrollerA.address]: { [tokenA.address]: COMPTROLLER_A_AMOUNT },
       });
 
       const tx = riskFund
@@ -161,13 +161,30 @@ describe("Risk Fund: Tests", function () {
   describe("updatePoolState: Update pools states after getting funds", () => {
     it(" Update pool reserves", async () => {
       const COMPTROLLER_A_AMOUNT = convertToUnit(10, 18);
-      const beforePoolReserve = await riskFund.poolReserves(comptrollerA.address);
+      const beforePoolReserve = await riskFund.poolAssetsFunds(comptrollerA.address, tokenA.address);
 
       await riskFund.setVariable("riskFundConverter", await admin.getAddress());
-      await riskFund.connect(admin).updatePoolState(comptrollerA.address, COMPTROLLER_A_AMOUNT);
+      await riskFund.connect(admin).updatePoolState(comptrollerA.address, tokenA.address, COMPTROLLER_A_AMOUNT);
 
-      const afterPoolReserve = await riskFund.poolReserves(comptrollerA.address);
+      const afterPoolReserve = await riskFund.poolAssetsFunds(comptrollerA.address, tokenA.address);
       expect(afterPoolReserve).equals(String(Number(beforePoolReserve) + Number(COMPTROLLER_A_AMOUNT)));
+    });
+  });
+
+  describe("SweepTokens", () => {
+    it("Transfer sweep tokens to owner", async () => {
+      await riskFund.connect(admin).setConvertibleBaseAsset(tokenA.address);
+      const COMPTROLLER_A_AMOUNT = convertToUnit(10, 18);
+
+      await tokenA.transfer(riskFund.address, COMPTROLLER_A_AMOUNT);
+      await riskFund.setVariable("riskFundConverter", await admin.getAddress());
+      await riskFund.connect(admin).updatePoolState(comptrollerA.address, tokenA.address, COMPTROLLER_A_AMOUNT);
+
+      await expect(riskFund.sweepToken(comptrollerA.address, tokenA.address, 1000)).to.changeTokenBalances(
+        tokenA,
+        [await riskFund.owner(), riskFund.address],
+        [1000, -1000],
+      );
     });
   });
 });
