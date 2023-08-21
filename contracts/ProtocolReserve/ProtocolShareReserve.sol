@@ -206,6 +206,7 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
 
     /**
      * @dev Release funds
+     * @param comptroller the comptroller address of the pool
      * @param assets assets to be released to distribution targets
      */
     function releaseFunds(address comptroller, address[] memory assets) external nonReentrant {
@@ -257,6 +258,7 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
      * @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
      * @param comptroller  Comptroller address(pool)
      * @param asset Asset address.
+     * @param incomeType type of income 
      */
     function updateAssetsState(
         address comptroller,
@@ -319,6 +321,11 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
         }
     }
 
+    /**
+     * @dev asset from a particular pool to be release to distribution targets
+     * @param comptroller  Comptroller address(pool)
+     * @param asset Asset address.
+     */
     function _releaseFund(address comptroller, address asset) internal {
         uint256 totalSchemas = uint256(type(Schema).max) + 1;
         uint256[] memory schemaBalances = new uint256[](totalSchemas);
@@ -375,6 +382,13 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
         }
     }
 
+    /**
+     * @dev Returns the schema based on comptroller, asset and income type
+     * @param comptroller  Comptroller address(pool)
+     * @param asset Asset address.
+     * @param incomeType type of income
+     * @return schema schema for distribution
+     */
     function getSchema(
         address comptroller,
         address asset,
@@ -411,6 +425,11 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
         }
     }
 
+    /**
+     * @dev Returns the underlying asset address for the vToken
+     * @param vToken vToken address
+     * @return asset address of asset
+     */
     function _getUnderlying(address vToken) internal view returns (address) {
         if (vToken == vBNB) {
             return WBNB;
