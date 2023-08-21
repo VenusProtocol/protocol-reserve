@@ -399,7 +399,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             }
         }
 
-        for (uint256 schemaValue = 0; schemaValue <= totalSchemas - 1;) {
+        for (uint256 schemaValue = 0; schemaValue < totalSchemas;) {
             if (totalPercentages[schemaValue] != MAX_PERCENT && totalPercentages[schemaValue] != 0)
                 revert InvalidTotalPercentage();
             
