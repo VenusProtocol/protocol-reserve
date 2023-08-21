@@ -322,7 +322,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         uint256[] memory schemaBalances = new uint256[](totalSchemas);
         uint256 totalBalance;
 
-        for (uint256 schemaValue; schemaValue < totalSchemas; ++schemaValue) {
+        for (uint256 schemaValue; schemaValue < totalSchemas;) {
             schemaBalances[schemaValue] = assetsReserves[comptroller][asset][Schema(schemaValue)];
             totalBalance += schemaBalances[schemaValue];
 
