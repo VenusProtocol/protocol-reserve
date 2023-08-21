@@ -138,9 +138,8 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
     function setPoolRegistry(address _poolRegistry) external {
         _checkAccessAllowed("setPoolRegistry(address)");
         if (_poolRegistry == address(0)) revert InvalidAddress();
-        address oldPoolRegistry = poolRegistry;
+        emit PoolRegistryUpdated(poolRegistry, _poolRegistry);
         poolRegistry = _poolRegistry;
-        emit PoolRegistryUpdated(oldPoolRegistry, poolRegistry);
     }
 
     /**
@@ -150,9 +149,8 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
     function setPrime(address _prime) external {
         _checkAccessAllowed("setPrime(address)");
         if (_prime == address(0)) revert InvalidAddress();
-        address oldPrime = prime;
+        emit PrimeUpdated(prime, _prime);
         prime = _prime;
-        emit PrimeUpdated(oldPrime, prime);
     }
 
     /**
@@ -176,10 +174,10 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
 
                 if (_config.schema == config.schema && config.destination == _config.destination) {
                     emit DistributionConfigUpdated(
-                        config.destination,
+                        _config.destination,
                         config.percentage,
                         _config.percentage,
-                        config.schema
+                        _config.schema
                     );
                     config.percentage = _config.percentage;
                     updated = true;
