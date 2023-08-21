@@ -3,6 +3,7 @@ pragma solidity 0.8.13;
 
 import { SafeERC20Upgradeable, IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
 import { ComptrollerInterface } from "../Interfaces/ComptrollerInterface.sol";
@@ -15,7 +16,7 @@ error InvalidAddress();
 error UnsupportedAsset();
 error InvalidTotalPercentage();
 
-contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
+contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice protocol income is categorized into two schemas.
@@ -127,6 +128,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      */
     function initialize(address _accessControlManager) external initializer {
         __AccessControlled_init(_accessControlManager);
+        __ReentrancyGuard_init();
     }
 
     /**
@@ -157,7 +159,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      * @dev Add or update destination targets based on destination address
      * @param configs configurations of the destinations.
      */
-    function addOrUpdateDistributionConfigs(DistributionConfig[] memory configs) external {
+    function addOrUpdateDistributionConfigs(DistributionConfig[] memory configs) external nonReentrant {
         _checkAccessAllowed("addOrUpdateDistributionConfigs(DistributionConfig)");
 
         //we need to accrue and release funds to prime before updating the distribution configuration
@@ -206,7 +208,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      * @dev Release funds
      * @param assets assets to be released to distribution targets
      */
-    function releaseFunds(address comptroller, address[] memory assets) external {
+    function releaseFunds(address comptroller, address[] memory assets) external nonReentrant {
         _accruePrimeInterest();
 
         for (uint256 i = 0; i < assets.length;) {
