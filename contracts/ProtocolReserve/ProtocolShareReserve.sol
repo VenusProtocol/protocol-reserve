@@ -160,7 +160,7 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
      * @param configs configurations of the destinations.
      */
     function addOrUpdateDistributionConfigs(DistributionConfig[] memory configs) external nonReentrant {
-        _checkAccessAllowed("addOrUpdateDistributionConfigs(DistributionConfig)");
+        _checkAccessAllowed("addOrUpdateDistributionConfigs(DistributionConfig[])");
 
         //we need to accrue and release funds to prime before updating the distribution configuration
         //because prime relies on getUnreleasedFunds and its return value may change after config update
