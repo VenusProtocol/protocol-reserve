@@ -5,4 +5,6 @@ interface IComptroller {
     function isComptroller() external view returns (bool);
 
     function markets(address) external view returns (bool);
+
+    function getAllMarkets() external view returns (address[] memory);
 }

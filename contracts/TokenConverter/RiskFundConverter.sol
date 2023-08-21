@@ -10,6 +10,7 @@ import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 import { IPoolRegistry } from "../Interfaces/IPoolRegistry.sol";
 import { IComptroller } from "../Interfaces/IComptroller.sol";
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
+import { IVToken } from "../Interfaces/IVToken.sol";
 import { EXP_SCALE } from "../Utils/Constants.sol";
 
 contract RiskFundConverter is AbstractTokenConverter {
@@ -211,7 +212,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     function getPools(address tokenAddress) internal view returns (address[] memory) {
         address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenAddress);
 
-        if (IComptroller(corePoolComptroller).markets(tokenAddress)) {
+        if (isAssetListedInCore(tokenAddress)) {
             uint256 poolsLength = pools.length;
             address[] memory poolsWithCore = new address[](poolsLength + 1);
 
@@ -225,9 +226,20 @@ contract RiskFundConverter is AbstractTokenConverter {
         return pools;
     }
 
+    function isAssetListedInCore(address tokenAddress) internal view returns (bool isAssetListed) {
+        address[] memory coreMarkets = IComptroller(corePoolComptroller).getAllMarkets();
+
+        for (uint256 i; i < coreMarkets.length; ++i) {
+            if (IVToken(coreMarkets[i]).underlying() == tokenAddress) {
+                isAssetListed = true;
+                break;
+            }
+        }
+    }
+
     function ensureAssetListed(address comptroller, address asset) internal view returns (bool) {
         if (comptroller == corePoolComptroller) {
-            return IComptroller(corePoolComptroller).markets(asset);
+            return isAssetListedInCore(asset);
         }
 
         return IPoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0);
