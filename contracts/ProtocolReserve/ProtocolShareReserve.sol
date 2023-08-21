@@ -164,12 +164,12 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         //because prime relies on getUnreleasedFunds and its return value may change after config update
         _accrueAndReleaseFundsToPrime();
 
-        for (uint256 i = 0; i < configs.length; ++i) {
+        for (uint256 i = 0; i < configs.length;) {
             DistributionConfig memory _config = configs[i];
             require(_config.destination != address(0), "ProtocolShareReserve: Destination address invalid");
 
             bool updated = false;
-            for (uint256 j = 0; j < distributionTargets.length; ++j) {
+            for (uint256 j = 0; j < distributionTargets.length;) {
                 DistributionConfig storage config = distributionTargets[j];
 
                 if (_config.schema == config.schema && config.destination == _config.destination) {
@@ -183,11 +183,19 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
                     updated = true;
                     break;
                 }
+
+                unchecked {
+                    ++j;
+                }
             }
 
             if (!updated) {
                 distributionTargets.push(_config);
                 emit DistributionConfigAdded(_config.destination, _config.percentage, _config.schema);
+            }
+
+            unchecked {
+                ++i;
             }
         }
 
@@ -201,8 +209,12 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
     function releaseFunds(address comptroller, address[] memory assets) external {
         _accruePrimeInterest();
 
-        for (uint256 i = 0; i < assets.length; ++i) {
+        for (uint256 i = 0; i < assets.length;) {
             _releaseFund(comptroller, assets[i]);
+
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -219,11 +231,15 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         address destination,
         address asset
     ) external view returns (uint256) {
-        for (uint256 i = 0; i < distributionTargets.length; ++i) {
+        for (uint256 i = 0; i < distributionTargets.length;) {
             DistributionConfig storage _config = distributionTargets[i];
             if (_config.schema == schema && _config.destination == destination) {
                 uint256 total = assetsReserves[comptroller][asset][schema];
                 return (total * _config.percentage) / MAX_PERCENT;
+            }
+
+            unchecked {
+                ++i;
             }
         }
     }
@@ -274,10 +290,14 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      */
     function _accrueAndReleaseFundsToPrime() internal {
         address[] memory markets = IPrime(prime).allMarkets();
-        for (uint256 i = 0; i < markets.length; ++i) {
+        for (uint256 i = 0; i < markets.length;) {
             address market = markets[i];
             IPrime(prime).accrueInterest(market);
             _releaseFund(CORE_POOL_COMPTROLLER, _getUnderlying(market));
+            
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -287,9 +307,13 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
      */
     function _accruePrimeInterest() internal {
         address[] memory markets = IPrime(prime).allMarkets();
-        for (uint256 i = 0; i < markets.length; ++i) {
+        for (uint256 i = 0; i < markets.length;) {
             address market = markets[i];
             IPrime(prime).accrueInterest(market);
+
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -301,6 +325,10 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         for (uint256 schemaValue; schemaValue < totalSchemas; ++schemaValue) {
             schemaBalances[schemaValue] = assetsReserves[comptroller][asset][Schema(schemaValue)];
             totalBalance += schemaBalances[schemaValue];
+
+            unchecked {
+                ++schemaValue;
+            }
         }
 
         if (totalBalance == 0) {
@@ -309,7 +337,7 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
 
         uint256[] memory totalTransferAmounts = new uint256[](totalSchemas);
 
-        for (uint256 i = 0; i < distributionTargets.length; ++i) {
+        for (uint256 i = 0; i < distributionTargets.length;) {
             DistributionConfig memory _config = distributionTargets[i];
 
             uint256 transferAmount = (schemaBalances[uint256(_config.schema)] * _config.percentage) / MAX_PERCENT;
@@ -319,10 +347,14 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
             IIncomeDestination(_config.destination).updateAssetsState(comptroller, asset);
 
             emit AssetReleased(_config.destination, asset, _config.schema, _config.percentage, transferAmount);
+
+            unchecked {
+                ++i;
+            }
         }
 
         uint256[] memory newSchemaBalances = new uint256[](totalSchemas);
-        for (uint256 schemaValue = 0; schemaValue < totalSchemas; ++schemaValue) {
+        for (uint256 schemaValue = 0; schemaValue < totalSchemas;) {
             newSchemaBalances[schemaValue] = schemaBalances[schemaValue] - totalTransferAmounts[schemaValue];
             assetsReserves[comptroller][asset][Schema(schemaValue)] = newSchemaBalances[schemaValue];
             totalAssetReserve[asset] = totalAssetReserve[asset] - totalTransferAmounts[schemaValue];
@@ -334,6 +366,10 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
                 schemaBalances[schemaValue],
                 newSchemaBalances[schemaValue]
             );
+
+            unchecked {
+                ++schemaValue;
+            }
         }
     }
 
@@ -354,14 +390,22 @@ contract ProtocolShareReserve is AccessControlledV8, IProtocolShareReserve {
         uint256 totalSchemas = uint256(type(Schema).max) + 1;
         uint256[] memory totalPercentages = new uint256[](totalSchemas);
 
-        for (uint256 i = 0; i < distributionTargets.length; ++i) {
+        for (uint256 i = 0; i < distributionTargets.length;) {
             DistributionConfig memory config = distributionTargets[i];
             totalPercentages[uint256(config.schema)] += config.percentage;
+
+            unchecked {
+                ++i;
+            }
         }
 
-        for (uint256 schemaValue = 0; schemaValue <= totalSchemas - 1; ++schemaValue) {
+        for (uint256 schemaValue = 0; schemaValue <= totalSchemas - 1;) {
             if (totalPercentages[schemaValue] != MAX_PERCENT && totalPercentages[schemaValue] != 0)
                 revert InvalidTotalPercentage();
+            
+            unchecked {
+                ++schemaValue;
+            }
         }
     }
 
