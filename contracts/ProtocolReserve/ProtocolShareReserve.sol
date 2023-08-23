@@ -4,6 +4,7 @@ pragma solidity 0.8.13;
 import { SafeERC20Upgradeable, IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import { MaxLoopsLimitHelper } from "@venusprotocol/isolated-pools/contracts/MaxLoopsLimitHelper.sol";
 
 import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
 import { ComptrollerInterface } from "../Interfaces/ComptrollerInterface.sol";
@@ -15,8 +16,14 @@ import { IIncomeDestination } from "../Interfaces/IIncomeDestination.sol";
 error InvalidAddress();
 error UnsupportedAsset();
 error InvalidTotalPercentage();
+error InvalidMaxLoopsLimit();
 
-contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable, IProtocolShareReserve {
+contract ProtocolShareReserve is
+    AccessControlledV8,
+    ReentrancyGuardUpgradeable,
+    MaxLoopsLimitHelper,
+    IProtocolShareReserve
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice protocol income is categorized into two schemas.
@@ -125,10 +132,13 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
     /**
      * @dev Initializes the deployer to owner.
      * @param _accessControlManager The address of ACM contract
+     * @param _loopsLimit Limit for the loops in the contract to avoid DOS
      */
-    function initialize(address _accessControlManager) external initializer {
+    function initialize(address _accessControlManager, uint256 _loopsLimit) external initializer {
+        if (_loopsLimit == 0) revert InvalidMaxLoopsLimit();
         __AccessControlled_init(_accessControlManager);
         __ReentrancyGuard_init();
+        _setMaxLoopsLimit(_loopsLimit);
     }
 
     /**
@@ -164,12 +174,14 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
         //because prime relies on getUnreleasedFunds and its return value may change after config update
         _accrueAndReleaseFundsToPrime();
 
-        for (uint256 i = 0; i < configs.length;) {
+        _ensureMaxLoops(configs.length);
+        for (uint256 i = 0; i < configs.length; ) {
             DistributionConfig memory _config = configs[i];
             require(_config.destination != address(0), "ProtocolShareReserve: Destination address invalid");
 
             bool updated = false;
-            for (uint256 j = 0; j < distributionTargets.length;) {
+            _ensureMaxLoops(distributionTargets.length);
+            for (uint256 j = 0; j < distributionTargets.length; ) {
                 DistributionConfig storage config = distributionTargets[j];
 
                 if (_config.schema == config.schema && config.destination == _config.destination) {
@@ -210,7 +222,8 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
     function releaseFunds(address comptroller, address[] memory assets) external nonReentrant {
         _accruePrimeInterest();
 
-        for (uint256 i = 0; i < assets.length;) {
+        _ensureMaxLoops(assets.length);
+        for (uint256 i = 0; i < assets.length; ) {
             _releaseFund(comptroller, assets[i]);
 
             unchecked {
@@ -232,7 +245,8 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
         address destination,
         address asset
     ) external view returns (uint256) {
-        for (uint256 i = 0; i < distributionTargets.length;) {
+        _ensureMaxLoops(distributionTargets.length);
+        for (uint256 i = 0; i < distributionTargets.length; ) {
             DistributionConfig storage _config = distributionTargets[i];
             if (_config.schema == schema && _config.destination == destination) {
                 uint256 total = assetsReserves[comptroller][asset][schema];
@@ -256,7 +270,7 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
      * @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
      * @param comptroller  Comptroller address(pool)
      * @param asset Asset address.
-     * @param incomeType type of income 
+     * @param incomeType type of income
      */
     function updateAssetsState(
         address comptroller,
@@ -292,11 +306,12 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
      */
     function _accrueAndReleaseFundsToPrime() internal {
         address[] memory markets = IPrime(prime).allMarkets();
-        for (uint256 i = 0; i < markets.length;) {
+        _ensureMaxLoops(markets.length);
+        for (uint256 i = 0; i < markets.length; ) {
             address market = markets[i];
             IPrime(prime).accrueInterest(market);
             _releaseFund(CORE_POOL_COMPTROLLER, _getUnderlying(market));
-            
+
             unchecked {
                 ++i;
             }
@@ -309,7 +324,8 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
      */
     function _accruePrimeInterest() internal {
         address[] memory markets = IPrime(prime).allMarkets();
-        for (uint256 i = 0; i < markets.length;) {
+        _ensureMaxLoops(markets.length);
+        for (uint256 i = 0; i < markets.length; ) {
             address market = markets[i];
             IPrime(prime).accrueInterest(market);
 
@@ -328,8 +344,8 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
         uint256 totalSchemas = uint256(type(Schema).max) + 1;
         uint256[] memory schemaBalances = new uint256[](totalSchemas);
         uint256 totalBalance;
-
-        for (uint256 schemaValue; schemaValue < totalSchemas;) {
+        _ensureMaxLoops(totalSchemas);
+        for (uint256 schemaValue; schemaValue < totalSchemas; ) {
             schemaBalances[schemaValue] = assetsReserves[comptroller][asset][Schema(schemaValue)];
             totalBalance += schemaBalances[schemaValue];
 
@@ -343,8 +359,8 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
         }
 
         uint256[] memory totalTransferAmounts = new uint256[](totalSchemas);
-
-        for (uint256 i = 0; i < distributionTargets.length;) {
+        _ensureMaxLoops(distributionTargets.length);
+        for (uint256 i = 0; i < distributionTargets.length; ) {
             DistributionConfig memory _config = distributionTargets[i];
 
             uint256 transferAmount = (schemaBalances[uint256(_config.schema)] * _config.percentage) / MAX_PERCENT;
@@ -361,7 +377,8 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
         }
 
         uint256[] memory newSchemaBalances = new uint256[](totalSchemas);
-        for (uint256 schemaValue = 0; schemaValue < totalSchemas;) {
+        _ensureMaxLoops(totalSchemas);
+        for (uint256 schemaValue = 0; schemaValue < totalSchemas; ) {
             newSchemaBalances[schemaValue] = schemaBalances[schemaValue] - totalTransferAmounts[schemaValue];
             assetsReserves[comptroller][asset][Schema(schemaValue)] = newSchemaBalances[schemaValue];
             totalAssetReserve[asset] = totalAssetReserve[asset] - totalTransferAmounts[schemaValue];
@@ -403,8 +420,8 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
     function _ensurePercentages() internal view {
         uint256 totalSchemas = uint256(type(Schema).max) + 1;
         uint256[] memory totalPercentages = new uint256[](totalSchemas);
-
-        for (uint256 i = 0; i < distributionTargets.length;) {
+        _ensureMaxLoops(distributionTargets.length);
+        for (uint256 i = 0; i < distributionTargets.length; ) {
             DistributionConfig memory config = distributionTargets[i];
             totalPercentages[uint256(config.schema)] += config.percentage;
 
@@ -412,11 +429,11 @@ contract ProtocolShareReserve is AccessControlledV8, ReentrancyGuardUpgradeable,
                 ++i;
             }
         }
-
-        for (uint256 schemaValue = 0; schemaValue < totalSchemas;) {
+        _ensureMaxLoops(totalSchemas);
+        for (uint256 schemaValue = 0; schemaValue < totalSchemas; ) {
             if (totalPercentages[schemaValue] != MAX_PERCENT && totalPercentages[schemaValue] != 0)
                 revert InvalidTotalPercentage();
-            
+
             unchecked {
                 ++schemaValue;
             }
