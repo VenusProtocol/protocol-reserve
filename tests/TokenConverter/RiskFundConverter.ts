@@ -175,7 +175,7 @@ describe("Risk fund Converter: tests", () => {
       await accessControl.isAllowedToCall.returns(false);
 
       await expect(
-        converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address]]),
+        converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address]], [[true]]),
       ).to.be.revertedWithCustomError(converter, "Unauthorized");
     });
 
@@ -183,14 +183,30 @@ describe("Risk fund Converter: tests", () => {
       await accessControl.isAllowedToCall.returns(true);
 
       await expect(
-        converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address], [tokenIn.address]]),
-      ).to.be.revertedWithCustomError(converter, "InvalidComptrollersAndAssets");
+        converter.setPoolsAssetsDirectTransfer(
+          [poolA.address, poolB.address],
+          [[tokenIn.address], [tokenIn.address]],
+          [[true]],
+        ),
+      ).to.be.revertedWithCustomError(converter, "InvalidArguments");
+
+      await expect(
+        converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address], [tokenIn.address]], [[true]]),
+      ).to.be.revertedWithCustomError(converter, "InvalidArguments");
+
+      await expect(
+        converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address, tokenIn.address]], [[true]]),
+      ).to.be.revertedWithCustomError(converter, "InvalidArguments");
+
+      await expect(
+        converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address]], [[true, true]]),
+      ).to.be.revertedWithCustomError(converter, "InvalidArguments");
     });
 
     it("Success on the setPoolsAssetsDirectTransfer", async () => {
       await accessControl.isAllowedToCall.returns(true);
 
-      await expect(converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address]]))
+      await expect(converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address]], [[true]]))
         .to.emit(converter, "PoolAssetsDirectTransferUpdated")
         .withArgs(poolA.address, tokenIn.address);
 
@@ -208,7 +224,7 @@ describe("Risk fund Converter: tests", () => {
       expect(await tokenIn.balanceOf(riskFund.address)).to.equal(0);
       expect(await tokenIn.balanceOf(converter.address)).to.equal(0);
       await tokenIn.transfer(converter.address, POOL_A_AMOUNT);
-      await converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address]]);
+      await converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address]], [[true]]);
       await converter.updateAssetsState(poolA.address, tokenIn.address);
 
       expect(await tokenIn.balanceOf(converter.address)).to.equal(0);

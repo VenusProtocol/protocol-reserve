@@ -51,7 +51,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     event PoolAssetsDirectTransferUpdated(address indexed comptrollers, address indexed assets);
 
     // Error thrown when comptrollers array length is not equal to assets array length
-    error InvalidComptrollersAndAssets();
+    error InvalidArguments();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address corePoolComptroller_) {
@@ -73,22 +73,31 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @notice Update the poolsAssetsDirectTransfer mapping
     /// @param comptrollers Addresses of the pools
     /// @param assets Addresses of the assets need to be added for direct transfer
-    /// @custom:error InvalidComptrollersAndAssets thrown when comptrollers array length is not equal to assets array length
+    /// @custom:error InvalidArguments thrown when comptrollers array length is not equal to assets array length
     /// @custom:access Restricted by ACM
-    function setPoolsAssetsDirectTransfer(address[] calldata comptrollers, address[][] calldata assets) external {
-        _checkAccessAllowed("setPoolsAssetsDirectTransfer(address[], address[][])");
+    function setPoolsAssetsDirectTransfer(
+        address[] calldata comptrollers,
+        address[][] calldata assets,
+        bool[][] calldata values
+    ) external {
+        _checkAccessAllowed("setPoolsAssetsDirectTransfer(address[], address[][], bool[][])");
 
         uint256 comptrollersLength = comptrollers.length;
-        uint256 assetsLength = assets.length;
 
-        if (comptrollersLength != assetsLength) {
-            revert InvalidComptrollersAndAssets();
+        if ((comptrollersLength != assets.length) || (comptrollersLength != values.length)) {
+            revert InvalidArguments();
         }
 
         for (uint256 i; i < comptrollersLength; ++i) {
             address[] memory poolAssets = assets[i];
+            bool[] memory assetsValues = values[i];
+
+            if (poolAssets.length != assetsValues.length) {
+                revert InvalidArguments();
+            }
+
             for (uint256 j; j < poolAssets.length; ++j) {
-                poolsAssetsDirectTransfer[comptrollers[i]][poolAssets[j]] = true;
+                poolsAssetsDirectTransfer[comptrollers[i]][poolAssets[j]] = assetsValues[j];
                 emit PoolAssetsDirectTransferUpdated(comptrollers[i], poolAssets[j]);
             }
         }
