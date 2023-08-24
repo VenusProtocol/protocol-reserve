@@ -48,7 +48,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     event AssetTransferredToDestination(address indexed comptroller, address indexed asset, uint256 amount);
 
     // Event emitted after the poolsAssetsDirectTransfer mapping is updated
-    event PoolAssetsDirectTransferUpdated(address indexed comptrollers, address indexed assets);
+    event PoolAssetsDirectTransferUpdated(address indexed comptroller, address indexed asset, bool value);
 
     // Error thrown when comptrollers array length is not equal to assets array length
     error InvalidArguments();
@@ -80,7 +80,7 @@ contract RiskFundConverter is AbstractTokenConverter {
         address[][] calldata assets,
         bool[][] calldata values
     ) external {
-        _checkAccessAllowed("setPoolsAssetsDirectTransfer(address[], address[][], bool[][])");
+        _checkAccessAllowed("setPoolsAssetsDirectTransfer(address[],address[][],bool[][])");
 
         uint256 comptrollersLength = comptrollers.length;
 
@@ -98,7 +98,7 @@ contract RiskFundConverter is AbstractTokenConverter {
 
             for (uint256 j; j < poolAssets.length; ++j) {
                 poolsAssetsDirectTransfer[comptrollers[i]][poolAssets[j]] = assetsValues[j];
-                emit PoolAssetsDirectTransferUpdated(comptrollers[i], poolAssets[j]);
+                emit PoolAssetsDirectTransferUpdated(comptrollers[i], poolAssets[j], assetsValues[j]);
             }
         }
     }

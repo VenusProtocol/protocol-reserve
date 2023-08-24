@@ -208,7 +208,7 @@ describe("Risk fund Converter: tests", () => {
 
       await expect(converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address]], [[true]]))
         .to.emit(converter, "PoolAssetsDirectTransferUpdated")
-        .withArgs(poolA.address, tokenIn.address);
+        .withArgs(poolA.address, tokenIn.address, true);
 
       expect(await converter.poolsAssetsDirectTransfer(poolA.address, tokenIn.address)).to.equal(true);
     });
