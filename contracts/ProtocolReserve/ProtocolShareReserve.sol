@@ -135,7 +135,6 @@ contract ProtocolShareReserve is
      * @param _loopsLimit Limit for the loops in the contract to avoid DOS
      */
     function initialize(address _accessControlManager, uint256 _loopsLimit) external initializer {
-        if (_loopsLimit == 0) revert InvalidMaxLoopsLimit();
         __AccessControlled_init(_accessControlManager);
         __ReentrancyGuard_init();
         _setMaxLoopsLimit(_loopsLimit);
@@ -174,13 +173,11 @@ contract ProtocolShareReserve is
         //because prime relies on getUnreleasedFunds and its return value may change after config update
         _accrueAndReleaseFundsToPrime();
 
-        _ensureMaxLoops(configs.length);
         for (uint256 i = 0; i < configs.length; ) {
             DistributionConfig memory _config = configs[i];
             require(_config.destination != address(0), "ProtocolShareReserve: Destination address invalid");
 
             bool updated = false;
-            _ensureMaxLoops(distributionTargets.length);
             for (uint256 j = 0; j < distributionTargets.length; ) {
                 DistributionConfig storage config = distributionTargets[j];
 
@@ -212,6 +209,7 @@ contract ProtocolShareReserve is
         }
 
         _ensurePercentages();
+        _ensureMaxLoops(distributionTargets.length);
     }
 
     /**
@@ -222,7 +220,6 @@ contract ProtocolShareReserve is
     function releaseFunds(address comptroller, address[] memory assets) external nonReentrant {
         _accruePrimeInterest();
 
-        _ensureMaxLoops(assets.length);
         for (uint256 i = 0; i < assets.length; ) {
             _releaseFund(comptroller, assets[i]);
 
@@ -245,7 +242,6 @@ contract ProtocolShareReserve is
         address destination,
         address asset
     ) external view returns (uint256) {
-        _ensureMaxLoops(distributionTargets.length);
         for (uint256 i = 0; i < distributionTargets.length; ) {
             DistributionConfig storage _config = distributionTargets[i];
             if (_config.schema == schema && _config.destination == destination) {
@@ -306,7 +302,6 @@ contract ProtocolShareReserve is
      */
     function _accrueAndReleaseFundsToPrime() internal {
         address[] memory markets = IPrime(prime).allMarkets();
-        _ensureMaxLoops(markets.length);
         for (uint256 i = 0; i < markets.length; ) {
             address market = markets[i];
             IPrime(prime).accrueInterest(market);
@@ -324,7 +319,6 @@ contract ProtocolShareReserve is
      */
     function _accruePrimeInterest() internal {
         address[] memory markets = IPrime(prime).allMarkets();
-        _ensureMaxLoops(markets.length);
         for (uint256 i = 0; i < markets.length; ) {
             address market = markets[i];
             IPrime(prime).accrueInterest(market);
@@ -344,7 +338,6 @@ contract ProtocolShareReserve is
         uint256 totalSchemas = uint256(type(Schema).max) + 1;
         uint256[] memory schemaBalances = new uint256[](totalSchemas);
         uint256 totalBalance;
-        _ensureMaxLoops(totalSchemas);
         for (uint256 schemaValue; schemaValue < totalSchemas; ) {
             schemaBalances[schemaValue] = assetsReserves[comptroller][asset][Schema(schemaValue)];
             totalBalance += schemaBalances[schemaValue];
@@ -359,7 +352,6 @@ contract ProtocolShareReserve is
         }
 
         uint256[] memory totalTransferAmounts = new uint256[](totalSchemas);
-        _ensureMaxLoops(distributionTargets.length);
         for (uint256 i = 0; i < distributionTargets.length; ) {
             DistributionConfig memory _config = distributionTargets[i];
 
@@ -377,7 +369,6 @@ contract ProtocolShareReserve is
         }
 
         uint256[] memory newSchemaBalances = new uint256[](totalSchemas);
-        _ensureMaxLoops(totalSchemas);
         for (uint256 schemaValue = 0; schemaValue < totalSchemas; ) {
             newSchemaBalances[schemaValue] = schemaBalances[schemaValue] - totalTransferAmounts[schemaValue];
             assetsReserves[comptroller][asset][Schema(schemaValue)] = newSchemaBalances[schemaValue];
@@ -420,7 +411,7 @@ contract ProtocolShareReserve is
     function _ensurePercentages() internal view {
         uint256 totalSchemas = uint256(type(Schema).max) + 1;
         uint256[] memory totalPercentages = new uint256[](totalSchemas);
-        _ensureMaxLoops(distributionTargets.length);
+
         for (uint256 i = 0; i < distributionTargets.length; ) {
             DistributionConfig memory config = distributionTargets[i];
             totalPercentages[uint256(config.schema)] += config.percentage;
@@ -429,7 +420,6 @@ contract ProtocolShareReserve is
                 ++i;
             }
         }
-        _ensureMaxLoops(totalSchemas);
         for (uint256 schemaValue = 0; schemaValue < totalSchemas; ) {
             if (totalPercentages[schemaValue] != MAX_PERCENT && totalPercentages[schemaValue] != 0)
                 revert InvalidTotalPercentage();
