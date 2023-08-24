@@ -272,7 +272,7 @@ contract ProtocolShareReserve is
         address comptroller,
         address asset,
         IncomeType incomeType
-    ) public override(IProtocolShareReserve) {
+    ) public override(IProtocolShareReserve) nonReentrant {
         if (!ComptrollerInterface(comptroller).isComptroller()) revert InvalidAddress();
         if (asset == address(0)) revert InvalidAddress();
         if (
