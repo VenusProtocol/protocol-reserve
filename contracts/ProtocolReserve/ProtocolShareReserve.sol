@@ -27,8 +27,8 @@ contract ProtocolShareReserve is
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice protocol income is categorized into two schemas.
-    /// The first schema is for spread income from prime markets in core protocol
-    /// The second schema is for all other sources and types of income
+    /// The first schema is the default one
+    /// The second schema is for spread income from prime markets in core protocol
     enum Schema {
         DEFAULT,
         SPREAD_PRIME_CORE
