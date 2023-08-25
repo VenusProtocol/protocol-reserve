@@ -10,6 +10,7 @@ import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 import { IPoolRegistry } from "../Interfaces/IPoolRegistry.sol";
 import { IComptroller } from "../Interfaces/IComptroller.sol";
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
+import { IVToken } from "../Interfaces/IVToken.sol";
 import { EXP_SCALE } from "../Utils/Constants.sol";
 
 contract RiskFundConverter is AbstractTokenConverter {
@@ -47,10 +48,10 @@ contract RiskFundConverter is AbstractTokenConverter {
     event AssetTransferredToDestination(address indexed comptroller, address indexed asset, uint256 amount);
 
     // Event emitted after the poolsAssetsDirectTransfer mapping is updated
-    event PoolAssetsDirectTransferUpdated(address indexed comptrollers, address indexed assets);
+    event PoolAssetsDirectTransferUpdated(address indexed comptroller, address indexed asset, bool value);
 
     // Error thrown when comptrollers array length is not equal to assets array length
-    error InvalidComptrollersAndAssets();
+    error InvalidArguments();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address corePoolComptroller_) {
@@ -72,23 +73,32 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @notice Update the poolsAssetsDirectTransfer mapping
     /// @param comptrollers Addresses of the pools
     /// @param assets Addresses of the assets need to be added for direct transfer
-    /// @custom:error InvalidComptrollersAndAssets thrown when comptrollers array length is not equal to assets array length
+    /// @custom:error InvalidArguments thrown when comptrollers array length is not equal to assets array length
     /// @custom:access Restricted by ACM
-    function setPoolsAssetsDirectTransfer(address[] calldata comptrollers, address[][] calldata assets) external {
-        _checkAccessAllowed("setPoolsAssetsDirectTransfer(address[], address[][])");
+    function setPoolsAssetsDirectTransfer(
+        address[] calldata comptrollers,
+        address[][] calldata assets,
+        bool[][] calldata values
+    ) external {
+        _checkAccessAllowed("setPoolsAssetsDirectTransfer(address[],address[][],bool[][])");
 
         uint256 comptrollersLength = comptrollers.length;
-        uint256 assetsLength = assets.length;
 
-        if (comptrollersLength != assetsLength) {
-            revert InvalidComptrollersAndAssets();
+        if ((comptrollersLength != assets.length) || (comptrollersLength != values.length)) {
+            revert InvalidArguments();
         }
 
         for (uint256 i; i < comptrollersLength; ++i) {
             address[] memory poolAssets = assets[i];
+            bool[] memory assetsValues = values[i];
+
+            if (poolAssets.length != assetsValues.length) {
+                revert InvalidArguments();
+            }
+
             for (uint256 j; j < poolAssets.length; ++j) {
-                poolsAssetsDirectTransfer[comptrollers[i]][poolAssets[j]] = true;
-                emit PoolAssetsDirectTransferUpdated(comptrollers[i], poolAssets[j]);
+                poolsAssetsDirectTransfer[comptrollers[i]][poolAssets[j]] = assetsValues[j];
+                emit PoolAssetsDirectTransferUpdated(comptrollers[i], poolAssets[j], assetsValues[j]);
             }
         }
     }
@@ -211,7 +221,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     function getPools(address tokenAddress) internal view returns (address[] memory) {
         address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenAddress);
 
-        if (IComptroller(corePoolComptroller).markets(tokenAddress)) {
+        if (isAssetListedInCore(tokenAddress)) {
             uint256 poolsLength = pools.length;
             address[] memory poolsWithCore = new address[](poolsLength + 1);
 
@@ -225,9 +235,20 @@ contract RiskFundConverter is AbstractTokenConverter {
         return pools;
     }
 
+    function isAssetListedInCore(address tokenAddress) internal view returns (bool isAssetListed) {
+        address[] memory coreMarkets = IComptroller(corePoolComptroller).getAllMarkets();
+
+        for (uint256 i; i < coreMarkets.length; ++i) {
+            if (IVToken(coreMarkets[i]).underlying() == tokenAddress) {
+                isAssetListed = true;
+                break;
+            }
+        }
+    }
+
     function ensureAssetListed(address comptroller, address asset) internal view returns (bool) {
         if (comptroller == corePoolComptroller) {
-            return IComptroller(corePoolComptroller).markets(asset);
+            return isAssetListedInCore(asset);
         }
 
         return IPoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0);
