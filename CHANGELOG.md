@@ -1,3 +1,23 @@
+## [1.0.0-dev.4](https://github.com/VenusProtocol/protocol-reserve/compare/v1.0.0-dev.3...v1.0.0-dev.4) (2023-08-25)
+
+
+### Bug Fixes
+
+* added nonReentrant to updateAssetsState ([1047224](https://github.com/VenusProtocol/protocol-reserve/commit/10472241b503438891b784e7f62a776282240e62))
+* only owner can set registry and prime ([e4e31d2](https://github.com/VenusProtocol/protocol-reserve/commit/e4e31d2a2a054cc9bdfaaa7541bb669603338e96))
+* PSR-04 ([64e4d6a](https://github.com/VenusProtocol/protocol-reserve/commit/64e4d6ae569fcd5fa81ae917bf0b4693b955f492))
+* PSR-05 ([1320fff](https://github.com/VenusProtocol/protocol-reserve/commit/1320fff4f7d92f3da41a4d5f99edde6e02722012))
+* PSR-06 ([3e4e013](https://github.com/VenusProtocol/protocol-reserve/commit/3e4e0135b2f9ff959cdd619b2640a006fe4fd91e))
+* PSR-06 ([f02e8ca](https://github.com/VenusProtocol/protocol-reserve/commit/f02e8ca0b4686e44bdcd45eada3bf57c9b23846b))
+* PSR-07 ([e9ae778](https://github.com/VenusProtocol/protocol-reserve/commit/e9ae778b5d6580ac46f8dfaccf4342f567004e16))
+* PSR-08 ([95b2ff4](https://github.com/VenusProtocol/protocol-reserve/commit/95b2ff4902b30434cef21954b2ce04a61d275564))
+* PSR-09 ([7891517](https://github.com/VenusProtocol/protocol-reserve/commit/789151704b35cd79b236d9e7873f2ea6a0a271c4))
+* PSR-11 ([24a9566](https://github.com/VenusProtocol/protocol-reserve/commit/24a956611704ef455361b09bede8df5abcda4bfe))
+* remove unnecessary checks for loop limit ([e3146d1](https://github.com/VenusProtocol/protocol-reserve/commit/e3146d143956e992c25b811d65873f7279cb9400))
+* use onlyowner ([e89d4bd](https://github.com/VenusProtocol/protocol-reserve/commit/e89d4bd01e70f3ea0e70e005b08dcba2a9fa17fd))
+* VPB-01 ([9b894de](https://github.com/VenusProtocol/protocol-reserve/commit/9b894de0031557d9241a412efd18a0220598c562))
+* VPB-03 ([11b5787](https://github.com/VenusProtocol/protocol-reserve/commit/11b5787e33cb9b973c64bd15ba0183b067c0ca71))
+
 ## [1.0.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v1.0.0-dev.2...v1.0.0-dev.3) (2023-08-09)
 
 
