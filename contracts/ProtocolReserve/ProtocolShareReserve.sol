@@ -144,8 +144,7 @@ contract ProtocolShareReserve is
      * @dev Pool registry setter.
      * @param _poolRegistry Address of the pool registry
      */
-    function setPoolRegistry(address _poolRegistry) external {
-        require(msg.sender == owner(), "only owner can set pool registry");
+    function setPoolRegistry(address _poolRegistry) external onlyOwner {
         if (_poolRegistry == address(0)) revert InvalidAddress();
         emit PoolRegistryUpdated(poolRegistry, _poolRegistry);
         poolRegistry = _poolRegistry;
@@ -155,8 +154,7 @@ contract ProtocolShareReserve is
      * @dev Prime contract address setter.
      * @param _prime Address of the prime contract
      */
-    function setPrime(address _prime) external {
-        require(msg.sender == owner(), "only owner can set prime");
+    function setPrime(address _prime) external onlyOwner {
         if (_prime == address(0)) revert InvalidAddress();
         emit PrimeUpdated(prime, _prime);
         prime = _prime;
