@@ -71,6 +71,18 @@ contract RiskFundConverter is AbstractTokenConverter {
         NATIVE_WRAPPED = nativeWrapped_;
     }
 
+    /// @param accessControlManager_ Access control manager contract address
+    /// @param priceOracle_ Resilient oracle address
+    /// @param destinationAddress_  Address at all incoming tokens will transferred to
+    function initialize(
+        address accessControlManager_,
+        ResilientOracle priceOracle_,
+        address destinationAddress_
+    ) public initializer {
+        // Initialize AbstractTokenConverter
+        __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
+    }
+
     /// @dev Pool registry setter
     /// @param poolRegistry_ Address of the pool registry
     /// @custom:event PoolRegistryUpdated emits on success
@@ -123,18 +135,6 @@ contract RiskFundConverter is AbstractTokenConverter {
         require(IComptroller(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         require(asset != address(0), "ReserveHelpers: Asset address invalid");
         return poolsAssetsReserves[comptroller][asset];
-    }
-
-    /// @param accessControlManager_ Access control manager contract address
-    /// @param priceOracle_ Resilient oracle address
-    /// @param destinationAddress_  Address at all incoming tokens will transferred to
-    function initialize(
-        address accessControlManager_,
-        ResilientOracle priceOracle_,
-        address destinationAddress_
-    ) public initializer {
-        // Initialize AbstractTokenConverter
-        __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
     }
 
     /// @dev Update the reserve of the asset for the specific pool after transferring to risk fund
