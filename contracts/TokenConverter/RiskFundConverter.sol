@@ -19,6 +19,13 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @notice Address of the core pool comptroller
     address public immutable corePoolComptroller;
 
+    ///@notice Address of the vBNB
+    ///@dev This address is used to exclude the BNB market while in getPools method
+    address public immutable vBNB;
+
+    ///@notice Address of the native wrapped currency
+    address public immutable NATIVE_WRAPPED;
+
     /// @notice Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools)
     mapping(address => uint256) internal assetsReserves;
 
@@ -54,9 +61,14 @@ contract RiskFundConverter is AbstractTokenConverter {
     error InvalidArguments();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address corePoolComptroller_) {
+    /// @param corePoolComptroller_ Address of the Comptroller pool
+    /// @param vBNB_ Address of the vBNB
+    /// @param nativeWrapped_ Address of the wrapped native currency
+    constructor(address corePoolComptroller_, address vBNB_, address nativeWrapped_) {
         ensureNonzeroAddress(corePoolComptroller_);
         corePoolComptroller = corePoolComptroller_;
+        vBNB = vBNB_;
+        NATIVE_WRAPPED = nativeWrapped_;
     }
 
     /// @dev Pool registry setter
@@ -239,7 +251,10 @@ contract RiskFundConverter is AbstractTokenConverter {
         address[] memory coreMarkets = IComptroller(corePoolComptroller).getAllMarkets();
 
         for (uint256 i; i < coreMarkets.length; ++i) {
-            if (IVToken(coreMarkets[i]).underlying() == tokenAddress) {
+            if (
+                (vBNB == coreMarkets[i] && tokenAddress == NATIVE_WRAPPED) ||
+                IVToken(coreMarkets[i]).underlying() == tokenAddress
+            ) {
                 isAssetListed = true;
                 break;
             }
