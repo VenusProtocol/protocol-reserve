@@ -40,6 +40,7 @@ let poolB: FakeContract<IComptroller>;
 let poolC: FakeContract<IComptroller>;
 let vToken: FakeContract<IVToken>;
 let vBNB: FakeContract<IVToken>;
+let WBNB: FakeContract<MockToken>;
 
 async function fixture(): Promise<void> {
   [, unKnown] = await ethers.getSigners();
@@ -54,6 +55,7 @@ async function fixture(): Promise<void> {
   poolC = await smock.fake<IComptroller>("IComptroller");
   vToken = await smock.fake<IVToken>("IVToken");
   vBNB = await smock.fake<IVToken>("IVToken");
+  WBNB = await smock.fake<MockToken>("MockToken");
 
   accessControl = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
   oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
@@ -68,7 +70,7 @@ async function fixture(): Promise<void> {
   tokenOut = await MockToken.deploy("TokenOut", "tokenOut", 18);
   await tokenOut.faucet(parseUnits("1000", 18));
 
-  converter = await converterFactory.deploy(corePool.address, vBNB.address);
+  converter = await converterFactory.deploy(corePool.address, vBNB.address, WBNB.address);
   await converter.initialize(accessControl.address, oracle.address, riskFund.address);
 }
 
