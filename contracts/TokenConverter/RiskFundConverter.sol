@@ -17,7 +17,11 @@ contract RiskFundConverter is AbstractTokenConverter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Address of the core pool comptroller
-    address public corePoolComptroller;
+    address public immutable corePoolComptroller;
+
+    ///@notice Address of the vBNB
+    ///@dev This address is used to exclude the BNB market while in getPools method
+    address public immutable vBNB;
 
     /// @notice Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools)
     mapping(address => uint256) internal assetsReserves;
@@ -32,10 +36,6 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @notice This mapping would contain the assets for the pool which would be send to RiskFund directly
     /// @dev Comptroller(pool) -> Asset -> bool(should transfer directly on true)
     mapping(address => mapping(address => bool)) public poolsAssetsDirectTransfer;
-
-    ///@notice Address of the vBNB
-    ///@dev This address is used to exclude the BNB market while in getPools method
-    address public vBNB;
 
     /// @dev This empty reserved space is put in place to allow future versions to add new
     /// variables without shifting down storage in the inheritance chain
@@ -56,6 +56,15 @@ contract RiskFundConverter is AbstractTokenConverter {
 
     // Error thrown when comptrollers array length is not equal to assets array length
     error InvalidArguments();
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    /// @param corePoolComptroller_ Address of the Comptroller pool
+    /// @param vBNB_ Address of the vBNB
+    constructor(address corePoolComptroller_, address vBNB_) {
+        ensureNonzeroAddress(corePoolComptroller_);
+        corePoolComptroller = corePoolComptroller_;
+        vBNB = vBNB_;
+    }
 
     /// @dev Pool registry setter
     /// @param poolRegistry_ Address of the pool registry
@@ -117,14 +126,10 @@ contract RiskFundConverter is AbstractTokenConverter {
     function initialize(
         address accessControlManager_,
         ResilientOracle priceOracle_,
-        address destinationAddress_,
-        address corePoolComptroller_,
-        address vBNB_
+        address destinationAddress_
     ) public initializer {
         // Initialize AbstractTokenConverter
         __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
-        corePoolComptroller = corePoolComptroller_;
-        vBNB = vBNB_;
     }
 
     /// @dev Update the reserve of the asset for the specific pool after transferring to risk fund

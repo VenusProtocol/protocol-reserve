@@ -55,7 +55,7 @@ const PRICE_ORACLE = "0x3cD69251D04A28d887Ac14cbe2E14c52F3D57823";
 const ADDRESS_ZERO = "0x0000000000000000000000000000000000000000";
 const POOL_REGISTRY = "0xC85491616Fa949E048F3aAc39fbf5b0703800667";
 const CONVERTER_OWNER = "0x7Bf1Fe2C42E79dbA813Bf5026B7720935a55ec5f";
-const RISK_FUND = "0xBe4609d972FdEBAa9DC870F4A957F40C301bEb1D"
+const RISK_FUND = "0xBe4609d972FdEBAa9DC870F4A957F40C301bEb1D";
 const INCENTIVE = parseUnits("0.02", 18);
 
 forking(32843073, () => {
@@ -77,10 +77,10 @@ forking(32843073, () => {
         accessController = await hre.ethers.getContractAt("MockACM", ACM);
         priceOracle = await hre.ethers.getContractAt("ResilientOracle", PRICE_ORACLE);
         riskFundConverter = await hre.ethers.getContractAt("RiskFundConverter", RISK_FUND_CONVERTER);
-        
+
         usdtToken = await getToken(USDT);
         alpacaToken = await getToken(ALPACA);
-        
+
         timeLockSigner = await initMainnetUser(NORMAL_TIMELOCK);
         converterOwnerSigner = await initMainnetUser(CONVERTER_OWNER);
 
@@ -192,7 +192,7 @@ forking(32843073, () => {
             .connect(timeLockSigner)
             .giveCallPermission(RISK_FUND_CONVERTER, "setConversionConfig(ConversionConfig)", signer);
 
-          await riskFundConverter.setConversionConfig(converterTokenData)
+          await riskFundConverter.setConversionConfig(converterTokenData);
 
           //amountOut should be zero as riskFundConverter does not have USDT faucet now.
           let actualAmountOut = await riskFundConverter.callStatic.getAmountOut(amountIn, ALPACA, USDT);
@@ -203,12 +203,11 @@ forking(32843073, () => {
           const usdtPrice = await priceOracle.getPrice(USDT);
           const incentivePlusMantissa = parseUnits("1.02", 18);
           const tokenInToOutConversion = alpacaPrice.mul(incentivePlusMantissa).div(usdtPrice);
-          let amountOut = (amountIn).mul(tokenInToOutConversion).div(parseUnits("1", 18));
-          // amountOut = amountIn.mul(tokenInToOutConversion).div(parseUnits("1", 18));
+          const amountOut = amountIn.mul(tokenInToOutConversion).div(parseUnits("1", 18));
 
           await usdtToken.allocateTo(RISK_FUND_CONVERTER, parseUnits("1", 6));
-          await riskFundConverter.updateAssetsState(COMPTROLLER_ALPACA_USDT, USDT)
-          
+          await riskFundConverter.updateAssetsState(COMPTROLLER_ALPACA_USDT, USDT);
+
           actualAmountOut = await riskFundConverter.callStatic.getAmountOut(amountIn, ALPACA, USDT);
           expect(actualAmountOut[1]).to.equal(amountOut);
         });
@@ -240,7 +239,7 @@ forking(32843073, () => {
         it.only("token conversion should execute succesfully", async () => {
           amountIn = parseUnits("1", 18);
           await alpacaToken.faucet(parseUnits("6", 18));
-          
+
           converterTokenData = {
             tokenAddressIn: ALPACA,
             tokenAddressOut: USDT,
@@ -251,20 +250,20 @@ forking(32843073, () => {
             .connect(timeLockSigner)
             .giveCallPermission(RISK_FUND_CONVERTER, "setConversionConfig(ConversionConfig)", signer);
 
-          await riskFundConverter.setConversionConfig(converterTokenData)
+          await riskFundConverter.setConversionConfig(converterTokenData);
           await riskFundConverter.connect(converterOwnerSigner).setDestination(RISK_FUND);
 
           // Transfering some asset to RISK_FUND_CONVERTER.
           await alpacaToken.transfer(RISK_FUND_CONVERTER, parseUnits("5", 18));
-          await riskFundConverter.updateAssetsState(COMPTROLLER_ALPACA_USDT, ALPACA)
+          await riskFundConverter.updateAssetsState(COMPTROLLER_ALPACA_USDT, ALPACA);
 
           await usdtToken.allocateTo(RISK_FUND_CONVERTER, parseUnits("1", 6));
-          await riskFundConverter.updateAssetsState(COMPTROLLER_ALPACA_USDT, USDT)
-          
+          await riskFundConverter.updateAssetsState(COMPTROLLER_ALPACA_USDT, USDT);
+
           await alpacaToken.approve(RISK_FUND_CONVERTER, parseUnits("1", 18));
 
           const actualAmountOut = await riskFundConverter.callStatic.getAmountOut(amountIn, ALPACA, USDT);
-          
+
           const signerPreviousBalance = await usdtToken.balanceOf(signer);
 
           const tx = await riskFundConverter.convertExactTokens(amountIn, parseUnits("1", 3), ALPACA, USDT, signer);
@@ -356,7 +355,7 @@ forking(32843073, () => {
             .connect(timeLockSigner)
             .giveCallPermission(RISK_FUND_CONVERTER, "setConversionConfig(ConversionConfig)", signer);
 
-          await riskFundConverter.setConversionConfig(converterTokenData)
+          await riskFundConverter.setConversionConfig(converterTokenData);
           await riskFundConverter.connect(converterOwnerSigner).setDestination(RISK_FUND);
           await alpacaToken.faucet(parseUnits("6", 18));
 
