@@ -31,6 +31,7 @@ let tokenIn: MockContract<MockToken>;
 let tokenOut: MockContract<MockToken>;
 let oracle: FakeContract<ResilientOracleInterface>;
 let poolRegistry: FakeContract<IPoolRegistry>;
+let newPoolRegistry: FakeContract<IPoolRegistry>;
 let riskFund: FakeContract<RiskFundV2>;
 let tokenInDeflationary: MockContract<MockDeflatingToken>;
 let unKnown: Signer;
@@ -71,47 +72,12 @@ async function fixture(): Promise<void> {
   await tokenOut.faucet(parseUnits("1000", 18));
 
   converter = await converterFactory.deploy(corePool.address, vBNB.address, WBNB.address);
-  await converter.initialize(accessControl.address, oracle.address, riskFund.address);
+  await converter.initialize(accessControl.address, oracle.address, riskFund.address, poolRegistry.address);
 }
 
 describe("Risk fund Converter: tests", () => {
   before(async function () {
     await loadFixture(fixture);
-  });
-
-  it("Reverts on invalid PoolRegistry address", async function () {
-    await expect(converter.setPoolRegistry(ethers.constants.AddressZero)).to.be.revertedWithCustomError(
-      converter,
-      "ZeroAddressNotAllowed",
-    );
-  });
-
-  it("Fails if called by a non-owner", async function () {
-    await expect(converter.connect(unKnown).setPoolRegistry(poolRegistry.address)).to.be.revertedWith(
-      "Ownable: caller is not the owner",
-    );
-  });
-
-  it("Emits PoolRegistryUpdated on success", async function () {
-    const tx = converter.setPoolRegistry(poolRegistry.address);
-    await expect(tx)
-      .to.emit(converter, "PoolRegistryUpdated")
-      .withArgs(ethers.constants.AddressZero, poolRegistry.address);
-  });
-
-  it("Check balanceOf converter for different tokens", async () => {
-    const TOKEN_IN_AMOUNT = convertToUnit(10, 18);
-    const TOKEN_OUT_AMOUNT = convertToUnit(20, 18);
-    const DEFLATIONARY_AMOUNT = convertToUnit(30, 18);
-    await converter.setVariable("assetsReserves", {
-      [tokenIn.address]: TOKEN_IN_AMOUNT,
-      [tokenOut.address]: TOKEN_OUT_AMOUNT,
-      [tokenInDeflationary.address]: "29700000000000000000",
-    });
-
-    expect(await converter.balanceOf(tokenIn.address)).to.equals(TOKEN_IN_AMOUNT);
-    expect(await converter.balanceOf(tokenOut.address)).to.equals(TOKEN_OUT_AMOUNT);
-    expect(await converter.balanceOf(tokenInDeflationary.address)).to.equals("29700000000000000000");
   });
 
   it("Post tokens convert", async () => {
@@ -174,6 +140,40 @@ describe("Risk fund Converter: tests", () => {
     );
   });
 
+  it("Reverts on invalid PoolRegistry address", async function () {
+    await expect(converter.setPoolRegistry(ethers.constants.AddressZero)).to.be.revertedWithCustomError(
+      converter,
+      "ZeroAddressNotAllowed",
+    );
+  });
+
+  it("Fails if called by a non-owner", async function () {
+    await expect(converter.connect(unKnown).setPoolRegistry(poolRegistry.address)).to.be.revertedWith(
+      "Ownable: caller is not the owner",
+    );
+  });
+
+  it("Emits PoolRegistryUpdated on success", async function () {
+    newPoolRegistry = await smock.fake<IPoolRegistry>("IPoolRegistry");
+    const tx = converter.setPoolRegistry(newPoolRegistry.address);
+    await expect(tx).to.emit(converter, "PoolRegistryUpdated").withArgs(poolRegistry.address, newPoolRegistry.address);
+  });
+
+  it("Check balanceOf converter for different tokens", async () => {
+    const TOKEN_IN_AMOUNT = convertToUnit(10, 18);
+    const TOKEN_OUT_AMOUNT = convertToUnit(20, 18);
+    const DEFLATIONARY_AMOUNT = convertToUnit(30, 18);
+    await converter.setVariable("assetsReserves", {
+      [tokenIn.address]: TOKEN_IN_AMOUNT,
+      [tokenOut.address]: TOKEN_OUT_AMOUNT,
+      [tokenInDeflationary.address]: "29700000000000000000",
+    });
+
+    expect(await converter.balanceOf(tokenIn.address)).to.equals(TOKEN_IN_AMOUNT);
+    expect(await converter.balanceOf(tokenOut.address)).to.equals(TOKEN_OUT_AMOUNT);
+    expect(await converter.balanceOf(tokenInDeflationary.address)).to.equals("29700000000000000000");
+  });
+
   describe("Pools direct transfer", () => {
     it("Revert on invalid access control", async () => {
       await accessControl.isAllowedToCall.returns(false);
@@ -181,6 +181,34 @@ describe("Risk fund Converter: tests", () => {
       await expect(
         converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address]], [[true]]),
       ).to.be.revertedWithCustomError(converter, "Unauthorized");
+    });
+
+    it("Success on the setPoolsAssetsDirectTransfer", async () => {
+      await accessControl.isAllowedToCall.returns(true);
+
+      await expect(converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address]], [[true]]))
+        .to.emit(converter, "PoolAssetsDirectTransferUpdated")
+        .withArgs(poolA.address, tokenIn.address, true);
+
+      expect(await converter.poolsAssetsDirectTransfer(poolA.address, tokenIn.address)).to.equal(true);
+    });
+
+    it("Transfer funds to riskFund directly", async () => {
+      poolA.isComptroller.returns(true);
+      await converter.setVariable("assetsReserves", {
+        [tokenIn.address]: 0,
+      });
+      const POOL_A_AMOUNT = convertToUnit(10, 18);
+      newPoolRegistry.getVTokenForAsset.returns(poolA.address);
+
+      expect(await tokenIn.balanceOf(riskFund.address)).to.equal(0);
+      expect(await tokenIn.balanceOf(converter.address)).to.equal(0);
+      await tokenIn.transfer(converter.address, POOL_A_AMOUNT);
+      await converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address]], [[true]]);
+      await converter.updateAssetsState(poolA.address, tokenIn.address);
+
+      expect(await tokenIn.balanceOf(converter.address)).to.equal(0);
+      expect(await tokenIn.balanceOf(riskFund.address)).to.equal(POOL_A_AMOUNT);
     });
 
     it("Revert on invalid parameters", async () => {
@@ -205,34 +233,6 @@ describe("Risk fund Converter: tests", () => {
       await expect(
         converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address]], [[true, true]]),
       ).to.be.revertedWithCustomError(converter, "InvalidArguments");
-    });
-
-    it("Success on the setPoolsAssetsDirectTransfer", async () => {
-      await accessControl.isAllowedToCall.returns(true);
-
-      await expect(converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address]], [[true]]))
-        .to.emit(converter, "PoolAssetsDirectTransferUpdated")
-        .withArgs(poolA.address, tokenIn.address, true);
-
-      expect(await converter.poolsAssetsDirectTransfer(poolA.address, tokenIn.address)).to.equal(true);
-    });
-
-    it("Transfer funds to riskFund directly", async () => {
-      poolRegistry.getVTokenForAsset.returns(poolA.address);
-      poolA.isComptroller.returns(true);
-      await converter.setVariable("assetsReserves", {
-        [tokenIn.address]: 0,
-      });
-      const POOL_A_AMOUNT = convertToUnit(10, 18);
-
-      expect(await tokenIn.balanceOf(riskFund.address)).to.equal(0);
-      expect(await tokenIn.balanceOf(converter.address)).to.equal(0);
-      await tokenIn.transfer(converter.address, POOL_A_AMOUNT);
-      await converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address]], [[true]]);
-      await converter.updateAssetsState(poolA.address, tokenIn.address);
-
-      expect(await tokenIn.balanceOf(converter.address)).to.equal(0);
-      expect(await tokenIn.balanceOf(riskFund.address)).to.equal(POOL_A_AMOUNT);
     });
   });
 });

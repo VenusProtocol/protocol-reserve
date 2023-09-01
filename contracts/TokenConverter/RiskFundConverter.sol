@@ -60,10 +60,10 @@ contract RiskFundConverter is AbstractTokenConverter {
     // Error thrown when comptrollers array length is not equal to assets array length
     error InvalidArguments();
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
     /// @param corePoolComptroller_ Address of the Comptroller pool
     /// @param vBNB_ Address of the vBNB
     /// @param nativeWrapped_ Address of the wrapped native currency
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address corePoolComptroller_, address vBNB_, address nativeWrapped_) {
         ensureNonzeroAddress(corePoolComptroller_);
         corePoolComptroller = corePoolComptroller_;
@@ -128,13 +128,16 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param accessControlManager_ Access control manager contract address
     /// @param priceOracle_ Resilient oracle address
     /// @param destinationAddress_  Address at all incoming tokens will transferred to
+    /// @param poolRegistry_ Address of the pool registry
     function initialize(
         address accessControlManager_,
         ResilientOracle priceOracle_,
-        address destinationAddress_
+        address destinationAddress_,
+        address poolRegistry_
     ) public initializer {
         // Initialize AbstractTokenConverter
         __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
+        poolRegistry = poolRegistry_;
     }
 
     /// @dev Update the reserve of the asset for the specific pool after transferring to risk fund
@@ -251,10 +254,11 @@ contract RiskFundConverter is AbstractTokenConverter {
         address[] memory coreMarkets = IComptroller(corePoolComptroller).getAllMarkets();
 
         for (uint256 i; i < coreMarkets.length; ++i) {
-            if (
-                (vBNB == coreMarkets[i] && tokenAddress == NATIVE_WRAPPED) ||
-                IVToken(coreMarkets[i]).underlying() == tokenAddress
-            ) {
+            bool isListed = (vBNB == coreMarkets[i])
+                ? (tokenAddress == NATIVE_WRAPPED)
+                : (IVToken(coreMarkets[i]).underlying() == tokenAddress);
+
+            if (isListed) {
                 isAssetListed = true;
                 break;
             }
