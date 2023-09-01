@@ -1,7 +1,10 @@
+import { smock } from "@defi-wonderland/smock";
 import chai from "chai";
 import { BigNumber } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import hre, { network } from "hardhat";
+
+import { ResilientOracleInterface } from "../../typechain";
 
 const { expect } = chai;
 
@@ -48,7 +51,7 @@ async function getToken(tokenAddress) {
 const NORMAL_TIMELOCK = "0xce10739590001705f7ff231611ba4a48b2820327";
 const USDT = "0xA11c8D9DC9b66E209Ef60F0C8D969D3CD988782c";
 const ALPACA = "0x6923189d91fdF62dBAe623a55273F1d20306D9f2";
-const RISK_FUND_CONVERTER = "0x4512e9579734f7B8730f0a05Cd0D92DC33EB2675";
+const RISK_FUND_CONVERTER = "0x5143eb18aA057Cd8BC9734cCfD2651823e71585f";
 const COMPTROLLER_ALPACA_USDT = "0x23a73971A6B9f6580c048B9CB188869B2A2aA2aD";
 const ACM = "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA";
 const PRICE_ORACLE = "0x3cD69251D04A28d887Ac14cbe2E14c52F3D57823";
@@ -58,7 +61,7 @@ const CONVERTER_OWNER = "0x7Bf1Fe2C42E79dbA813Bf5026B7720935a55ec5f";
 const RISK_FUND = "0xBe4609d972FdEBAa9DC870F4A957F40C301bEb1D";
 const INCENTIVE = parseUnits("0.02", 18);
 
-forking(32843073, () => {
+forking(32949861, () => {
   let usdtToken: ethers.Contract;
   let priceOracle: ethers.Contract;
   let alpacaToken: ethers.Contract;
@@ -178,7 +181,7 @@ forking(32843073, () => {
           );
         });
 
-        it.only("getAmountOut should execute successfully", async () => {
+        it("getAmountOut should execute successfully", async () => {
           converterTokenData = {
             tokenAddressIn: ALPACA,
             tokenAddressOut: USDT,
@@ -236,7 +239,7 @@ forking(32843073, () => {
           ).to.be.revertedWithCustomError(riskFundConverter, "AmountOutLowerThanMinRequired");
         });
 
-        it.only("token conversion should execute succesfully", async () => {
+        it("token conversion should execute succesfully", async () => {
           amountIn = parseUnits("1", 18);
           await alpacaToken.faucet(parseUnits("6", 18));
 
@@ -344,7 +347,7 @@ forking(32843073, () => {
           ).to.be.revertedWithCustomError(riskFundConverter, "AmountInHigherThanMax");
         });
 
-        it.only("token conversion should execute successfully", async () => {
+        it("token conversion should execute successfully", async () => {
           converterTokenData = {
             tokenAddressIn: ALPACA,
             tokenAddressOut: USDT,
@@ -384,6 +387,40 @@ forking(32843073, () => {
         });
       });
 
+      describe("Set price oracle", () => {
+        it("Set price oracle", async () => {
+          const newOracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+
+          const tx = await riskFundConverter.connect(converterOwnerSigner).setPriceOracle(newOracle.address);
+          await tx.wait();
+
+          await expect(tx).to.emit(riskFundConverter, "PriceOracleUpdated").withArgs(PRICE_ORACLE, newOracle.address);
+        });
+      });
+
+      describe("Pause/Resume converter functionality", () => {
+        it("Pause Converter", async () => {
+          await accessController
+            .connect(timeLockSigner)
+            .giveCallPermission(RISK_FUND_CONVERTER, "pauseConversion()", converterOwnerSigner.address);
+
+          const tx = await riskFundConverter.connect(converterOwnerSigner).pauseConversion();
+          tx.wait();
+
+          await expect(tx).to.emit(riskFundConverter, "ConversionPaused").withArgs(converterOwnerSigner.address);
+        });
+
+        it("Resume Converter", async () => {
+          await accessController
+            .connect(timeLockSigner)
+            .giveCallPermission(RISK_FUND_CONVERTER, "resumeConversion()", converterOwnerSigner.address);
+
+          const tx = await riskFundConverter.connect(converterOwnerSigner).resumeConversion();
+          tx.wait();
+
+          await expect(tx).to.emit(riskFundConverter, "ConversionResumed").withArgs(converterOwnerSigner.address);
+        });
+      });
       //TODO: Need to write test cases for supporting fee methods once protocol share reserve V1 deployed to mainnet
     });
   }
