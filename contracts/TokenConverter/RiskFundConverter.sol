@@ -74,13 +74,16 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param accessControlManager_ Access control manager contract address
     /// @param priceOracle_ Resilient oracle address
     /// @param destinationAddress_  Address at all incoming tokens will transferred to
+    /// @param poolRegistry_ Address of the pool registry
     function initialize(
         address accessControlManager_,
         ResilientOracle priceOracle_,
-        address destinationAddress_
+        address destinationAddress_,
+        address poolRegistry_
     ) public initializer {
         // Initialize AbstractTokenConverter
         __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
+        poolRegistry = poolRegistry_;
     }
 
     /// @dev Pool registry setter
@@ -135,21 +138,6 @@ contract RiskFundConverter is AbstractTokenConverter {
         require(IComptroller(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         require(asset != address(0), "ReserveHelpers: Asset address invalid");
         return poolsAssetsReserves[comptroller][asset];
-    }
-
-    /// @param accessControlManager_ Access control manager contract address
-    /// @param priceOracle_ Resilient oracle address
-    /// @param destinationAddress_  Address at all incoming tokens will transferred to
-    /// @param poolRegistry_ Address of the pool registry
-    function initialize(
-        address accessControlManager_,
-        ResilientOracle priceOracle_,
-        address destinationAddress_,
-        address poolRegistry_
-    ) public initializer {
-        // Initialize AbstractTokenConverter
-        __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
-        poolRegistry = poolRegistry_;
     }
 
     /// @dev Update the reserve of the asset for the specific pool after transferring to risk fund
@@ -220,17 +208,17 @@ contract RiskFundConverter is AbstractTokenConverter {
         uint256 amountIn,
         uint256 amountOut
     ) internal override {
-        address[] memory pools = getPools(tokenInAddress);
-        uint256 assetReserve = assetsReserves[tokenInAddress];
+        address[] memory pools = getPools(tokenOutAddress);
+        uint256 assetReserve = assetsReserves[tokenOutAddress];
         for (uint256 i; i < pools.length; ++i) {
-            uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenInAddress] * EXP_SCALE) / assetReserve;
+            uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenOutAddress] * EXP_SCALE) / assetReserve;
             if (poolShare == 0) continue;
-            updatePoolAssetsReserve(pools[i], tokenInAddress, amountIn, poolShare);
+            updatePoolAssetsReserve(pools[i], tokenOutAddress, amountIn, poolShare);
             uint256 poolAmountOutShare = (poolShare * amountOut) / EXP_SCALE;
-            IRiskFund(destinationAddress).updatePoolState(pools[i], tokenOutAddress, poolAmountOutShare);
+            IRiskFund(destinationAddress).updatePoolState(pools[i], tokenInAddress, poolAmountOutShare);
         }
 
-        assetsReserves[tokenInAddress] -= amountIn;
+        assetsReserves[tokenOutAddress] -= amountIn;
     }
 
     /// @notice Update the poolAssetsResreves upon transferring the tokens

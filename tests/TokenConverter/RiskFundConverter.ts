@@ -89,29 +89,29 @@ describe("Risk fund Converter: tests", () => {
     const AMOUNT_IN = convertToUnit(20, 18);
     const AMOUNT_OUT = convertToUnit(18, 18);
 
-    await tokenIn.transfer(poolA.address, POOL_A_AMOUNT);
-    await tokenIn.transfer(poolB.address, POOL_B_AMOUNT);
-    await tokenIn.transfer(poolC.address, POOL_C_AMOUNT);
-    await tokenIn.transfer(corePool.address, CORE_POOL_AMOUNT);
-    vToken.underlying.returns(tokenIn.address);
+    await tokenOut.transfer(poolA.address, POOL_A_AMOUNT);
+    await tokenOut.transfer(poolB.address, POOL_B_AMOUNT);
+    await tokenOut.transfer(poolC.address, POOL_C_AMOUNT);
+    await tokenOut.transfer(corePool.address, CORE_POOL_AMOUNT);
+    vToken.underlying.returns(tokenOut.address);
     corePool.getAllMarkets.returns([vToken.address]);
 
     await converter.setVariable("poolsAssetsReserves", {
       [poolA.address]: {
-        [tokenIn.address]: POOL_A_AMOUNT,
+        [tokenOut.address]: POOL_A_AMOUNT,
       },
       [poolB.address]: {
-        [tokenIn.address]: POOL_B_AMOUNT,
+        [tokenOut.address]: POOL_B_AMOUNT,
       },
       [poolC.address]: {
-        [tokenIn.address]: POOL_C_AMOUNT,
+        [tokenOut.address]: POOL_C_AMOUNT,
       },
       [corePool.address]: {
-        [tokenIn.address]: CORE_POOL_AMOUNT,
+        [tokenOut.address]: CORE_POOL_AMOUNT,
       },
     });
     poolRegistry.getPoolsSupportedByAsset.returns([poolA.address, poolB.address, poolC.address]);
-    await converter.setAssetsReserves(tokenIn.address, TOTAL_ASSESTS_RESERVES);
+    await converter.setAssetsReserves(tokenOut.address, TOTAL_ASSESTS_RESERVES);
     await converter.postConversionHookMock(tokenIn.address, tokenOut.address, AMOUNT_IN, AMOUNT_OUT);
 
     const poolAShare = new BigNumber(POOL_A_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_IN);
@@ -119,22 +119,22 @@ describe("Risk fund Converter: tests", () => {
     const poolCShare = new BigNumber(POOL_C_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_IN);
     const corePoolShare = new BigNumber(CORE_POOL_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_IN);
 
-    expect(await converter.callStatic.getAssetsReserves(tokenIn.address)).to.equals(
+    expect(await converter.callStatic.getAssetsReserves(tokenOut.address)).to.equals(
       String(Number(TOTAL_ASSESTS_RESERVES) - Number(AMOUNT_IN)),
     );
-    expect(await converter.callStatic.getPoolsAssetsReserves(poolA.address, tokenIn.address)).to.closeTo(
+    expect(await converter.callStatic.getPoolsAssetsReserves(poolA.address, tokenOut.address)).to.closeTo(
       String(Number(POOL_A_AMOUNT) - Number(poolAShare)),
       1000,
     );
-    expect(await converter.callStatic.getPoolsAssetsReserves(poolB.address, tokenIn.address)).to.closeTo(
+    expect(await converter.callStatic.getPoolsAssetsReserves(poolB.address, tokenOut.address)).to.closeTo(
       String(Number(POOL_B_AMOUNT) - Number(poolBShare)),
       1500,
     );
-    expect(await converter.callStatic.getPoolsAssetsReserves(poolC.address, tokenIn.address)).to.closeTo(
+    expect(await converter.callStatic.getPoolsAssetsReserves(poolC.address, tokenOut.address)).to.closeTo(
       String(Number(POOL_C_AMOUNT) - Number(poolCShare)),
       1000,
     );
-    expect(await converter.callStatic.getPoolsAssetsReserves(corePool.address, tokenIn.address)).to.closeTo(
+    expect(await converter.callStatic.getPoolsAssetsReserves(corePool.address, tokenOut.address)).to.closeTo(
       String(Number(CORE_POOL_AMOUNT) - Number(corePoolShare)),
       1000,
     );
