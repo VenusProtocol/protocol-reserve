@@ -42,6 +42,14 @@ contract XVSVaultTreasury is AccessControlledV8 {
         _disableInitializers();
     }
 
+    /// @param accessControlManager_ Access control manager contract address
+    /// @param xvsVault_ XVSVault address
+    function initialize(address accessControlManager_, address xvsVault_) public virtual initializer {
+        __AccessControlled_init(accessControlManager_);
+
+        _setXVSVault(xvsVault_);
+    }
+
     /// @dev XVS vault setter
     /// @param xvsVault_ Address of the XVS vault
     function setXVSVault(address xvsVault_) external onlyOwner {
@@ -61,14 +69,6 @@ contract XVSVaultTreasury is AccessControlledV8 {
         IERC20Upgradeable(xvsAddress).safeTransfer(xvsStore, amountMantissa);
 
         emit FundsTransferredToXVSStore(xvsStore, amountMantissa);
-    }
-
-    /// @param accessControlManager_ Access control manager contract address
-    /// @param xvsVault_ XVSVault address
-    function initialize(address accessControlManager_, address xvsVault_) public virtual initializer {
-        __AccessControlled_init(accessControlManager_);
-
-        _setXVSVault(xvsVault_);
     }
 
     /// @dev XVS vault setter
