@@ -53,21 +53,26 @@ const USDT = "0xA11c8D9DC9b66E209Ef60F0C8D969D3CD988782c";
 const ALPACA = "0x6923189d91fdF62dBAe623a55273F1d20306D9f2";
 const RISK_FUND_CONVERTER = "0xE8c1dE02b9C7d5637930410567EB8b8f01B2A012";
 const COMPTROLLER_ALPACA_USDT = "0x23a73971A6B9f6580c048B9CB188869B2A2aA2aD";
+const CORE_POOL_COMPTROLLER = "0x94d1820b2D1c7c7452A163983Dc888CEC546b77D";
 const ACM = "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA";
 const PRICE_ORACLE = "0x3cD69251D04A28d887Ac14cbe2E14c52F3D57823";
 const ADDRESS_ZERO = "0x0000000000000000000000000000000000000000";
 const CONVERTER_OWNER = "0x7Bf1Fe2C42E79dbA813Bf5026B7720935a55ec5f";
+const WBNB_HOLDER = "0x352a7a5277ec7619500b06fa051974621c1acd12";
+const WBNB = "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd";
 const INCENTIVE = parseUnits("0.02", 18);
 
 forking(33017489, () => {
   let usdtToken: ethers.Contract;
   let priceOracle: ethers.Contract;
   let alpacaToken: ethers.Contract;
+  let wBNBToken: ethers.Contract;
   let accessController: ethers.Contract;
   let riskFundConverter: ethers.Contract;
   let signer: ethers.Signer;
   let timeLockSigner: ethers.Signer;
   let converterOwnerSigner: ethers.Signer;
+  let wBNBHolder: ethers.Signer;
   let converterTokenData: object;
   let amountIn: BigNumber;
   let amountOutExpected: BigNumber;
@@ -260,6 +265,44 @@ forking(33017489, () => {
 
           expect(signerAfterBalance.sub(signerPreviousBalance)).to.equal(actualAmountOut[1]);
         });
+
+        it("token conversion wrapped native token (WBNB) should execute succesfully", async () => {
+          converterTokenData = {
+            tokenAddressIn: USDT,
+            tokenAddressOut: WBNB,
+            incentive: INCENTIVE,
+            enabled: true,
+          };
+          await accessController
+            .connect(timeLockSigner)
+            .giveCallPermission(RISK_FUND_CONVERTER, "setConversionConfig(ConversionConfig)", signer);
+
+          await riskFundConverter.setConversionConfig(converterTokenData);
+
+          amountIn = parseUnits("1", 18);
+
+          // Transfering some asset to RISK_FUND_CONVERTER.
+          await usdtToken.allocateTo(signer, parseUnits("1", 18));
+          await usdtToken.approve(RISK_FUND_CONVERTER, parseUnits("1", 18));
+
+          await wBNBToken.connect(wBNBHolder).transfer(RISK_FUND_CONVERTER, parseUnits("1", 18));
+          await riskFundConverter.updateAssetsState(CORE_POOL_COMPTROLLER, WBNB);
+
+          const actualAmountOut = await riskFundConverter.callStatic.getAmountOut(amountIn, USDT, WBNB);
+
+          const signerPreviousBalance = await wBNBToken.balanceOf(signer);
+
+          const tx = await riskFundConverter.convertExactTokens(amountIn, parseUnits("1", 5), USDT, WBNB, signer);
+          await tx.wait();
+
+          await expect(tx)
+            .emit(riskFundConverter, "ConvertExactTokens")
+            .withArgs(actualAmountOut[0], actualAmountOut[1]);
+
+          const signerAfterBalance = await wBNBToken.balanceOf(signer);
+
+          expect(signerAfterBalance.sub(signerPreviousBalance)).to.equal(actualAmountOut[1]);
+        });
       });
 
       describe("getAmountIn()", () => {
@@ -330,6 +373,12 @@ forking(33017489, () => {
         });
 
         it("token conversion should execute successfully", async () => {
+          converterTokenData = {
+            tokenAddressIn: ALPACA,
+            tokenAddressOut: USDT,
+            incentive: INCENTIVE,
+            enabled: true,
+          };
           await accessController
             .connect(timeLockSigner)
             .giveCallPermission(RISK_FUND_CONVERTER, "setConversionConfig(ConversionConfig)", signer);
@@ -360,6 +409,47 @@ forking(33017489, () => {
             .withArgs(actualAmounts[1], actualAmounts[0]);
 
           const signerAfterBalance = await alpacaToken.balanceOf(signer);
+
+          expect(signerPreviousBalance.sub(signerAfterBalance)).to.equal(actualAmounts[1]);
+        });
+
+        it("token conversion of wrapped native token (WBNB) should execute successfully", async () => {
+          converterTokenData = {
+            tokenAddressIn: WBNB,
+            tokenAddressOut: USDT,
+            incentive: INCENTIVE,
+            enabled: true,
+          };
+          await accessController
+            .connect(timeLockSigner)
+            .giveCallPermission(RISK_FUND_CONVERTER, "setConversionConfig(ConversionConfig)", signer);
+
+          await riskFundConverter.setConversionConfig(converterTokenData);
+
+          await wBNBToken.connect(wBNBHolder).transfer(signer, parseUnits("6", 18));
+
+          await wBNBToken.approve(RISK_FUND_CONVERTER, parseUnits("5", 18));
+          await usdtToken.allocateTo(RISK_FUND_CONVERTER, parseUnits("1", 18));
+          await riskFundConverter.updateAssetsState(CORE_POOL_COMPTROLLER, USDT);
+
+          amountOutExpected = parseUnits("1", 6);
+          const actualAmounts = await riskFundConverter.callStatic.getAmountIn(amountOutExpected, WBNB, USDT);
+          const signerPreviousBalance = await wBNBToken.balanceOf(signer);
+
+          const tx = await riskFundConverter.convertForExactTokens(
+            parseUnits("5", 18),
+            amountOutExpected,
+            WBNB,
+            USDT,
+            signer,
+          );
+          await tx.wait();
+
+          await expect(tx)
+            .emit(riskFundConverter, "ConvertForExactTokens")
+            .withArgs(actualAmounts[1], actualAmounts[0]);
+
+          const signerAfterBalance = await wBNBToken.balanceOf(signer);
 
           expect(signerPreviousBalance.sub(signerAfterBalance)).to.equal(actualAmounts[1]);
         });
