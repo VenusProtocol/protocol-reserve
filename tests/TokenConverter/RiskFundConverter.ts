@@ -114,13 +114,13 @@ describe("Risk fund Converter: tests", () => {
     await converter.setAssetsReserves(tokenOut.address, TOTAL_ASSESTS_RESERVES);
     await converter.postConversionHookMock(tokenIn.address, tokenOut.address, AMOUNT_IN, AMOUNT_OUT);
 
-    const poolAShare = new BigNumber(POOL_A_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_IN);
-    const poolBShare = new BigNumber(POOL_B_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_IN);
-    const poolCShare = new BigNumber(POOL_C_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_IN);
-    const corePoolShare = new BigNumber(CORE_POOL_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_IN);
+    const poolAShare = new BigNumber(POOL_A_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_OUT);
+    const poolBShare = new BigNumber(POOL_B_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_OUT);
+    const poolCShare = new BigNumber(POOL_C_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_OUT);
+    const corePoolShare = new BigNumber(CORE_POOL_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_OUT);
 
     expect(await converter.callStatic.getAssetsReserves(tokenOut.address)).to.equals(
-      String(Number(TOTAL_ASSESTS_RESERVES) - Number(AMOUNT_IN)),
+      String(Number(TOTAL_ASSESTS_RESERVES) - Number(AMOUNT_OUT)),
     );
     expect(await converter.callStatic.getPoolsAssetsReserves(poolA.address, tokenOut.address)).to.closeTo(
       String(Number(POOL_A_AMOUNT) - Number(poolAShare)),

@@ -213,12 +213,12 @@ contract RiskFundConverter is AbstractTokenConverter {
         for (uint256 i; i < pools.length; ++i) {
             uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenOutAddress] * EXP_SCALE) / assetReserve;
             if (poolShare == 0) continue;
-            updatePoolAssetsReserve(pools[i], tokenOutAddress, amountIn, poolShare);
-            uint256 poolAmountOutShare = (poolShare * amountOut) / EXP_SCALE;
-            IRiskFund(destinationAddress).updatePoolState(pools[i], tokenInAddress, poolAmountOutShare);
+            updatePoolAssetsReserve(pools[i], tokenOutAddress, amountOut, poolShare);
+            uint256 poolAmountInShare = (poolShare * amountIn) / EXP_SCALE;
+            IRiskFund(destinationAddress).updatePoolState(pools[i], tokenInAddress, poolAmountInShare);
         }
 
-        assetsReserves[tokenOutAddress] -= amountIn;
+        assetsReserves[tokenOutAddress] -= amountOut;
     }
 
     /// @notice Update the poolAssetsResreves upon transferring the tokens
@@ -254,12 +254,11 @@ contract RiskFundConverter is AbstractTokenConverter {
         address[] memory coreMarkets = IComptroller(corePoolComptroller).getAllMarkets();
 
         for (uint256 i; i < coreMarkets.length; ++i) {
-            bool isListed = (vBNB == coreMarkets[i])
+            isAssetListed = (vBNB == coreMarkets[i])
                 ? (tokenAddress == NATIVE_WRAPPED)
                 : (IVToken(coreMarkets[i]).underlying() == tokenAddress);
 
-            if (isListed) {
-                isAssetListed = true;
+            if (isAssetListed) {
                 break;
             }
         }
