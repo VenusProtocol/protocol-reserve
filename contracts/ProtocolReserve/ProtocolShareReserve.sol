@@ -440,4 +440,18 @@ contract ProtocolShareReserve is
             return IVToken(vToken).underlying();
         }
     }
+
+    function getPercentageDistribution(address destination, Schema schema) external view returns (uint256) {
+        for (uint256 i = 0; i < distributionTargets.length; ) {
+            DistributionConfig memory config = distributionTargets[i];
+            
+            if (config.destination == destination && config.schema == schema) {
+                return config.percentage;
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
 }
