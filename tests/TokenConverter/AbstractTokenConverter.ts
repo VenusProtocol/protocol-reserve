@@ -92,7 +92,11 @@ describe("MockConverter: tests", () => {
       const MAX_AMOUNT_IN = convertToUnit(".25", 18);
       const AMOUNT_OUT = convertToUnit(".5", 18);
       await converter.setConversionConfig(ConversionConfig);
-      const expectedResults = await converter.callStatic.getAmountIn(AMOUNT_OUT, tokenIn.address, tokenOut.address);
+      const expectedResults = await converter.callStatic.getUpdatedAmountIn(
+        AMOUNT_OUT,
+        tokenIn.address,
+        tokenOut.address,
+      );
 
       const tx = await converter.convertForExactTokens(
         MAX_AMOUNT_IN,
@@ -158,7 +162,11 @@ describe("MockConverter: tests", () => {
       const MIN_AMOUNT_OUT = convertToUnit(".5", 18);
       await converter.setConversionConfig(ConversionConfig);
 
-      const expectedResults = await converter.callStatic.getAmountOut(AMOUNT_IN, tokenIn.address, tokenOut.address);
+      const expectedResults = await converter.callStatic.getUpdatedAmountOut(
+        AMOUNT_IN,
+        tokenIn.address,
+        tokenOut.address,
+      );
 
       const tx = await converter.convertExactTokens(
         AMOUNT_IN,
@@ -246,7 +254,7 @@ describe("MockConverter: tests", () => {
       const amountDeductedInTransfer = parseUnits(".25", 18).div(100);
       const amountTransferredAfterFees = parseUnits(".25", 18).sub(amountDeductedInTransfer);
 
-      const expectedResults = await converter.callStatic.getAmountOut(
+      const expectedResults = await converter.callStatic.getUpdatedAmountOut(
         convertToUnit(".25", 18),
         tokenInDeflationary.address,
         tokenOut.address,
@@ -300,7 +308,7 @@ describe("MockConverter: tests", () => {
 
       await converter.setConversionConfig(ConversionConfig);
 
-      const expectedResults = await converter.callStatic.getAmountIn(
+      const expectedResults = await converter.callStatic.getUpdatedAmountIn(
         convertToUnit(".5", 18),
         tokenInDeflationary.address,
         tokenOut.address,
@@ -427,7 +435,7 @@ describe("MockConverter: tests", () => {
     };
 
     it("Revert on zero amountIn value", async () => {
-      await expect(converter.getAmountOut(0, tokenIn.address, tokenOut.address)).to.be.revertedWithCustomError(
+      await expect(converter.getUpdatedAmountOut(0, tokenIn.address, tokenOut.address)).to.be.revertedWithCustomError(
         converter,
         "InsufficientInputAmount",
       );
@@ -435,7 +443,7 @@ describe("MockConverter: tests", () => {
 
     it("Revert on no config or disabled convert for tokens pair", async () => {
       await expect(
-        converter.getAmountOut(TOKEN_OUT_MAX, tokenIn.address, tokenOut.address),
+        converter.getUpdatedAmountOut(TOKEN_OUT_MAX, tokenIn.address, tokenOut.address),
       ).to.be.revertedWithCustomError(converter, "ConversionConfigNotEnabled");
     });
 
@@ -443,7 +451,11 @@ describe("MockConverter: tests", () => {
       await setConversionConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await converter.callStatic.getAmountOut(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address);
+      const results = await converter.callStatic.getUpdatedAmountOut(
+        AMOUNT_IN_UNDER,
+        tokenIn.address,
+        tokenOut.address,
+      );
       const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
       const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
       const amountOut = new BigNumber(AMOUNT_IN_UNDER)
@@ -460,7 +472,7 @@ describe("MockConverter: tests", () => {
       await setConversionConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await converter.callStatic.getAmountOut(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
+      const results = await converter.callStatic.getUpdatedAmountOut(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
       const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
       const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
       const amountIn = new BigNumber(TOKEN_OUT_MAX)
@@ -489,7 +501,7 @@ describe("MockConverter: tests", () => {
     };
 
     it("Revert on zero amountIn value", async () => {
-      await expect(converter.getAmountIn(0, tokenIn.address, tokenOut.address)).to.be.revertedWithCustomError(
+      await expect(converter.getUpdatedAmountIn(0, tokenIn.address, tokenOut.address)).to.be.revertedWithCustomError(
         converter,
         "InsufficientInputAmount",
       );
@@ -497,7 +509,7 @@ describe("MockConverter: tests", () => {
 
     it("Revert on no config or disabled convert for tokens pair", async () => {
       await expect(
-        converter.getAmountIn(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address),
+        converter.getUpdatedAmountIn(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address),
       ).to.be.revertedWithCustomError(converter, "ConversionConfigNotEnabled");
     });
 
@@ -505,7 +517,7 @@ describe("MockConverter: tests", () => {
       await setConversionConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await converter.callStatic.getAmountIn(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address);
+      const results = await converter.callStatic.getUpdatedAmountIn(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address);
       const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
       const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
       const amountIn = new BigNumber(AMOUNT_IN_UNDER)
@@ -522,7 +534,7 @@ describe("MockConverter: tests", () => {
       await setConversionConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await converter.callStatic.getAmountIn(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
+      const results = await converter.callStatic.getUpdatedAmountIn(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
       const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
       const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
       const amountIn = new BigNumber(TOKEN_OUT_MAX)
