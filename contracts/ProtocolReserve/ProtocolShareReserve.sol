@@ -114,13 +114,13 @@ contract ProtocolShareReserve is
     /// @notice Event emitted when distribution configuration is added
     event DistributionConfigAdded(address indexed destination, uint256 percentage, Schema schema);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
     /**
      * @dev Constructor to initialize the immutable variables
      * @param _corePoolComptroller The address of core pool comptroller
      * @param _wbnb The address of WBNB
      * @param _vbnb The address of vBNB
      */
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address _corePoolComptroller, address _wbnb, address _vbnb) {
         if (_corePoolComptroller == address(0)) revert InvalidAddress();
         if (_wbnb == address(0)) revert InvalidAddress();
