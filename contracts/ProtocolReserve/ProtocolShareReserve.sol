@@ -115,6 +115,12 @@ contract ProtocolShareReserve is
     event DistributionConfigAdded(address indexed destination, uint256 percentage, Schema schema);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
+    /**
+     * @dev Constructor to initialize the immutable variables
+     * @param _corePoolComptroller The address of core pool comptroller
+     * @param _wbnb The address of WBNB
+     * @param _vbnb The address of vBNB
+     */
     constructor(address _corePoolComptroller, address _wbnb, address _vbnb) {
         if (_corePoolComptroller == address(0)) revert InvalidAddress();
         if (_wbnb == address(0)) revert InvalidAddress();
@@ -258,6 +264,26 @@ contract ProtocolShareReserve is
      */
     function totalDistributions() external view returns (uint256) {
         return distributionTargets.length;
+    }
+
+    /**
+     * @dev Used to find out the percentage distribution for a particular destination based on schema
+     * @param destination the destination address of the distribution target
+     * @param schema the schema of the distribution target
+     * @return percentage percentage distribution
+     */
+    function getPercentageDistribution(address destination, Schema schema) external view returns (uint256) {
+        for (uint256 i = 0; i < distributionTargets.length; ) {
+            DistributionConfig memory config = distributionTargets[i];
+
+            if (config.destination == destination && config.schema == schema) {
+                return config.percentage;
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     /**
@@ -406,6 +432,9 @@ contract ProtocolShareReserve is
         }
     }
 
+    /**
+     * @dev This ensures that the total percentage of all the distribution targets is 100% or 0%
+     */
     function _ensurePercentages() internal view {
         uint256 totalSchemas = uint256(type(Schema).max) + 1;
         uint256[] memory totalPercentages = new uint256[](totalSchemas);
@@ -438,20 +467,6 @@ contract ProtocolShareReserve is
             return WBNB;
         } else {
             return IVToken(vToken).underlying();
-        }
-    }
-
-    function getPercentageDistribution(address destination, Schema schema) external view returns (uint256) {
-        for (uint256 i = 0; i < distributionTargets.length; ) {
-            DistributionConfig memory config = distributionTargets[i];
-            
-            if (config.destination == destination && config.schema == schema) {
-                return config.percentage;
-            }
-
-            unchecked {
-                ++i;
-            }
         }
     }
 }
