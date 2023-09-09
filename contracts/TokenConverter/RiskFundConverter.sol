@@ -170,26 +170,6 @@ contract RiskFundConverter is AbstractTokenConverter {
         }
     }
 
-    /// @notice Operations to perform after sweepToken
-    /// @param tokenAddress Address of the token
-    /// @param amount Amount transferred to address(to)
-    function postSweepToken(address tokenAddress, uint256 amount) public override {
-        uint256 balance = IERC20Upgradeable(tokenAddress).balanceOf(address(this));
-        uint256 balanceDiff = balance - assetsReserves[tokenAddress];
-
-        uint256 amountDiff = amount - balanceDiff;
-        if (amountDiff > 0) {
-            address[] memory pools = getPools(tokenAddress);
-            uint256 assetReserve = assetsReserves[tokenAddress];
-            for (uint256 i; i < pools.length; ++i) {
-                uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenAddress] * EXP_SCALE) / assetReserve;
-                if (poolShare == 0) continue;
-                updatePoolAssetsReserve(pools[i], tokenAddress, amount, poolShare);
-            }
-            assetsReserves[tokenAddress] -= amountDiff;
-        }
-    }
-
     /// @notice Get the balance for specific token
     /// @param tokenAddress Address of the token
     function balanceOf(address tokenAddress) public view override returns (uint256 tokenBalance) {
@@ -219,6 +199,26 @@ contract RiskFundConverter is AbstractTokenConverter {
         }
 
         assetsReserves[tokenOutAddress] -= amountOut;
+    }
+
+    /// @notice Operations to perform after sweepToken
+    /// @param tokenAddress Address of the token
+    /// @param amount Amount transferred to address(to)
+    function postSweepToken(address tokenAddress, uint256 amount) internal override {
+        uint256 balance = IERC20Upgradeable(tokenAddress).balanceOf(address(this));
+        uint256 balanceDiff = balance - assetsReserves[tokenAddress];
+
+        uint256 amountDiff = amount - balanceDiff;
+        if (amountDiff > 0) {
+            address[] memory pools = getPools(tokenAddress);
+            uint256 assetReserve = assetsReserves[tokenAddress];
+            for (uint256 i; i < pools.length; ++i) {
+                uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenAddress] * EXP_SCALE) / assetReserve;
+                if (poolShare == 0) continue;
+                updatePoolAssetsReserve(pools[i], tokenAddress, amount, poolShare);
+            }
+            assetsReserves[tokenAddress] -= amountDiff;
+        }
     }
 
     /// @notice Update the poolAssetsResreves upon transferring the tokens

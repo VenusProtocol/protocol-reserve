@@ -341,7 +341,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         emit ConvertForExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
 
-    /// @notice A public function to sweep accidental ERC-20 transfers to this contract. Tokens are sent to admin (timelock)
+    /// @notice A public function to sweep ERC20 tokens and transfer them to user(to address)
     /// @param tokenAddress The address of the ERC-20 token to sweep
     /// @custom:event Emits SweepToken event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/to address is zero
@@ -360,11 +360,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Get the balance for specific token
     /// @param token Address of the token
     function balanceOf(address token) public virtual returns (uint256 tokenBalance) {}
-
-    /// @notice Operations to perform after sweepToken
-    /// @param token Address of the token
-    /// @param amount Amount transferred to address(to)
-    function postSweepToken(address token, uint256 amount) public virtual {}
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @param amountInMantissa Amount of tokenAddressIn
@@ -455,6 +450,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             amountConvertedMantissa = maxTokenOutReserve;
         }
     }
+
+    /// @notice Operations to perform after sweepToken
+    /// @param token Address of the token
+    /// @param amount Amount transferred to address(to)
+    function postSweepToken(address token, uint256 amount) internal virtual {}
 
     /// @notice Convert exact amount of tokenAddressIn for tokenAddressOut
     /// @param amountInMantissa Amount of tokenAddressIn
