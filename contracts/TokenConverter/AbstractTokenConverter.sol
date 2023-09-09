@@ -18,7 +18,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Maximum incentive could be
-    uint256 public constant MAX_INCENTIVE = 5e18;
+    uint256 public constant MAX_INCENTIVE = 0.5e18;
 
     /// @notice Venus price oracle contract
     ResilientOracle public priceOracle;
