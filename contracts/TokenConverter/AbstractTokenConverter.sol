@@ -223,9 +223,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             );
         }
 
-        emit ConvertExactTokens(actualAmountIn, actualAmountOut);
-
         postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
+
+        emit ConvertExactTokens(actualAmountIn, actualAmountOut);
     }
 
     /// @notice Convert tokens for tokenAddressIn for exact amount of tokenAddressOut
