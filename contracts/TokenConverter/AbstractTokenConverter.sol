@@ -441,13 +441,13 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         /// conversion rate after considering incentive(conversionWithIncentive)
         uint256 tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
 
-        amountInMantissa = ((amountOutMantissa * EXP_SCALE) / tokenInToOutConversion);
-        amountConvertedMantissa = amountOutMantissa;
-
         /// If contract has less liquity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountOutMantissa) {
-            amountInMantissa = ((maxTokenOutReserve * EXP_SCALE) / tokenInToOutConversion);
+            amountInMantissa = ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
             amountConvertedMantissa = maxTokenOutReserve;
+        } else {
+            amountInMantissa = ((amountOutMantissa * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
+            amountConvertedMantissa = amountOutMantissa;
         }
     }
 
