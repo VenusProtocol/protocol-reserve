@@ -469,8 +469,8 @@ describe("MockConverter: tests", () => {
         .dividedBy(conversionWithIncentive)
         .toFixed(0);
 
-      expect(results[0]).to.equal(amountIn);
-      expect(results[1]).to.equal(TOKEN_OUT_MAX);
+      expect(results[0]).to.closeTo(amountIn, 1);
+      expect(results[1]).to.closeTo(TOKEN_OUT_MAX, 1);
     });
   });
 

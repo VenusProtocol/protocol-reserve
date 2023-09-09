@@ -401,7 +401,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         /// If contract has less liquity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountOutMantissa) {
-            amountConvertedMantissa = ((maxTokenOutReserve * EXP_SCALE) / tokenInToOutConversion);
+            amountConvertedMantissa = ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion -1) / tokenInToOutConversion; //round-up
             amountOutMantissa = maxTokenOutReserve;
         }
     }
