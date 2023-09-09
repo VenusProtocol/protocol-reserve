@@ -536,7 +536,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         );
     }
 
-    /// @notice return actualAmounts from reservers for tokenAddressIn and tokenAddressOut
+    /// @notice return actualAmounts from reserves for tokenAddressIn and tokenAddressOut
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after convert
     /// @param to Address of the tokenAddressOut receiver
