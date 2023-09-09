@@ -208,14 +208,14 @@ contract RiskFundConverter is AbstractTokenConverter {
         uint256 balance = IERC20Upgradeable(tokenAddress).balanceOf(address(this));
         uint256 balanceDiff = balance - assetsReserves[tokenAddress];
 
-        uint256 amountDiff = amount - balanceDiff;
-        if (amountDiff > 0) {
+        if (balanceDiff < amount) {
+            uint256 amountDiff = amount - balanceDiff;
             address[] memory pools = getPools(tokenAddress);
             uint256 assetReserve = assetsReserves[tokenAddress];
             for (uint256 i; i < pools.length; ++i) {
                 uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenAddress] * EXP_SCALE) / assetReserve;
                 if (poolShare == 0) continue;
-                updatePoolAssetsReserve(pools[i], tokenAddress, amount, poolShare);
+                updatePoolAssetsReserve(pools[i], tokenAddress, amountDiff, poolShare);
             }
             assetsReserves[tokenAddress] -= amountDiff;
         }
