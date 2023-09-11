@@ -37,14 +37,14 @@ const addresses: Addresses = {
     proxyOwnerAddress: "0xce10739590001705F7FF231611ba4A48B2820327", //Normal timelock
   },
   bscmainnet: {
-    acm: "",
-    oracle: "",
-    riskFund: "",
-    poolRegistry: "",
-    corePool: "",
-    vBNB: "",
-    wBNB: "",
-    proxyOwnerAddress: "",
+    acm: "0x4788629abc6cfca10f9f969efdeaa1cf70c23555",
+    oracle: "0x6592b5DE802159F3E74B2486b091D11a8256ab8A",
+    riskFund: "", // TODO
+    poolRegistry: "0x9F7b01A536aFA00EF10310A162877fd792cD0666",
+    corePool: "0xfD36E2c2a6789Db23113685031d7F16329158384",
+    vBNB: "0xA07c5b74C9B40447a954e1466938b865b6BBea36",
+    wBNB: "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
+    proxyOwnerAddress: "0x939bD8d64c0A9583A7Dcea9933f7b21697ab6396",
   },
 };
 
