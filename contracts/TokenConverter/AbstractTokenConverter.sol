@@ -372,7 +372,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     ) public returns (uint256 amountConvertedMantissa, uint256 amountOutMantissa) {
         priceOracle.updateAssetPrice(tokenAddressIn);
         priceOracle.updateAssetPrice(tokenAddressOut);
-        return getAmountOut(amountInMantissa, tokenAddressIn, tokenAddressOut);
+        (amountConvertedMantissa, amountOutMantissa) = getAmountOut(amountInMantissa, tokenAddressIn, tokenAddressOut);
     }
 
     /// @notice To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
@@ -390,7 +390,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     ) public returns (uint256 amountConvertedMantissa, uint256 amountInMantissa) {
         priceOracle.updateAssetPrice(tokenAddressIn);
         priceOracle.updateAssetPrice(tokenAddressOut);
-        return getAmountIn(amountOutMantissa, tokenAddressIn, tokenAddressOut);
+        (amountConvertedMantissa, amountInMantissa) = getAmountIn(amountOutMantissa, tokenAddressIn, tokenAddressOut);
     }
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
