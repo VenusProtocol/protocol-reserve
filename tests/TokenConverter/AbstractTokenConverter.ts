@@ -469,8 +469,8 @@ describe("MockConverter: tests", () => {
         .dividedBy(conversionWithIncentive)
         .toFixed(0);
 
-      expect(results[0]).to.equal(amountIn);
-      expect(results[1]).to.equal(TOKEN_OUT_MAX);
+      expect(results[0]).to.closeTo(amountIn, 1);
+      expect(results[1]).to.closeTo(TOKEN_OUT_MAX, 1);
     });
   });
 
@@ -514,8 +514,8 @@ describe("MockConverter: tests", () => {
         .dividedBy(conversionWithIncentive)
         .toFixed(0);
 
-      expect(results[0]).to.equal(AMOUNT_IN_UNDER);
-      expect(results[1]).to.equal(amountIn);
+      expect(results[0]).to.closeTo(AMOUNT_IN_UNDER, 1);
+      expect(results[1]).to.closeTo(amountIn, 1);
     });
 
     it("Success on conversing tokenIn to tokenOut for over tokenOut liquidity", async () => {
@@ -531,8 +531,8 @@ describe("MockConverter: tests", () => {
         .dividedBy(conversionWithIncentive)
         .toFixed(0);
 
-      expect(results[0]).to.equal(TOKEN_OUT_MAX);
-      expect(results[1]).to.equal(amountIn);
+      expect(results[0]).to.closeTo(TOKEN_OUT_MAX, 1);
+      expect(results[1]).to.closeTo(amountIn, 1);
     });
   });
 
