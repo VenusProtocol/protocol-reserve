@@ -18,7 +18,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Maximum incentive could be
-    uint256 public constant MAX_INCENTIVE = 5e18;
+    uint256 public constant MAX_INCENTIVE = 0.5e18;
 
     /// @notice Venus price oracle contract
     ResilientOracle public priceOracle;
@@ -223,9 +223,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             );
         }
 
-        emit ConvertExactTokens(actualAmountIn, actualAmountOut);
-
         postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
+
+        emit ConvertExactTokens(actualAmountIn, actualAmountOut);
     }
 
     /// @notice Convert tokens for tokenAddressIn for exact amount of tokenAddressOut
@@ -341,7 +341,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         emit ConvertForExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
 
-    /// @notice A public function to sweep accidental ERC-20 transfers to this contract. Tokens are sent to admin (timelock)
+    /// @notice A public function to sweep ERC20 tokens and transfer them to user(to address)
     /// @param tokenAddress The address of the ERC-20 token to sweep
     /// @custom:event Emits SweepToken event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/to address is zero
@@ -356,11 +356,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         emit SweepToken(address(token));
     }
-
-    /// @notice Operations to perform after sweepToken
-    /// @param token Address of the token
-    /// @param amount Amount transferred to address(to)
-    function postSweepToken(address token, uint256 amount) public virtual {}
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @param amountInMantissa Amount of tokenAddressIn
@@ -436,7 +431,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         /// If contract has less liquity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountOutMantissa) {
-            amountConvertedMantissa = ((maxTokenOutReserve * EXP_SCALE) / tokenInToOutConversion);
+            amountConvertedMantissa =
+                ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) /
+                tokenInToOutConversion; //round-up
             amountOutMantissa = maxTokenOutReserve;
         }
     }
@@ -474,19 +471,24 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         /// conversion rate after considering incentive(conversionWithIncentive)
         uint256 tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
 
-        amountInMantissa = ((amountOutMantissa * EXP_SCALE) / tokenInToOutConversion);
-        amountConvertedMantissa = amountOutMantissa;
-
         /// If contract has less liquity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountOutMantissa) {
-            amountInMantissa = ((maxTokenOutReserve * EXP_SCALE) / tokenInToOutConversion);
+            amountInMantissa = ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
             amountConvertedMantissa = maxTokenOutReserve;
+        } else {
+            amountInMantissa = ((amountOutMantissa * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
+            amountConvertedMantissa = amountOutMantissa;
         }
     }
 
     /// @notice Get the balance for specific token
     /// @param token Address of the token
     function balanceOf(address token) public view virtual returns (uint256 tokenBalance) {}
+
+    /// @notice Operations to perform after sweepToken
+    /// @param token Address of the token
+    /// @param amount Amount transferred to address(to)
+    function postSweepToken(address token, uint256 amount) internal virtual {}
 
     /// @notice Convert exact amount of tokenAddressIn for tokenAddressOut
     /// @param amountInMantissa Amount of tokenAddressIn
@@ -576,7 +578,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         );
     }
 
-    /// @notice return actualAmounts from reservers for tokenAddressIn and tokenAddressOut
+    /// @notice return actualAmounts from reserves for tokenAddressIn and tokenAddressOut
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after convert
     /// @param to Address of the tokenAddressOut receiver

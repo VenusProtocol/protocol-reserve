@@ -60,10 +60,10 @@ contract RiskFundConverter is AbstractTokenConverter {
     // Error thrown when comptrollers array length is not equal to assets array length
     error InvalidArguments();
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
     /// @param corePoolComptroller_ Address of the Comptroller pool
     /// @param vBNB_ Address of the vBNB
     /// @param nativeWrapped_ Address of the wrapped native currency
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address corePoolComptroller_, address vBNB_, address nativeWrapped_) {
         ensureNonzeroAddress(corePoolComptroller_);
         corePoolComptroller = corePoolComptroller_;
@@ -74,13 +74,16 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param accessControlManager_ Access control manager contract address
     /// @param priceOracle_ Resilient oracle address
     /// @param destinationAddress_  Address at all incoming tokens will transferred to
+    /// @param poolRegistry_ Address of the pool registry
     function initialize(
         address accessControlManager_,
         ResilientOracle priceOracle_,
-        address destinationAddress_
+        address destinationAddress_,
+        address poolRegistry_
     ) public initializer {
         // Initialize AbstractTokenConverter
         __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
+        poolRegistry = poolRegistry_;
     }
 
     /// @dev Pool registry setter
@@ -167,26 +170,6 @@ contract RiskFundConverter is AbstractTokenConverter {
         }
     }
 
-    /// @notice Operations to perform after sweepToken
-    /// @param tokenAddress Address of the token
-    /// @param amount Amount transferred to address(to)
-    function postSweepToken(address tokenAddress, uint256 amount) public override {
-        uint256 balance = IERC20Upgradeable(tokenAddress).balanceOf(address(this));
-        uint256 balanceDiff = balance - assetsReserves[tokenAddress];
-
-        uint256 amountDiff = amount - balanceDiff;
-        if (amountDiff > 0) {
-            address[] memory pools = getPools(tokenAddress);
-            uint256 assetReserve = assetsReserves[tokenAddress];
-            for (uint256 i; i < pools.length; ++i) {
-                uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenAddress] * EXP_SCALE) / assetReserve;
-                if (poolShare == 0) continue;
-                updatePoolAssetsReserve(pools[i], tokenAddress, amount, poolShare);
-            }
-            assetsReserves[tokenAddress] -= amountDiff;
-        }
-    }
-
     /// @notice Get the balance for specific token
     /// @param tokenAddress Address of the token
     function balanceOf(address tokenAddress) public view override returns (uint256 tokenBalance) {
@@ -205,17 +188,37 @@ contract RiskFundConverter is AbstractTokenConverter {
         uint256 amountIn,
         uint256 amountOut
     ) internal override {
-        address[] memory pools = getPools(tokenInAddress);
-        uint256 assetReserve = assetsReserves[tokenInAddress];
+        address[] memory pools = getPools(tokenOutAddress);
+        uint256 assetReserve = assetsReserves[tokenOutAddress];
         for (uint256 i; i < pools.length; ++i) {
-            uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenInAddress] * EXP_SCALE) / assetReserve;
+            uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenOutAddress] * EXP_SCALE) / assetReserve;
             if (poolShare == 0) continue;
-            updatePoolAssetsReserve(pools[i], tokenInAddress, amountIn, poolShare);
-            uint256 poolAmountOutShare = (poolShare * amountOut) / EXP_SCALE;
-            IRiskFund(destinationAddress).updatePoolState(pools[i], tokenOutAddress, poolAmountOutShare);
+            updatePoolAssetsReserve(pools[i], tokenOutAddress, amountOut, poolShare);
+            uint256 poolAmountInShare = (poolShare * amountIn) / EXP_SCALE;
+            IRiskFund(destinationAddress).updatePoolState(pools[i], tokenInAddress, poolAmountInShare);
         }
 
-        assetsReserves[tokenInAddress] -= amountIn;
+        assetsReserves[tokenOutAddress] -= amountOut;
+    }
+
+    /// @notice Operations to perform after sweepToken
+    /// @param tokenAddress Address of the token
+    /// @param amount Amount transferred to address(to)
+    function postSweepToken(address tokenAddress, uint256 amount) internal override {
+        uint256 balance = IERC20Upgradeable(tokenAddress).balanceOf(address(this));
+        uint256 balanceDiff = balance - assetsReserves[tokenAddress];
+
+        if (balanceDiff < amount) {
+            uint256 amountDiff = amount - balanceDiff;
+            address[] memory pools = getPools(tokenAddress);
+            uint256 assetReserve = assetsReserves[tokenAddress];
+            for (uint256 i; i < pools.length; ++i) {
+                uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenAddress] * EXP_SCALE) / assetReserve;
+                if (poolShare == 0) continue;
+                updatePoolAssetsReserve(pools[i], tokenAddress, amountDiff, poolShare);
+            }
+            assetsReserves[tokenAddress] -= amountDiff;
+        }
     }
 
     /// @notice Update the poolAssetsResreves upon transferring the tokens
@@ -251,11 +254,11 @@ contract RiskFundConverter is AbstractTokenConverter {
         address[] memory coreMarkets = IComptroller(corePoolComptroller).getAllMarkets();
 
         for (uint256 i; i < coreMarkets.length; ++i) {
-            if (
-                (vBNB == coreMarkets[i] && tokenAddress == NATIVE_WRAPPED) ||
-                IVToken(coreMarkets[i]).underlying() == tokenAddress
-            ) {
-                isAssetListed = true;
+            isAssetListed = (vBNB == coreMarkets[i])
+                ? (tokenAddress == NATIVE_WRAPPED)
+                : (IVToken(coreMarkets[i]).underlying() == tokenAddress);
+
+            if (isAssetListed) {
                 break;
             }
         }
