@@ -357,11 +357,44 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         emit SweepToken(address(token));
     }
 
-    /// @notice Get the balance for specific token
-    /// @param token Address of the token
-    function balanceOf(address token) public virtual returns (uint256 tokenBalance) {}
+    /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
+    /// @param amountInMantissa Amount of tokenAddressIn
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after convert
+    /// @return amountConvertedMantissa Amount of tokenAddressIn should be transferred after convert
+    /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after convert
+    /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
+    /// @custom:error ConversionConfigNotEnabled is thrown when convert is disabled or config does not exist for given pair
+    function getUpdatedAmountOut(
+        uint256 amountInMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut
+    ) public returns (uint256 amountConvertedMantissa, uint256 amountOutMantissa) {
+        priceOracle.updateAssetPrice(tokenAddressIn);
+        priceOracle.updateAssetPrice(tokenAddressOut);
+        (amountConvertedMantissa, amountOutMantissa) = getAmountOut(amountInMantissa, tokenAddressIn, tokenAddressOut);
+    }
+
+    /// @notice To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
+    /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after convert
+    /// @return amountConvertedMantissa Amount of tokenAddressOut should be transferred after convert
+    /// @return amountInMantissa Amount of the tokenAddressIn sender would send to contract before convert
+    /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
+    /// @custom:error ConversionConfigNotEnabled is thrown when convert is disabled or config does not exist for given pair
+    function getUpdatedAmountIn(
+        uint256 amountOutMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut
+    ) public returns (uint256 amountConvertedMantissa, uint256 amountInMantissa) {
+        priceOracle.updateAssetPrice(tokenAddressIn);
+        priceOracle.updateAssetPrice(tokenAddressOut);
+        (amountConvertedMantissa, amountInMantissa) = getAmountIn(amountOutMantissa, tokenAddressIn, tokenAddressOut);
+    }
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
+    /// @dev This function retrieves values without altering token prices.
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after convert
@@ -373,7 +406,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 amountInMantissa,
         address tokenAddressIn,
         address tokenAddressOut
-    ) public returns (uint256 amountConvertedMantissa, uint256 amountOutMantissa) {
+    ) public view returns (uint256 amountConvertedMantissa, uint256 amountOutMantissa) {
         if (amountInMantissa == 0) {
             revert InsufficientInputAmount();
         }
@@ -383,9 +416,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         if (!configuration.enabled) {
             revert ConversionConfigNotEnabled();
         }
-
-        priceOracle.updateAssetPrice(tokenAddressIn);
-        priceOracle.updateAssetPrice(tokenAddressOut);
 
         uint256 maxTokenOutReserve = balanceOf(tokenAddressOut);
         uint256 tokenInUnderlyingPrice = priceOracle.getPrice(tokenAddressIn);
@@ -401,12 +431,15 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         /// If contract has less liquity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountOutMantissa) {
-            amountConvertedMantissa = ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion -1) / tokenInToOutConversion; //round-up
+            amountConvertedMantissa =
+                ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) /
+                tokenInToOutConversion; //round-up
             amountOutMantissa = maxTokenOutReserve;
         }
     }
 
     /// @notice To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
+    /// @dev This function retrieves values without altering token prices.
     /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after convert
@@ -418,7 +451,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 amountOutMantissa,
         address tokenAddressIn,
         address tokenAddressOut
-    ) public returns (uint256 amountConvertedMantissa, uint256 amountInMantissa) {
+    ) public view returns (uint256 amountConvertedMantissa, uint256 amountInMantissa) {
         if (amountOutMantissa == 0) {
             revert InsufficientInputAmount();
         }
@@ -428,9 +461,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         if (!configuration.enabled) {
             revert ConversionConfigNotEnabled();
         }
-
-        priceOracle.updateAssetPrice(tokenAddressIn);
-        priceOracle.updateAssetPrice(tokenAddressOut);
 
         uint256 maxTokenOutReserve = balanceOf(tokenAddressOut);
         uint256 tokenInUnderlyingPrice = priceOracle.getPrice(tokenAddressIn);
@@ -450,6 +480,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             amountConvertedMantissa = amountOutMantissa;
         }
     }
+
+    /// @notice Get the balance for specific token
+    /// @param token Address of the token
+    function balanceOf(address token) public view virtual returns (uint256 tokenBalance) {}
 
     /// @notice Operations to perform after sweepToken
     /// @param token Address of the token
@@ -482,7 +516,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             uint256 amountOutMantissa
         )
     {
-        (amountConvertedMantissa, amountOutMantissa) = getAmountOut(amountInMantissa, tokenAddressIn, tokenAddressOut);
+        (amountConvertedMantissa, amountOutMantissa) = getUpdatedAmountOut(
+            amountInMantissa,
+            tokenAddressIn,
+            tokenAddressOut
+        );
 
         if (amountOutMantissa < amountOutMinMantissa) {
             revert AmountOutLowerThanMinRequired(amountOutMantissa, amountOutMinMantissa);
@@ -522,7 +560,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             uint256 amountConvertedMantissa
         )
     {
-        (amountConvertedMantissa, amountInMantissa) = getAmountIn(amountOutMantissa, tokenAddressIn, tokenAddressOut);
+        (amountConvertedMantissa, amountInMantissa) = getUpdatedAmountIn(
+            amountOutMantissa,
+            tokenAddressIn,
+            tokenAddressOut
+        );
 
         if (amountInMantissa > amountInMaxMantissa) {
             revert AmountInHigherThanMax(amountInMantissa, amountInMaxMantissa);
