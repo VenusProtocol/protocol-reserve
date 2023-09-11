@@ -2,10 +2,8 @@
 pragma solidity 0.8.13;
 
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
 import { ensureNonzeroAddress } from "../Utils/Validators.sol";
@@ -15,13 +13,7 @@ import { RiskFundV2Storage } from "./RiskFundStorage.sol";
 /// @author Venus
 /// @notice Contract with basic features to hold base asset for different Comptrollers
 /// @dev This contract does not support BNB
-contract RiskFundV2 is
-    Ownable2StepUpgradeable,
-    AccessControlledV8,
-    RiskFundV2Storage,
-    IRiskFund,
-    ReentrancyGuardUpgradeable
-{
+contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Emitted when convertible base asset address is updated
