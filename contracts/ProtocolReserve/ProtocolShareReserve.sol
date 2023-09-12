@@ -299,7 +299,7 @@ contract ProtocolShareReserve is
      * releases the funds to prime for each market
      */
     function _accrueAndReleaseFundsToPrime() internal {
-        address[] memory markets = IPrime(prime).allMarkets();
+        address[] memory markets = IPrime(prime).getAllMarkets();
         for (uint256 i = 0; i < markets.length; ) {
             address market = markets[i];
             IPrime(prime).accrueInterest(market);
@@ -316,7 +316,7 @@ contract ProtocolShareReserve is
      * to prime for each market
      */
     function _accruePrimeInterest() internal {
-        address[] memory markets = IPrime(prime).allMarkets();
+        address[] memory markets = IPrime(prime).getAllMarkets();
         for (uint256 i = 0; i < markets.length; ) {
             address market = markets[i];
             IPrime(prime).accrueInterest(market);

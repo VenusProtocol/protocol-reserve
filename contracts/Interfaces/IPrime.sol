@@ -8,5 +8,5 @@ interface IPrime is IIncomeDestination {
 
     function vTokenForAsset(address asset) external view returns (address);
 
-    function allMarkets() external view returns (address[] memory);
+    function getAllMarkets() external view returns (address[] memory);
 }
