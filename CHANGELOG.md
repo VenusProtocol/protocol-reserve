@@ -1,3 +1,10 @@
+## [1.0.0-dev.5](https://github.com/VenusProtocol/protocol-reserve/compare/v1.0.0-dev.4...v1.0.0-dev.5) (2023-09-13)
+
+
+### Bug Fixes
+
+* prime market getter for releaseFunds in psr ([838fbc3](https://github.com/VenusProtocol/protocol-reserve/commit/838fbc3cf4c659739469cf1d9eccbf957399d5b3))
+
 ## [1.0.0-dev.4](https://github.com/VenusProtocol/protocol-reserve/compare/v1.0.0-dev.3...v1.0.0-dev.4) (2023-08-25)
 
 
