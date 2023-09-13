@@ -182,7 +182,8 @@ contract ProtocolShareReserve is
             require(_config.destination != address(0), "ProtocolShareReserve: Destination address invalid");
 
             bool updated = false;
-            for (uint256 j = 0; j < distributionTargets.length; ) {
+            uint256 distributionTargetsLength = distributionTargets.length;
+            for (uint256 j = 0; j < distributionTargetsLength; ) {
                 DistributionConfig storage config = distributionTargets[j];
 
                 if (_config.schema == config.schema && config.destination == _config.destination) {
@@ -246,7 +247,8 @@ contract ProtocolShareReserve is
         address destination,
         address asset
     ) external view returns (uint256) {
-        for (uint256 i = 0; i < distributionTargets.length; ) {
+        uint256 distributionTargetsLength = distributionTargets.length;
+        for (uint256 i = 0; i < distributionTargetsLength; ) {
             DistributionConfig storage _config = distributionTargets[i];
             if (_config.schema == schema && _config.destination == destination) {
                 uint256 total = assetsReserves[comptroller][asset][schema];
@@ -273,7 +275,8 @@ contract ProtocolShareReserve is
      * @return percentage percentage distribution
      */
     function getPercentageDistribution(address destination, Schema schema) external view returns (uint256) {
-        for (uint256 i = 0; i < distributionTargets.length; ) {
+        uint256 distributionTargetsLength = distributionTargets.length;
+        for (uint256 i = 0; i < distributionTargetsLength; ) {
             DistributionConfig memory config = distributionTargets[i];
 
             if (config.destination == destination && config.schema == schema) {
@@ -439,7 +442,8 @@ contract ProtocolShareReserve is
         uint256 totalSchemas = uint256(type(Schema).max) + 1;
         uint256[] memory totalPercentages = new uint256[](totalSchemas);
 
-        for (uint256 i = 0; i < distributionTargets.length; ) {
+        uint256 distributionTargetsLength = distributionTargets.length;
+        for (uint256 i = 0; i < distributionTargetsLength; ) {
             DistributionConfig memory config = distributionTargets[i];
             totalPercentages[uint256(config.schema)] += config.percentage;
 
