@@ -82,7 +82,7 @@ contract ProtocolShareReserve is
     event AssetsReservesUpdated(
         address indexed comptroller,
         address indexed asset,
-        uint256 amount,
+        uint256 indexed amount,
         IncomeType incomeType,
         Schema schema
     );
@@ -91,7 +91,7 @@ contract ProtocolShareReserve is
     event AssetReleased(
         address indexed destination,
         address indexed asset,
-        Schema schema,
+        Schema indexed schema,
         uint256 percent,
         uint256 amount
     );
@@ -100,7 +100,7 @@ contract ProtocolShareReserve is
     event ReservesUpdated(
         address indexed comptroller,
         address indexed asset,
-        Schema schema,
+        Schema  indexed schema,
         uint256 oldBalance,
         uint256 newBalance
     );
@@ -108,16 +108,16 @@ contract ProtocolShareReserve is
     /// @notice Event emitted when distribution configuration is updated
     event DistributionConfigUpdated(
         address indexed destination,
-        uint8 oldPercentage,
-        uint8 newPercentage,
+        uint8 indexed oldPercentage,
+        uint8 indexed newPercentage,
         Schema schema
     );
 
     /// @notice Event emitted when distribution configuration is added
-    event DistributionConfigAdded(address indexed destination, uint8 percentage, Schema schema);
+    event DistributionConfigAdded(address indexed destination, uint8 indexed percentage, Schema indexed schema);
 
     /// @notice Event emitted when distribution configuration is removed
-    event DistributionConfigRemoved(address indexed destination, uint8 percentage, Schema schema);
+    event DistributionConfigRemoved(address indexed destination, uint8 indexed percentage, Schema indexed schema);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address _corePoolComptroller, address _wbnb, address _vbnb) {
