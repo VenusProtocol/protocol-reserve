@@ -323,7 +323,7 @@ contract ProtocolShareReserve is
             PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) == address(0)
         ) revert InvalidAddress();
 
-        Schema schema = getSchema(comptroller, asset, incomeType);
+        Schema schema = _getSchema(comptroller, asset, incomeType);
         uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
         uint256 assetReserve = totalAssetReserve[asset];
 
@@ -438,7 +438,7 @@ contract ProtocolShareReserve is
      * @param incomeType type of income
      * @return schema schema for distribution
      */
-    function getSchema(
+    function _getSchema(
         address comptroller,
         address asset,
         IncomeType incomeType
