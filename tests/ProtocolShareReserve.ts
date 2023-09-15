@@ -222,7 +222,7 @@ describe("ProtocolShareReserve: Tests", function () {
     expect(config1.percentage).to.equal(30);
   });
 
-  it.only("remove configuration", async () => {
+  it("remove configuration", async () => {
     const protocolShareReserve = setup.protocolShareReserve;
     expect(await protocolShareReserve.totalDistributions()).to.be.equal(7);
 

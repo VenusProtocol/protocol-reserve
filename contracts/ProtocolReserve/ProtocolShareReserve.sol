@@ -39,7 +39,7 @@ contract ProtocolShareReserve is
     struct DistributionConfig {
         Schema schema;
         /// @dev percenatge is represented without any scale
-        uint256 percentage;
+        uint8 percentage;
         address destination;
     }
 
@@ -61,7 +61,7 @@ contract ProtocolShareReserve is
     /// @notice address of pool registry contract
     address public poolRegistry;
 
-    uint256 private constant MAX_PERCENT = 100;
+    uint8 private constant MAX_PERCENT = 100;
 
     /// @notice comptroller => asset => schema => balance
     mapping(address => mapping(address => mapping(Schema => uint256))) public assetsReserves;
@@ -108,13 +108,13 @@ contract ProtocolShareReserve is
     /// @notice Event emitted when distribution configuration is updated
     event DistributionConfigUpdated(
         address indexed destination,
-        uint256 oldPercentage,
-        uint256 newPercentage,
+        uint8 oldPercentage,
+        uint8 newPercentage,
         Schema schema
     );
 
     /// @notice Event emitted when distribution configuration is added
-    event DistributionConfigAdded(address indexed destination, uint256 percentage, Schema schema);
+    event DistributionConfigAdded(address indexed destination, uint8 percentage, Schema schema);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address _corePoolComptroller, address _wbnb, address _vbnb) {
@@ -453,7 +453,7 @@ contract ProtocolShareReserve is
 
     function _ensurePercentages() internal view {
         uint256 totalSchemas = uint256(type(Schema).max) + 1;
-        uint256[] memory totalPercentages = new uint256[](totalSchemas);
+        uint8[] memory totalPercentages = new uint8[](totalSchemas);
 
         for (uint256 i = 0; i < distributionTargets.length; ) {
             DistributionConfig memory config = distributionTargets[i];
