@@ -228,7 +228,7 @@ describe("ProtocolShareReserve: Tests", function () {
 
     const ONE_ADDRESS = "0x0000000000000000000000000000000000000001";
     const TWO_ADDRESS = "0x0000000000000000000000000000000000000002";
- 
+
     await protocolShareReserve.addOrUpdateDistributionConfigs([
       {
         schema: SCHEMA_SPREAD_PRIME_CORE,
@@ -248,7 +248,6 @@ describe("ProtocolShareReserve: Tests", function () {
 
     expect(protocolShareReserve.distributionTargets(7)).to.have.reverted;
     expect(await protocolShareReserve.totalDistributions()).to.be.equal(7);
-
 
     await protocolShareReserve.addOrUpdateDistributionConfigs([
       {

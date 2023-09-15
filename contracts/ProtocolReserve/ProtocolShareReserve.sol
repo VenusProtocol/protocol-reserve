@@ -13,8 +13,6 @@ import { IPrime } from "../Interfaces/IPrime.sol";
 import { IVToken } from "../Interfaces/IVToken.sol";
 import { IIncomeDestination } from "../Interfaces/IIncomeDestination.sol";
 
-import "hardhat/console.sol";
-
 error InvalidAddress();
 error UnsupportedAsset();
 error InvalidTotalPercentage();
@@ -240,16 +238,20 @@ contract ProtocolShareReserve is
         }
 
         if (found) {
-            emit DistributionConfigRemoved(distributionTargets[distributionIndex].destination,  distributionTargets[distributionIndex].percentage, distributionTargets[distributionIndex].schema);
+            emit DistributionConfigRemoved(
+                distributionTargets[distributionIndex].destination,
+                distributionTargets[distributionIndex].percentage,
+                distributionTargets[distributionIndex].schema
+            );
 
-            for (uint256 i = distributionIndex; i < distributionTargets.length;) {
+            for (uint256 i = distributionIndex; i < distributionTargets.length; ) {
                 if (i == distributionTargets.length - 1) {
                     distributionTargets.pop();
                     break;
-                } 
+                }
 
-                distributionTargets[i] = distributionTargets[i+1];
-                distributionTargets[i+1] = DistributionConfig(Schema(0), 0, address(0));
+                distributionTargets[i] = distributionTargets[i + 1];
+                distributionTargets[i + 1] = DistributionConfig(Schema(0), 0, address(0));
 
                 unchecked {
                     ++i;
