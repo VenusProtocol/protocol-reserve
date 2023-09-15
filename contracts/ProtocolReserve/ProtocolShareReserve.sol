@@ -175,7 +175,7 @@ contract ProtocolShareReserve is
 
         for (uint256 i = 0; i < configs.length; ) {
             DistributionConfig memory _config = configs[i];
-            require(_config.destination != address(0), "ProtocolShareReserve: Destination address invalid");
+            if (_config.destination == address(0)) revert InvalidAddress();
 
             bool updated = false;
             for (uint256 j = 0; j < distributionTargets.length; ) {
