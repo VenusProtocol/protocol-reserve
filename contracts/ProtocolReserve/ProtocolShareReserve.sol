@@ -166,7 +166,7 @@ contract ProtocolShareReserve is
      * @dev Add or update destination targets based on destination address
      * @param configs configurations of the destinations.
      */
-    function addOrUpdateDistributionConfigs(DistributionConfig[] memory configs) external nonReentrant {
+    function addOrUpdateDistributionConfigs(DistributionConfig[] calldata configs) external nonReentrant {
         _checkAccessAllowed("addOrUpdateDistributionConfigs(DistributionConfig[])");
 
         //we need to accrue and release funds to prime before updating the distribution configuration
@@ -260,7 +260,7 @@ contract ProtocolShareReserve is
      * @param comptroller the comptroller address of the pool
      * @param assets assets to be released to distribution targets
      */
-    function releaseFunds(address comptroller, address[] memory assets) external nonReentrant {
+    function releaseFunds(address comptroller, address[] calldata assets) external nonReentrant {
         _accruePrimeInterest();
 
         for (uint256 i = 0; i < assets.length; ) {
