@@ -116,6 +116,9 @@ contract ProtocolShareReserve is
     /// @notice Event emitted when distribution configuration is added
     event DistributionConfigAdded(address indexed destination, uint8 percentage, Schema schema);
 
+    /// @notice Event emitted when distribution configuration is removed
+    event DistributionConfigRemoved(address indexed destination, uint8 percentage, Schema schema);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address _corePoolComptroller, address _wbnb, address _vbnb) {
         if (_corePoolComptroller == address(0)) revert InvalidAddress();
@@ -237,6 +240,8 @@ contract ProtocolShareReserve is
         }
 
         if (found) {
+            emit DistributionConfigRemoved(distributionTargets[distributionIndex].destination,  distributionTargets[distributionIndex].percentage, distributionTargets[distributionIndex].schema);
+
             for (uint256 i = distributionIndex; i < distributionTargets.length;) {
                 if (i == distributionTargets.length - 1) {
                     distributionTargets.pop();
