@@ -244,19 +244,8 @@ contract ProtocolShareReserve is
                 distributionTargets[distributionIndex].schema
             );
 
-            for (uint256 i = distributionIndex; i < distributionTargets.length; ) {
-                if (i == distributionTargets.length - 1) {
-                    distributionTargets.pop();
-                    break;
-                }
-
-                distributionTargets[i] = distributionTargets[i + 1];
-                distributionTargets[i + 1] = DistributionConfig(Schema(0), 0, address(0));
-
-                unchecked {
-                    ++i;
-                }
-            }
+            distributionTargets[distributionIndex] = distributionTargets[distributionTargets.length - 1];
+            distributionTargets.pop();
         }
 
         _ensurePercentages();
