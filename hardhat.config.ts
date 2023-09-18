@@ -1,13 +1,16 @@
+import "module-alias/register";
+
 import "@nomicfoundation/hardhat-chai-matchers";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-etherscan";
 import "@openzeppelin/hardhat-upgrades";
 import "@typechain/hardhat";
-import { ethers } from "ethers";
 import "hardhat-deploy";
-import { HardhatUserConfig, task } from "hardhat/config";
+import "hardhat-gas-reporter";
+import "solidity-coverage";
 import "solidity-docgen";
+
 
 require("dotenv").config();
 
@@ -84,7 +87,6 @@ const config: HardhatUserConfig = {
       accounts: {
         mnemonic: process.env.MNEMONIC || "",
       },
-      gasPrice: ethers.utils.parseUnits("10", "gwei").toNumber(),
       gasMultiplier: 10,
       timeout: 12000000,
     },
