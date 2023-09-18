@@ -45,8 +45,6 @@ jobs:
 
       - name: "Install the dependencies"
         run: "yarn install --immutable"
-      - name: "Compile the contracts and generate the TypeChain bindings"
-        run: "yarn typechain"
 
       - name: "Test the contracts and generate the coverage report"
         run: "npx hardhat coverage"
