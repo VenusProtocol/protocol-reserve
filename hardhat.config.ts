@@ -11,7 +11,6 @@ import "solidity-docgen";
 
 require("dotenv").config();
 
-const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY;
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
 
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
@@ -93,9 +92,36 @@ const config: HardhatUserConfig = {
       url: process.env.BSC_MAINNET_NODE || "https://bsc-dataseed.binance.org/",
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
+    sepolia: {
+      url: "https://rpc.notadegen.com/eth/sepolia",
+      chainId: 11155111,
+      gasPrice: 20000000000,
+      accounts: process.env.PRIVATE_KEY ? [`0x${process.env.PRIVATE_KEY}`] : [],
+    },
   },
   etherscan: {
-    apiKey: BSCSCAN_API_KEY,
+    apiKey: {
+      bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      bsctestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+    },
+    customChains: [
+      {
+        network: "bscmainnet",
+        chainId: 56,
+        urls: {
+          apiURL: "https://api.bscscan.com/api",
+          browserURL: "https://bscscan.com",
+        },
+      },
+      {
+        network: "bsctestnet",
+        chainId: 97,
+        urls: {
+          apiURL: "https://api-testnet.bscscan.com/api",
+          browserURL: "https://testnet.bscscan.com",
+        },
+      },
+    ],
   },
   paths: {
     sources: "./contracts",
