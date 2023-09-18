@@ -11,7 +11,6 @@ import "hardhat-gas-reporter";
 import "solidity-coverage";
 import "solidity-docgen";
 
-
 require("dotenv").config();
 
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;

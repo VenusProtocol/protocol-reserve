@@ -1,10 +1,9 @@
 import mainnetDeployments from "@venusprotocol/venus-protocol/networks/mainnet.json";
 import testnetDeployments from "@venusprotocol/venus-protocol/networks/testnet.json";
 import hre, { ethers } from "hardhat";
-import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-const ADDRESSES:any = {
+const ADDRESSES: any = {
   bsctestnet: {
     vBNBAddress: testnetDeployments.Contracts.vBNB,
     comptroller: testnetDeployments.Contracts.Comptroller,
@@ -41,11 +40,7 @@ module.exports = async ({ getNamedAccounts, deployments, network }: HardhatRunti
     from: deployer,
     log: true,
     deterministicDeployment: false,
-    args: [
-      comptroller,
-      WBNBAddress,
-      vBNBAddress
-    ],
+    args: [comptroller, WBNBAddress, vBNBAddress],
     proxy: {
       owner: timelock,
       proxyContract: "OptimizedTransparentProxy",
@@ -64,4 +59,4 @@ module.exports = async ({ getNamedAccounts, deployments, network }: HardhatRunti
   }
 };
 
-module.exports.tags = ['deploy'];
+module.exports.tags = ["deploy"];
