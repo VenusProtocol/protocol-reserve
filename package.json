@@ -1,7 +1,7 @@
 {
   "name": "@venusprotocol/protocol-reserve",
   "description": "",
-  "version": "1.0.0-dev.5",
+  "version": "1.0.0-dev.6",
   "author": "",
   "engines": {
     "node": ">=18.0.0"
