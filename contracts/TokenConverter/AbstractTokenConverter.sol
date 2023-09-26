@@ -77,6 +77,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Thrown when given input amount is zero
     error InsufficientInputAmount();
 
+    /// @notice Thrown when given output amount is zero
+    error InsufficientOutputAmount();
+
     /// @notice Thrown when conversion is disabled or config does not exist for given pair
     error ConversionConfigNotEnabled();
 
@@ -451,7 +454,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressOut
     ) public view returns (uint256 amountConvertedMantissa, uint256 amountInMantissa) {
         if (amountOutMantissa == 0) {
-            revert InsufficientInputAmount();
+            revert InsufficientOutputAmount();
         }
 
         ConversionConfig memory configuration = convertConfigurations[tokenAddressIn][tokenAddressOut];

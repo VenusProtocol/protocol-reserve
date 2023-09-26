@@ -472,10 +472,10 @@ describe("MockConverter: tests", () => {
       await tokenOut.balanceOf.returns(TOKEN_OUT_MAX);
     };
 
-    it("Revert on zero amountIn value", async () => {
+    it("Revert on zero amountOut value", async () => {
       await expect(converter.getUpdatedAmountIn(0, tokenIn.address, tokenOut.address)).to.be.revertedWithCustomError(
         converter,
-        "InsufficientInputAmount",
+        "InsufficientOutputAmount",
       );
     });
 
