@@ -103,12 +103,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Thrown when conversion is Active
     error ConversionTokensActive();
 
-    /**
-     * @notice Pause conversion of tokens
-     * @custom:event Emits ConversionPaused on success
-     * @custom:error ConversionTokensPaused thrown when convert is already paused
-     * @custom:access Restricted by ACM
-     */
+    /// @notice Pause conversion of tokens
+    /// @custom:event Emits ConversionPaused on success
+    /// @custom:error ConversionTokensPaused thrown when convert is already paused
+    /// @custom:access Restricted by ACM
     function pauseConversion() external {
         _checkAccessAllowed("pauseConversion()");
         _checkConversionPaused();
@@ -116,12 +114,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         emit ConversionPaused(msg.sender);
     }
 
-    /**
-     * @notice Resume conversion of tokens.
-     * @custom:event Emits ConversionResumed on success
-     * @custom:error ConversionTokensActive thrown when convert is already active
-     * @custom:access Restricted by ACM
-     */
+    /// @notice Resume conversion of tokens.
+    /// @custom:event Emits ConversionResumed on success
+    /// @custom:error ConversionTokensActive thrown when convert is already active
+    /// @custom:access Restricted by ACM
     function resumeConversion() external {
         _checkAccessAllowed("resumeConversion()");
         if (!conversionPaused) {

@@ -7,6 +7,9 @@ import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle
 
 import { AbstractTokenConverter } from "./AbstractTokenConverter.sol";
 
+/// @title XVSVaultConverter
+/// @author Venus
+/// @notice XVSVaultConverter used for token conversions and sends received token to XVSVaultTreasury
 contract XVSVaultConverter is AbstractTokenConverter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 

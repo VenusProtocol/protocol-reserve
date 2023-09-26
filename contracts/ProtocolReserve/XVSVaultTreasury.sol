@@ -8,6 +8,9 @@ import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contract
 import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 import { IXVSVault } from "../Interfaces/IXVSVault.sol";
 
+/// @title XVSVaultTreasury
+/// @author Venus
+/// @notice XVSVaultTreasury stores the tokens sent by XVSVaultConverter and funds XVSVault
 contract XVSVaultTreasury is AccessControlledV8 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -56,6 +59,8 @@ contract XVSVaultTreasury is AccessControlledV8 {
         _setXVSVault(xvsVault_);
     }
 
+    /// @notice This function transfers funds to the XVS vault
+    /// @param amountMantissa Amount to be sent to XVS vault
     function fundXVSVault(uint256 amountMantissa) external {
         _checkAccessAllowed("fundXVSVault(uint256)");
 

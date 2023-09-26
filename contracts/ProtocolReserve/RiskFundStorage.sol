@@ -4,6 +4,9 @@ pragma solidity 0.8.13;
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
+/// @title ReserveHelpersStorage
+/// @author Venus
+/// @dev Reserve helpers storage
 contract ReserveHelpersStorage is Ownable2StepUpgradeable {
     /// @notice Deprecated slot for assetReserves mapping
     bytes32 private __deprecatedSlot1;
@@ -22,6 +25,9 @@ contract ReserveHelpersStorage is Ownable2StepUpgradeable {
     uint256[46] private __gap;
 }
 
+/// @title MaxLoopsLimitHelpersStorage
+/// @author Venus
+/// @dev Max loop limit helpers storage
 contract MaxLoopsLimitHelpersStorage {
     /// @notice Limit for the loops to avoid the DOS
     /// @notice This state is deprecated, using it to prevent storage collision

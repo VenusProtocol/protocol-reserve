@@ -13,6 +13,9 @@ import { IRiskFund } from "../Interfaces/IRiskFund.sol";
 import { IVToken } from "../Interfaces/IVToken.sol";
 import { EXP_SCALE } from "../Utils/Constants.sol";
 
+/// @title RiskFundConverter
+/// @author Venus
+/// @notice RiskFundConverter used for token conversions and sends received token to RiskFund
 contract RiskFundConverter is AbstractTokenConverter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -47,14 +50,14 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
 
-    // Event emitted after the updation of the assets reserves
-    // amount -> reserve increased by amount
+    /// @notice Emitted after the updation of the assets reserves
+    /// amount -> reserve increased by amount
     event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
 
-    // Event emitted after the funds transferred to the destination address
+    /// @notice Emmitted after the funds transferred to the destination address
     event AssetTransferredToDestination(address indexed comptroller, address indexed asset, uint256 amount);
 
-    // Event emitted after the poolsAssetsDirectTransfer mapping is updated
+    /// @notice Emitted after the poolsAssetsDirectTransfer mapping is updated
     event PoolAssetsDirectTransferUpdated(address indexed comptroller, address indexed asset, bool value);
 
     // Error thrown when comptrollers array length is not equal to assets array length
@@ -268,6 +271,9 @@ contract RiskFundConverter is AbstractTokenConverter {
         }
     }
 
+    /// @notice This function checks for the given asset is listed or not
+    /// @param comptroller Address of the comptroller
+    /// @param asset Address of the asset
     function ensureAssetListed(address comptroller, address asset) internal view returns (bool) {
         if (comptroller == corePoolComptroller) {
             return isAssetListedInCore(asset);
