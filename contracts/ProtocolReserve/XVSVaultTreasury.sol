@@ -57,7 +57,7 @@ contract XVSVaultTreasury is AccessControlledV8 {
     }
 
     function fundXVSVault(uint256 amountMantissa) external {
-        _checkAccessAllowed("fundXVSVault(amountMantissa)");
+        _checkAccessAllowed("fundXVSVault(uint256)");
 
         uint256 balance = IERC20Upgradeable(xvsAddress).balanceOf(address(this));
 
