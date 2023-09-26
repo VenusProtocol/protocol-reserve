@@ -136,7 +136,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     }
 
     /// @notice Sets a new destination address
-    /// @param destinationAddress_ Address of the new price oracle to set
+    /// @param destinationAddress_ The new destination address to be set
     /// @custom:access Only Governance
     function setDestination(address destinationAddress_) external onlyOwner {
         _setDestination(destinationAddress_);
@@ -233,7 +233,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param to Address of the tokenAddressOut receiver
     /// @custom:event Emits ConvertForExactTokens event on success
     /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
-    /// @custom:error AmountInOrAmountOutMismatched error is thrown when Amount of tokenAddressIn or tokenAddressOut is lower than expected fater transfer
+    /// @custom:error AmountInOrAmountOutMismatched error is thrown when Amount of tokenAddressIn or tokenAddressOut is lower than expected after transfer
     function convertForExactTokens(
         uint256 amountInMaxMantissa,
         uint256 amountOutMantissa,
@@ -337,7 +337,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         emit ConvertForExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
 
-    /// @notice A public function to sweep ERC20 tokens and transfer them to user(to address)
+    /// @notice To sweep ERC20 tokens and transfer them to user(to address)
     /// @param tokenAddress The address of the ERC-20 token to sweep
     /// @custom:event Emits SweepToken event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/to address is zero
@@ -467,7 +467,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         /// conversion rate after considering incentive(conversionWithIncentive)
         uint256 tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
 
-        /// If contract has less liquity for tokenAddressOut than amountOutMantissa
+        /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountOutMantissa) {
             amountInMantissa = ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
             amountConvertedMantissa = maxTokenOutReserve;
@@ -617,7 +617,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     }
 
     /// @notice Sets a new destination address
-    /// @param destinationAddress_ Address of the new price oracle to set
+    /// @param destinationAddress_ The new destination address to be set
     /// @custom:event Emits DestinationAddressUpdated event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when destination address is zero
     function _setDestination(address destinationAddress_) internal {

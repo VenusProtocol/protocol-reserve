@@ -184,7 +184,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     }
 
     /// @notice Hook to perform after converting tokens
-    /// @dev After transfromation poolsAssetsReserves are settled by pool's reserves fraction
+    /// @dev After transformation poolsAssetsReserves are settled by pool's reserves fraction
     /// @param tokenInAddress Address of the tokenIn
     /// @param tokenOutAddress Address of the tokenOut
     /// @param amountIn Amount of tokenIn transferred
@@ -228,7 +228,7 @@ contract RiskFundConverter is AbstractTokenConverter {
         }
     }
 
-    /// @notice Update the poolAssetsResreves upon transferring the tokens
+    /// @notice Update the poolAssetsReserves upon transferring the tokens
     /// @param pool Address of the pool
     /// @param tokenAddress Address of the token
     /// @param amount Amount transferred to address(to)
