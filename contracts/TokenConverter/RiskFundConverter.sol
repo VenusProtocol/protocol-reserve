@@ -213,6 +213,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param amount Amount transferred to address(to)
     function postSweepToken(address tokenAddress, uint256 amount) internal override {
         uint256 balance = IERC20Upgradeable(tokenAddress).balanceOf(address(this));
+        require(balance >= amount, "Insufficient Balance");
         uint256 balanceDiff = balance - assetsReserves[tokenAddress];
 
         if (balanceDiff < amount) {
