@@ -66,6 +66,9 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address corePoolComptroller_, address vBNB_, address nativeWrapped_) {
         ensureNonzeroAddress(corePoolComptroller_);
+        ensureNonzeroAddress(vBNB_);
+        ensureNonzeroAddress(nativeWrapped_);
+
         corePoolComptroller = corePoolComptroller_;
         vBNB = vBNB_;
         NATIVE_WRAPPED = nativeWrapped_;
@@ -83,6 +86,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     ) public initializer {
         // Initialize AbstractTokenConverter
         __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
+        ensureNonzeroAddress(poolRegistry_);
         poolRegistry = poolRegistry_;
     }
 
@@ -136,7 +140,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @return Asset's reserve in risk fund
     function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256) {
         require(IComptroller(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
-        require(asset != address(0), "ReserveHelpers: Asset address invalid");
+        ensureNonzeroAddress(asset);
         return poolsAssetsReserves[comptroller][asset];
     }
 
@@ -146,8 +150,8 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param asset Asset address
     function updateAssetsState(address comptroller, address asset) public {
         require(IComptroller(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
-        require(asset != address(0), "ReserveHelpers: Asset address invalid");
-        require(poolRegistry != address(0), "ReserveHelpers: Pool Registry address is not set");
+        ensureNonzeroAddress(asset);
+
         require(ensureAssetListed(comptroller, asset), "ReserveHelpers: The pool doesn't support the asset");
 
         IERC20Upgradeable token = IERC20Upgradeable(asset);
