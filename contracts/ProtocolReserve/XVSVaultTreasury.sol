@@ -71,6 +71,7 @@ contract XVSVaultTreasury is AccessControlledV8 {
         }
 
         address xvsStore = IXVSVault(xvsVault).xvsStore();
+        ensureNonzeroAddress(xvsStore);
         IERC20Upgradeable(xvsAddress).safeTransfer(xvsStore, amountMantissa);
 
         emit FundsTransferredToXVSStore(xvsStore, amountMantissa);

@@ -85,6 +85,17 @@ describe("XVS vault treasury: tests", () => {
       );
     });
 
+    it("Revert when xvsStore address got from xvsVault is zero address", async () => {
+      accessControl.isAllowedToCall.returns(true);
+      await xvs.transfer(xvsVaultTreasury.address, FUND_XVS_AMOUNT);
+      await xvsVault.xvsStore.returns(ethers.utils.AddressZero);
+
+      await expect(xvsVaultTreasury.fundXVSVault(FUND_XVS_AMOUNT)).to.be.revertedWithCustomError(
+        xvsVaultTreasury,
+        "ZeroAddressNotAllowed",
+      );
+    });
+
     it("Transfer amount to XVSStore", async () => {
       const xvsStoreAddress = await xvsStore.getAddress();
       accessControl.isAllowedToCall.returns(true);
