@@ -143,35 +143,37 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     }
 
     /// @notice Set the configuration for new or existing convert pair
+    /// @param tokenAddressIn Address of tokenIn
+    /// @param tokenAddressOut Address of tokenOut
     /// @param conversionConfig ConversionConfig config details to update
     /// @custom:event Emits ConversionConfigUpdated event on success
     /// @custom:error Unauthorized error is thrown when the call is not authorized by AccessControlManager
     /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
     /// @custom:access Controlled by AccessControlManager
-    function setConversionConfig(ConversionConfig calldata conversionConfig) external {
-        _checkAccessAllowed("setConversionConfig(ConversionConfig)");
-        ensureNonzeroAddress(conversionConfig.tokenAddressIn);
-        ensureNonzeroAddress(conversionConfig.tokenAddressOut);
+    function setConversionConfig(
+        address tokenAddressIn,
+        address tokenAddressOut,
+        ConversionConfig calldata conversionConfig
+    ) external {
+        _checkAccessAllowed("setConversionConfig(address,address,ConversionConfig)");
+        ensureNonzeroAddress(tokenAddressIn);
+        ensureNonzeroAddress(tokenAddressOut);
 
         if (conversionConfig.incentive > MAX_INCENTIVE) {
             revert IncentiveTooHigh(conversionConfig.incentive, MAX_INCENTIVE);
         }
 
-        ConversionConfig storage configuration = convertConfigurations[conversionConfig.tokenAddressIn][
-            conversionConfig.tokenAddressOut
-        ];
+        ConversionConfig storage configuration = convertConfigurations[tokenAddressIn][tokenAddressOut];
 
         uint256 oldIncentive = configuration.incentive;
         bool oldEnabled = configuration.enabled;
 
-        configuration.tokenAddressIn = conversionConfig.tokenAddressIn;
-        configuration.tokenAddressOut = conversionConfig.tokenAddressOut;
         configuration.incentive = conversionConfig.incentive;
         configuration.enabled = conversionConfig.enabled;
 
         emit ConversionConfigUpdated(
-            conversionConfig.tokenAddressIn,
-            conversionConfig.tokenAddressOut,
+            tokenAddressIn,
+            tokenAddressOut,
             oldIncentive,
             conversionConfig.incentive,
             oldEnabled,
