@@ -185,7 +185,7 @@ contract ProtocolShareReserve is
      * @param isPrimeAsset Boolean to add/remove asset from prime program
      */
     function addOrRemoveAssetFromPrime(address asset, bool isPrimeAsset) external {
-        _checkAccessAllowed("togglePrimeMarket(address)");
+        _checkAccessAllowed("addOrRemoveAssetFromPrime(address,bool)");
         if (asset == address(0)) revert InvalidAddress();
         emit PrimeAssetUpdated(asset, isPrimeAsset);
         isInPrime[asset] = isPrimeAsset;
