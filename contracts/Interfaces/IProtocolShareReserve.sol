@@ -8,5 +8,9 @@ interface IProtocolShareReserve {
         LIQUIDATION
     }
 
-    function updateAssetsState(address comptroller, address asset, IncomeType incomeType) external;
+    function updateAssetsState(
+        address comptroller,
+        address asset,
+        IncomeType incomeType
+    ) external;
 }

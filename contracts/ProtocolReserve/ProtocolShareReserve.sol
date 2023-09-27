@@ -121,7 +121,11 @@ contract ProtocolShareReserve is
      * @param _vbnb The address of vBNB
      */
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address _corePoolComptroller, address _wbnb, address _vbnb) {
+    constructor(
+        address _corePoolComptroller,
+        address _wbnb,
+        address _vbnb
+    ) {
         if (_corePoolComptroller == address(0)) revert InvalidAddress();
         if (_wbnb == address(0)) revert InvalidAddress();
         if (_vbnb == address(0)) revert InvalidAddress();
