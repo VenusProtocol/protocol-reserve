@@ -600,12 +600,12 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 balanceAfterDestination = tokenIn.balanceOf(destinationAddress);
 
         IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
-        uint256 balanceBeforeTo = tokenOut.balanceOf(to);
+        uint256 balanceBefore = tokenOut.balanceOf(address(this));
         tokenOut.safeTransfer(to, amountConvertedMantissa);
-        uint256 balanceAfterTo = tokenOut.balanceOf(to);
+        uint256 balanceAfter = tokenOut.balanceOf(address(this));
 
         actualAmountIn = balanceAfterDestination - balanceBeforeDestination;
-        actualAmountOut = balanceAfterTo - balanceBeforeTo;
+        actualAmountOut = balanceBefore - balanceAfter;
     }
 
     /// @notice Sets a new price oracle
