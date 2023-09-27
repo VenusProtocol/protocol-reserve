@@ -48,10 +48,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         bool newEnabled
     );
     /// @notice Emitted when price oracle address is updated
-    event PriceOracleUpdated(ResilientOracle oldPriceOracle, ResilientOracle priceOracle);
+    event PriceOracleUpdated(ResilientOracle oldPriceOracle, ResilientOracle indexed priceOracle);
 
     /// @notice Emitted when destination address is updated
-    event DestinationAddressUpdated(address oldDestinationAddress, address destinationAddress);
+    event DestinationAddressUpdated(address oldDestinationAddress, address indexed destinationAddress);
 
     /// @notice Emitted when exact amount of tokens are convert for tokens
     event ConvertExactTokens(uint256 amountIn, uint256 amountOut);
@@ -66,10 +66,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     event ConvertForExactTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOut);
 
     /// @notice Emitted when conversion is paused
-    event ConversionPaused(address sender);
+    event ConversionPaused(address indexed sender);
 
     /// @notice Emitted when conversion is unpaused
-    event ConversionResumed(address sender);
+    event ConversionResumed(address indexed sender);
 
     /// @notice Event emitted when tokens are swept
     event SweepToken(address indexed token);
