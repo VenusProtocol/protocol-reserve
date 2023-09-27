@@ -70,11 +70,17 @@ contract ProtocolShareReserve is
     /// @notice configuration for different income distribution targets
     DistributionConfig[] public distributionTargets;
 
+    /// @notice asset => boolean
+    mapping (address => bool) public isInPrime;
+
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
 
     /// @notice Emitted when prime address is updated
     event PrimeUpdated(address indexed oldPrime, address indexed newPrime);
+
+    /// @notice Emitted when an asset is added to prime program
+    event PrimeMarketUpdated(address asset, bool isPrimeAsset);
 
     /// @notice Event emitted after the updation of the assets reserves.
     event AssetsReservesUpdated(
@@ -171,6 +177,18 @@ contract ProtocolShareReserve is
         if (_prime == address(0)) revert InvalidAddress();
         emit PrimeUpdated(prime, _prime);
         prime = _prime;
+    }
+
+    /**
+     * @dev Add/Remove asset to prime program.
+     * @param asset Address of the asset
+     * @param isPrimeAsset Boolean to add/remove asset from prime program
+     */
+    function addOrRemoveAssetFromPrime(address asset, bool isPrimeAsset) external {
+        _checkAccessAllowed("togglePrimeMarket(address)");
+        if (asset == address(0)) revert InvalidAddress();
+        emit PrimeMarketUpdated(asset, isPrimeAsset);
+        isInPrime[asset] = isPrimeAsset;
     }
 
     /**
@@ -373,6 +391,10 @@ contract ProtocolShareReserve is
      * releases the funds to prime for each market
      */
     function _accrueAndReleaseFundsToPrime() internal {
+        if (prime == address(0)) {
+            return;
+        }
+        
         address[] memory markets = IPrime(prime).getAllMarkets();
         for (uint256 i = 0; i < markets.length; ) {
             address market = markets[i];
@@ -390,6 +412,10 @@ contract ProtocolShareReserve is
      * to prime for each market
      */
     function _accruePrimeInterest() internal {
+        if (prime == address(0)) {
+            return;
+        }
+
         address[] memory markets = IPrime(prime).getAllMarkets();
         for (uint256 i = 0; i < markets.length; ) {
             address market = markets[i];
@@ -473,9 +499,8 @@ contract ProtocolShareReserve is
         IncomeType incomeType
     ) internal view returns (Schema schema) {
         schema = Schema.DEFAULT;
-        address vToken = IPrime(prime).vTokenForAsset(asset);
 
-        if (vToken != address(0) && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
+        if (isInPrime[asset] && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
             schema = Schema.SPREAD_PRIME_CORE;
         }
     }

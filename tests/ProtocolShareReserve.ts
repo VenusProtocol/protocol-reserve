@@ -303,12 +303,12 @@ describe("ProtocolShareReserve: Tests", function () {
 
     //Transfer liquidation and spread income from asset part of prime program
     await mockDAI.transfer(protocolShareReserve.address, 100);
-    await prime.vTokenForAsset.returns(ONE_ADDRESS);
+    await protocolShareReserve.addOrRemoveAssetFromPrime(mockDAI.address, true);
     await protocolShareReserve.updateAssetsState(corePoolComptroller.address, mockDAI.address, SPREAD_INCOME);
     await mockDAI.transfer(protocolShareReserve.address, 100);
     await protocolShareReserve.updateAssetsState(corePoolComptroller.address, mockDAI.address, LIQUIDATION_INCOME);
 
-    await prime.vTokenForAsset.returns(ethers.constants.AddressZero);
+    await protocolShareReserve.addOrRemoveAssetFromPrime(mockDAI.address, false);
 
     expect(
       await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockDAI.address, SCHEMA_SPREAD_PRIME_CORE),
