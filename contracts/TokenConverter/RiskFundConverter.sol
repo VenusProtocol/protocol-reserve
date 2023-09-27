@@ -197,6 +197,25 @@ contract RiskFundConverter is AbstractTokenConverter {
         return assetsReserves[tokenAddress];
     }
 
+    /// @notice Get the array of all pools addresses
+    /// @param tokenAddress Address of the token
+    function getPools(address tokenAddress) public view returns (address[] memory) {
+        address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenAddress);
+
+        if (isAssetListedInCore(tokenAddress)) {
+            uint256 poolsLength = pools.length;
+            address[] memory poolsWithCore = new address[](poolsLength + 1);
+
+            for (uint256 i; i < poolsLength; ++i) {
+                poolsWithCore[i] = pools[i];
+            }
+            poolsWithCore[poolsLength] = CORE_POOL_COMPTROLLER;
+            return poolsWithCore;
+        }
+
+        return pools;
+    }
+
     /// @notice Hook to perform after converting tokens
     /// @dev After transformation poolsAssetsReserves are settled by pool's reserves fraction
     /// @param tokenInAddress Address of the tokenIn
@@ -253,25 +272,6 @@ contract RiskFundConverter is AbstractTokenConverter {
         uint256 poolAmountShare = (poolShare * amount) / EXP_SCALE;
         poolsAssetsReserves[pool][tokenAddress] -= poolAmountShare;
         emit AssetsReservesUpdated(pool, tokenAddress, poolAmountShare);
-    }
-
-    /// @notice Get the array of all pools addresses
-    /// @param tokenAddress Address of the token
-    function getPools(address tokenAddress) internal view returns (address[] memory) {
-        address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenAddress);
-
-        if (isAssetListedInCore(tokenAddress)) {
-            uint256 poolsLength = pools.length;
-            address[] memory poolsWithCore = new address[](poolsLength + 1);
-
-            for (uint256 i; i < poolsLength; ++i) {
-                poolsWithCore[i] = pools[i];
-            }
-            poolsWithCore[poolsLength] = CORE_POOL_COMPTROLLER;
-            return poolsWithCore;
-        }
-
-        return pools;
     }
 
     function isAssetListedInCore(address tokenAddress) internal view returns (bool isAssetListed) {

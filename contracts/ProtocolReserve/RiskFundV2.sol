@@ -6,7 +6,11 @@ import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contract
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
+import { IRiskFundConverter } from "../Interfaces/IRiskFundConverter.sol";
+
 import { ensureNonzeroAddress } from "../Utils/Validators.sol";
+import { EXP_SCALE } from "../Utils/Constants.sol";
+
 import { RiskFundV2Storage } from "./RiskFundStorage.sol";
 
 /// @title RiskFundV2
@@ -32,7 +36,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     event PoolStateUpdated(address indexed comptroller, address indexed asset, uint256 amount);
 
     /// @notice Event emitted when tokens are swept
-    event SweepToken(address indexed comptroller, address indexed asset, uint256 amount);
+    event SweepToken(address indexed asset);
 
     /// @notice Error is thrown when updatePoolState is not called by riskFundConverter
     error InvalidRiskFundConverter();
@@ -104,26 +108,21 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     }
 
     /// @notice Function to sweep baseAsset for pool, Tokens are sent to admin (timelock)
-    /// @param comptroller The address of the pool for the amount need to be sweeped
-    /// @param asset Address of the asset(token)
+    /// @param tokenAddress Address of the asset(token)
+    /// @param to Address to which assets will be transferred
     /// @param amount Amount need to sweep for the pool
     /// @custom:event Emits SweepToken event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/to address is zero
-    /// @custom:error InsufficientPoolReserve is thrown when pool reserve is less than the amount needed
     /// @custom:access Only Governance
-    function sweepToken(address comptroller, address asset, uint256 amount) external onlyOwner nonReentrant {
-        ensureNonzeroAddress(comptroller);
+    function sweepToken(address tokenAddress, address to, uint256 amount) external onlyOwner nonReentrant {
+        ensureNonzeroAddress(tokenAddress);
+        ensureNonzeroAddress(to);
 
-        uint256 poolReserve = poolAssetsFunds[comptroller][asset];
-        if (amount > poolReserve) {
-            revert InsufficientPoolReserve(comptroller, amount, poolReserve);
-        }
-        poolAssetsFunds[comptroller][asset] = poolReserve - amount;
+        IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
+        postSweepToken(tokenAddress, amount);
+        token.safeTransfer(to, amount);
 
-        IERC20Upgradeable token = IERC20Upgradeable(asset);
-        token.safeTransfer(owner(), amount);
-
-        emit SweepToken(comptroller, asset, amount);
+        emit SweepToken(tokenAddress);
     }
 
     /// @dev Update the reserve of the asset for the specific pool after transferring to risk fund
@@ -137,5 +136,43 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
 
         poolAssetsFunds[comptroller][asset] += amount;
         emit PoolStateUpdated(comptroller, asset, amount);
+    }
+
+    /// @notice Operations to perform after sweepToken
+    /// @param tokenAddress Address of the token
+    /// @param amount Amount transferred to address(to)
+    function postSweepToken(address tokenAddress, uint256 amount) internal {
+        uint256 balance = IERC20Upgradeable(tokenAddress).balanceOf(address(this));
+        require(balance >= amount, "Insufficient Balance");
+
+        address[] memory pools = IRiskFundConverter(riskFundConverter).getPools(tokenAddress);
+
+        uint256 assetReserves;
+        uint256 poolsLength = pools.length;
+        for (uint256 i; i < poolsLength; ++i) {
+            assetReserves += poolAssetsFunds[pools[i]][tokenAddress];
+        }
+
+        uint256 balanceDiff = balance - assetReserves;
+
+        if (balanceDiff < amount) {
+            uint256 amountDiff = amount - balanceDiff;
+            for (uint256 i; i < poolsLength; ++i) {
+                uint256 poolShare = (poolAssetsFunds[pools[i]][tokenAddress] * EXP_SCALE) / assetReserves;
+                if (poolShare == 0) continue;
+                updatePoolAssetsReserve(pools[i], tokenAddress, amountDiff, poolShare);
+            }
+        }
+    }
+
+    /// @notice Update the poolAssetsReserves upon transferring the tokens
+    /// @param pool Address of the pool
+    /// @param tokenAddress Address of the token
+    /// @param amount Amount transferred to address(to)
+    /// @param poolShare share for corresponding pool
+    function updatePoolAssetsReserve(address pool, address tokenAddress, uint256 amount, uint256 poolShare) internal {
+        uint256 poolAmountShare = (poolShare * amount) / EXP_SCALE;
+        poolAssetsFunds[pool][tokenAddress] -= poolAmountShare;
+        emit PoolStateUpdated(pool, tokenAddress, poolAmountShare);
     }
 }
