@@ -81,7 +81,7 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: isFork(),
     bsctestnet: {
-      url: process.env.BSC_TESTNET_NODE || "https://data-seed-prebsc-1-s1.binance.org:8545",
+      url: process.env.BSC_TESTNET_NODE || "https://data-seed-prebsc-2-s3.binance.org:8545/",
       chainId: 97,
       accounts: {
         mnemonic: process.env.MNEMONIC || "",
