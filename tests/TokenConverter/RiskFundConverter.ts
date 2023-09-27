@@ -4,7 +4,7 @@ import { BigNumber } from "bignumber.js";
 import chai from "chai";
 import { Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 import {
   IAccessControlManagerV8,
@@ -71,8 +71,16 @@ async function fixture(): Promise<void> {
   tokenOut = await MockToken.deploy("TokenOut", "tokenOut", 18);
   await tokenOut.faucet(parseUnits("1000", 18));
 
-  converter = await converterFactory.deploy(corePool.address, vBNB.address, WBNB.address);
-  await converter.initialize(accessControl.address, oracle.address, riskFund.address, poolRegistry.address);
+  converter = await upgrades.deployProxy(
+    converterFactory,
+    [accessControl.address, oracle.address, riskFund.address, poolRegistry.address],
+    {
+      Contract: converterFactory,
+      initializer: "initialize",
+      unsafeAllow: "constructor",
+      constructorArgs: [corePool.address, vBNB.address, WBNB.address],
+    },
+  );
 }
 
 describe("Risk fund Converter: tests", () => {
@@ -96,20 +104,11 @@ describe("Risk fund Converter: tests", () => {
     vToken.underlying.returns(tokenOut.address);
     corePool.getAllMarkets.returns([vToken.address]);
 
-    await converter.setVariable("poolsAssetsReserves", {
-      [poolA.address]: {
-        [tokenOut.address]: POOL_A_AMOUNT,
-      },
-      [poolB.address]: {
-        [tokenOut.address]: POOL_B_AMOUNT,
-      },
-      [poolC.address]: {
-        [tokenOut.address]: POOL_C_AMOUNT,
-      },
-      [corePool.address]: {
-        [tokenOut.address]: CORE_POOL_AMOUNT,
-      },
-    });
+    await converter.setPoolsAssetsReserves(poolA.address, tokenOut.address, POOL_A_AMOUNT);
+    await converter.setPoolsAssetsReserves(poolB.address, tokenOut.address, POOL_B_AMOUNT);
+    await converter.setPoolsAssetsReserves(poolC.address, tokenOut.address, POOL_C_AMOUNT);
+    await converter.setPoolsAssetsReserves(corePool.address, tokenOut.address, CORE_POOL_AMOUNT);
+
     poolRegistry.getPoolsSupportedByAsset.returns([poolA.address, poolB.address, poolC.address]);
     await converter.setAssetsReserves(tokenOut.address, TOTAL_ASSESTS_RESERVES);
     await converter.postConversionHookMock(tokenIn.address, tokenOut.address, AMOUNT_IN, AMOUNT_OUT);
@@ -163,11 +162,10 @@ describe("Risk fund Converter: tests", () => {
     const TOKEN_IN_AMOUNT = convertToUnit(10, 18);
     const TOKEN_OUT_AMOUNT = convertToUnit(20, 18);
     const DEFLATIONARY_AMOUNT = convertToUnit(30, 18);
-    await converter.setVariable("assetsReserves", {
-      [tokenIn.address]: TOKEN_IN_AMOUNT,
-      [tokenOut.address]: TOKEN_OUT_AMOUNT,
-      [tokenInDeflationary.address]: "29700000000000000000",
-    });
+
+    await converter.setAssetsReserves(tokenIn.address, TOKEN_IN_AMOUNT);
+    await converter.setAssetsReserves(tokenOut.address, TOKEN_OUT_AMOUNT);
+    await converter.setAssetsReserves(tokenInDeflationary.address, parseUnits("297", 17));
 
     expect(await converter.balanceOf(tokenIn.address)).to.equals(TOKEN_IN_AMOUNT);
     expect(await converter.balanceOf(tokenOut.address)).to.equals(TOKEN_OUT_AMOUNT);
@@ -201,9 +199,8 @@ describe("Risk fund Converter: tests", () => {
 
     it("Transfer funds to riskFund directly", async () => {
       poolA.isComptroller.returns(true);
-      await converter.setVariable("assetsReserves", {
-        [tokenIn.address]: 0,
-      });
+
+      await converter.setAssetsReserves(tokenIn.address, 0);
       const POOL_A_AMOUNT = convertToUnit(10, 18);
       newPoolRegistry.getVTokenForAsset.returns(poolA.address);
 

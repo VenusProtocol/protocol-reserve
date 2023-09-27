@@ -20,13 +20,16 @@ contract RiskFundConverter is AbstractTokenConverter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Address of the core pool comptroller
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable corePoolComptroller;
 
     ///@notice Address of the vBNB
     ///@dev This address is used to exclude the BNB market while in getPools method
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable vBNB;
 
     ///@notice Address of the native wrapped currency
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable NATIVE_WRAPPED;
 
     /// @notice Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools)
@@ -75,6 +78,10 @@ contract RiskFundConverter is AbstractTokenConverter {
         corePoolComptroller = corePoolComptroller_;
         vBNB = vBNB_;
         NATIVE_WRAPPED = nativeWrapped_;
+
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables.
+        _disableInitializers();
     }
 
     /// @param accessControlManager_ Access control manager contract address

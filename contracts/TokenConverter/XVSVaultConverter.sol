@@ -13,6 +13,13 @@ import { AbstractTokenConverter } from "./AbstractTokenConverter.sol";
 contract XVSVaultConverter is AbstractTokenConverter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables.
+        _disableInitializers();
+    }
+
     /// @param accessControlManager_ Access control manager contract address
     /// @param priceOracle_ Resilient oracle address
     /// @param destinationAddress_  Address at all incoming tokens will transferred to
