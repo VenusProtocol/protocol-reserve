@@ -80,7 +80,7 @@ contract ProtocolShareReserve is
     event PrimeUpdated(address indexed oldPrime, address indexed newPrime);
 
     /// @notice Emitted when an asset is added to prime program
-    event PrimeMarketUpdated(address asset, bool isPrimeAsset);
+    event PrimeAssetUpdated(address asset, bool isPrimeAsset);
 
     /// @notice Event emitted after the updation of the assets reserves.
     event AssetsReservesUpdated(
@@ -187,7 +187,7 @@ contract ProtocolShareReserve is
     function addOrRemoveAssetFromPrime(address asset, bool isPrimeAsset) external {
         _checkAccessAllowed("togglePrimeMarket(address)");
         if (asset == address(0)) revert InvalidAddress();
-        emit PrimeMarketUpdated(asset, isPrimeAsset);
+        emit PrimeAssetUpdated(asset, isPrimeAsset);
         isInPrime[asset] = isPrimeAsset;
     }
 
