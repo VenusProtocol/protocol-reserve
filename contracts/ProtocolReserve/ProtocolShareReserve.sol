@@ -71,7 +71,7 @@ contract ProtocolShareReserve is
     DistributionConfig[] public distributionTargets;
 
     /// @notice asset => boolean
-    mapping (address => bool) public isInPrime;
+    mapping(address => bool) public isInPrime;
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
@@ -394,7 +394,7 @@ contract ProtocolShareReserve is
         if (prime == address(0)) {
             return;
         }
-        
+
         address[] memory markets = IPrime(prime).getAllMarkets();
         for (uint256 i = 0; i < markets.length; ) {
             address market = markets[i];
