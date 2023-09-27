@@ -13,8 +13,6 @@ import "solidity-docgen";
 
 require("dotenv").config();
 
-const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
-
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   const accounts = await hre.ethers.getSigners();
 
@@ -91,7 +89,10 @@ const config: HardhatUserConfig = {
     },
     bscmainnet: {
       url: process.env.BSC_MAINNET_NODE || "https://bsc-dataseed.binance.org/",
-      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+      gasMultiplier: 10,
+      accounts: {
+        mnemonic: process.env.MNEMONIC || "",
+      },
     },
     sepolia: {
       url: "https://rpc.notadegen.com/eth/sepolia",
