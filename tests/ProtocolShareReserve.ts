@@ -222,6 +222,72 @@ describe("ProtocolShareReserve: Tests", function () {
     expect(config1.percentage).to.equal(30);
   });
 
+  it("remove configuration", async () => {
+    const protocolShareReserve = setup.protocolShareReserve;
+    expect(await protocolShareReserve.totalDistributions()).to.be.equal(7);
+
+    const ONE_ADDRESS = "0x0000000000000000000000000000000000000001";
+    const TWO_ADDRESS = "0x0000000000000000000000000000000000000002";
+
+    await protocolShareReserve.addOrUpdateDistributionConfigs([
+      {
+        schema: SCHEMA_SPREAD_PRIME_CORE,
+        percentage: 0,
+        destination: ONE_ADDRESS,
+      },
+    ]);
+    expect(await protocolShareReserve.totalDistributions()).to.be.equal(8);
+
+    let config = await protocolShareReserve.distributionTargets(7);
+
+    expect(config.schema).to.equal(SCHEMA_SPREAD_PRIME_CORE);
+    expect(config.destination).to.equal(ONE_ADDRESS);
+    expect(config.percentage).to.equal(0);
+
+    await protocolShareReserve.removeDistributionConfig(SCHEMA_SPREAD_PRIME_CORE, ONE_ADDRESS);
+
+    expect(protocolShareReserve.distributionTargets(7)).to.have.reverted;
+    expect(await protocolShareReserve.totalDistributions()).to.be.equal(7);
+
+    await protocolShareReserve.addOrUpdateDistributionConfigs([
+      {
+        schema: SCHEMA_SPREAD_PRIME_CORE,
+        percentage: 0,
+        destination: ONE_ADDRESS,
+      },
+      {
+        schema: SCHEMA_SPREAD_PRIME_CORE,
+        percentage: 0,
+        destination: TWO_ADDRESS,
+      },
+    ]);
+
+    config = await protocolShareReserve.distributionTargets(7);
+
+    expect(config.schema).to.equal(SCHEMA_SPREAD_PRIME_CORE);
+    expect(config.destination).to.equal(ONE_ADDRESS);
+    expect(config.percentage).to.equal(0);
+
+    config = await protocolShareReserve.distributionTargets(8);
+
+    expect(config.schema).to.equal(SCHEMA_SPREAD_PRIME_CORE);
+    expect(config.destination).to.equal(TWO_ADDRESS);
+    expect(config.percentage).to.equal(0);
+
+    expect(await protocolShareReserve.totalDistributions()).to.be.equal(9);
+
+    await protocolShareReserve.removeDistributionConfig(SCHEMA_SPREAD_PRIME_CORE, ONE_ADDRESS);
+
+    expect(protocolShareReserve.distributionTargets(8)).to.have.reverted;
+    expect(await protocolShareReserve.totalDistributions()).to.be.equal(8);
+
+    config = await protocolShareReserve.distributionTargets(7);
+
+    expect(config.schema).to.equal(SCHEMA_SPREAD_PRIME_CORE);
+    expect(config.destination).to.equal(TWO_ADDRESS);
+    expect(config.percentage).to.equal(0);
+  });
+
   it("collect and distribute of income", async () => {
     const mockDAI = setup.mockDAI;
     const protocolShareReserve = setup.protocolShareReserve;
