@@ -209,6 +209,7 @@ contract RiskFundConverter is AbstractTokenConverter {
             if (poolShare == 0) continue;
             updatePoolAssetsReserve(pools[i], tokenOutAddress, amountOut, poolShare);
             uint256 poolAmountInShare = (poolShare * amountIn) / EXP_SCALE;
+            emit AssetTransferredToDestination(pools[i], tokenInAddress, poolAmountInShare);
             IRiskFund(destinationAddress).updatePoolState(pools[i], tokenInAddress, poolAmountInShare);
         }
 
@@ -244,6 +245,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     function updatePoolAssetsReserve(address pool, address tokenAddress, uint256 amount, uint256 poolShare) internal {
         uint256 poolAmountShare = (poolShare * amount) / EXP_SCALE;
         poolsAssetsReserves[pool][tokenAddress] -= poolAmountShare;
+        emit AssetsReservesUpdated(pool, tokenAddress, poolAmountShare);
     }
 
     /// @notice Get the array of all pools addresses
