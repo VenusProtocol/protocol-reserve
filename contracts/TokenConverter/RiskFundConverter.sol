@@ -21,12 +21,12 @@ contract RiskFundConverter is AbstractTokenConverter {
 
     /// @notice Address of the core pool comptroller
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address public immutable corePoolComptroller;
+    address public immutable CORE_POOL_COMPTROLLER;
 
     ///@notice Address of the vBNB
     ///@dev This address is used to exclude the BNB market while in getPools method
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address public immutable vBNB;
+    address public immutable VBNB;
 
     ///@notice Address of the native wrapped currency
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
@@ -75,8 +75,8 @@ contract RiskFundConverter is AbstractTokenConverter {
         ensureNonzeroAddress(vBNB_);
         ensureNonzeroAddress(nativeWrapped_);
 
-        corePoolComptroller = corePoolComptroller_;
-        vBNB = vBNB_;
+        CORE_POOL_COMPTROLLER = corePoolComptroller_;
+        VBNB = vBNB_;
         NATIVE_WRAPPED = nativeWrapped_;
 
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -258,7 +258,7 @@ contract RiskFundConverter is AbstractTokenConverter {
             for (uint256 i; i < poolsLength; ++i) {
                 poolsWithCore[i] = pools[i];
             }
-            poolsWithCore[poolsLength] = corePoolComptroller;
+            poolsWithCore[poolsLength] = CORE_POOL_COMPTROLLER;
             return poolsWithCore;
         }
 
@@ -266,10 +266,10 @@ contract RiskFundConverter is AbstractTokenConverter {
     }
 
     function isAssetListedInCore(address tokenAddress) internal view returns (bool isAssetListed) {
-        address[] memory coreMarkets = IComptroller(corePoolComptroller).getAllMarkets();
+        address[] memory coreMarkets = IComptroller(CORE_POOL_COMPTROLLER).getAllMarkets();
 
         for (uint256 i; i < coreMarkets.length; ++i) {
-            isAssetListed = (vBNB == coreMarkets[i])
+            isAssetListed = (VBNB == coreMarkets[i])
                 ? (tokenAddress == NATIVE_WRAPPED)
                 : (IVToken(coreMarkets[i]).underlying() == tokenAddress);
 
@@ -283,7 +283,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param comptroller Address of the comptroller
     /// @param asset Address of the asset
     function ensureAssetListed(address comptroller, address asset) internal view returns (bool) {
-        if (comptroller == corePoolComptroller) {
+        if (comptroller == CORE_POOL_COMPTROLLER) {
             return isAssetListedInCore(asset);
         }
 

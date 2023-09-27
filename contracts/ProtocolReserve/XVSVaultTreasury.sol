@@ -16,7 +16,7 @@ contract XVSVaultTreasury is AccessControlledV8 {
 
     /// @notice The xvs token address
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address public immutable xvsAddress;
+    address public immutable XVS_ADDRESS;
 
     /// @notice The xvsvault address
     address public xvsVault;
@@ -38,7 +38,7 @@ contract XVSVaultTreasury is AccessControlledV8 {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address xvsAddress_) {
         ensureNonzeroAddress(xvsAddress_);
-        xvsAddress = xvsAddress_;
+        XVS_ADDRESS = xvsAddress_;
 
         // Note that the contract is upgradeable. Use initialize() or reinitializers
         // to set the state variables.
@@ -64,7 +64,7 @@ contract XVSVaultTreasury is AccessControlledV8 {
     function fundXVSVault(uint256 amountMantissa) external {
         _checkAccessAllowed("fundXVSVault(uint256)");
 
-        uint256 balance = IERC20Upgradeable(xvsAddress).balanceOf(address(this));
+        uint256 balance = IERC20Upgradeable(XVS_ADDRESS).balanceOf(address(this));
 
         if (balance < amountMantissa) {
             revert InsufficientBalance();
@@ -72,7 +72,7 @@ contract XVSVaultTreasury is AccessControlledV8 {
 
         address xvsStore = IXVSVault(xvsVault).xvsStore();
         ensureNonzeroAddress(xvsStore);
-        IERC20Upgradeable(xvsAddress).safeTransfer(xvsStore, amountMantissa);
+        IERC20Upgradeable(XVS_ADDRESS).safeTransfer(xvsStore, amountMantissa);
 
         emit FundsTransferredToXVSStore(xvsStore, amountMantissa);
     }
