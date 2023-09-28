@@ -66,6 +66,9 @@ contract RiskFundConverter is AbstractTokenConverter {
     // Error thrown when comptrollers array length is not equal to assets array length
     error InvalidArguments();
 
+    /// @notice thrown when amount entered is greater than balance
+    error InsufficientBalance();
+
     /// @param corePoolComptroller_ Address of the Comptroller pool
     /// @param vBNB_ Address of the vBNB
     /// @param nativeWrapped_ Address of the wrapped native currency
@@ -247,7 +250,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param amount Amount transferred to address(to)
     function postSweepToken(address tokenAddress, uint256 amount) internal override {
         uint256 balance = IERC20Upgradeable(tokenAddress).balanceOf(address(this));
-        require(balance >= amount, "Insufficient Balance");
+        if (amount > balance) revert InsufficientBalance();
         uint256 balanceDiff = balance - assetsReserves[tokenAddress];
 
         if (balanceDiff < amount) {

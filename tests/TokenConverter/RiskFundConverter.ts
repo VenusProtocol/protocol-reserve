@@ -175,7 +175,7 @@ describe("Risk fund Converter: tests", () => {
   it("Reverts on sweepToken() when amount entered is higher than balance", async () => {
     await expect(
       converter.sweepToken(tokenIn.address, await unKnown.getAddress(), parseUnits("1000", 18)),
-    ).to.be.revertedWith("Insufficient Balance");
+    ).to.be.revertedWithCustomError(converter, "InsufficientBalance");
   });
 
   describe("Pools direct transfer", () => {

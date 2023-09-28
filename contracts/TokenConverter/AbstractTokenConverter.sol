@@ -72,7 +72,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     event ConversionResumed(address indexed sender);
 
     /// @notice Event emitted when tokens are swept
-    event SweepToken(address indexed token);
+    event SweepToken(address indexed token, address indexed to, uint256 amount);
 
     /// @notice Thrown when given input amount is zero
     error InsufficientInputAmount();
@@ -355,7 +355,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         postSweepToken(tokenAddress, amount);
         token.safeTransfer(to, amount);
 
-        emit SweepToken(address(token));
+        emit SweepToken(tokenAddress, to, amount);
     }
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn

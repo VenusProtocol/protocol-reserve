@@ -181,6 +181,12 @@ describe("Risk Fund: Tests", function () {
       await tokenA.transfer(riskFund.address, COMPTROLLER_A_AMOUNT);
     });
 
+    it("Reverts on sweepToken() when amount entered is higher than balance", async () => {
+      await expect(
+        riskFund.sweepToken(tokenA.address, await admin.getAddress(), parseUnits("1000", 18)),
+      ).to.be.revertedWithCustomError(riskFund, "InsufficientBalance");
+    });
+
     it("Transfer sweep tokens to (to) address", async () => {
       await impersonateAccount(riskFundConverter.address);
       riskFundConverterSigner = await ethers.getSigner(riskFundConverter.address);
