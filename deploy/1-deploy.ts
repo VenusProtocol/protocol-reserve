@@ -55,7 +55,9 @@ module.exports = async ({ getNamedAccounts, deployments, network }: HardhatRunti
   const psrOwner = await psr.owner();
 
   if (psrOwner === deployer) {
-    await psr.transferOwnership(ADDRESSES[networkName].timelock);
+    const tx = await psr.transferOwnership(ADDRESSES[networkName].timelock);
+    await tx.wait();
+    console.log("Transferred ownership of PSR to Timelock");
   }
 };
 
