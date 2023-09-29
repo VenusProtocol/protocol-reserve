@@ -456,10 +456,12 @@ contract ProtocolShareReserve is
             uint256 transferAmount = (schemaBalances[uint256(_config.schema)] * _config.percentage) / MAX_PERCENT;
             totalTransferAmounts[uint256(_config.schema)] += transferAmount;
 
-            IERC20Upgradeable(asset).safeTransfer(_config.destination, transferAmount);
-            IIncomeDestination(_config.destination).updateAssetsState(comptroller, asset);
+            if (transferAmount != 0) {
+                IERC20Upgradeable(asset).safeTransfer(_config.destination, transferAmount);
+                IIncomeDestination(_config.destination).updateAssetsState(comptroller, asset);
 
-            emit AssetReleased(_config.destination, asset, _config.schema, _config.percentage, transferAmount);
+                emit AssetReleased(_config.destination, asset, _config.schema, _config.percentage, transferAmount);
+            }
 
             unchecked {
                 ++i;
