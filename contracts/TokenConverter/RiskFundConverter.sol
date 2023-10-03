@@ -117,6 +117,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @notice Update the poolsAssetsDirectTransfer mapping
     /// @param comptrollers Addresses of the pools
     /// @param assets Addresses of the assets need to be added for direct transfer
+    /// @custom:event PoolAssetsDirectTransferUpdated emits on success
     /// @custom:error InvalidArguments thrown when comptrollers array length is not equal to assets array length
     /// @custom:access Restricted by ACM
     function setPoolsAssetsDirectTransfer(
@@ -161,6 +162,8 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// and transferring funds to the protocol share reserve
     /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address
+    /// @custom:event AssetTransferredToDestination emits when poolsAssetsDirectTransfer is enabled for entered comptroller and asset
+    /// @custom:event AssetsReservesUpdated emits when poolsAssetsDirectTransfer is not enabled for entered comptroller and asset
     function updateAssetsState(address comptroller, address asset) public {
         require(IComptroller(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         ensureNonzeroAddress(asset);
@@ -225,6 +228,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param tokenOutAddress Address of the tokenOut
     /// @param amountIn Amount of tokenIn transferred
     /// @param amountOut Amount of tokenOut transferred
+    /// @custom:event AssetTransferredToDestination emits on success for each pool which has share
     function postConversionHook(
         address tokenInAddress,
         address tokenOutAddress,
@@ -254,7 +258,11 @@ contract RiskFundConverter is AbstractTokenConverter {
         uint256 balanceDiff = balance - assetsReserves[tokenAddress];
 
         if (balanceDiff < amount) {
-            uint256 amountDiff = amount - balanceDiff;
+            uint256 amountDiff;
+            unchecked {
+                amountDiff = amount - balanceDiff;
+            }
+
             address[] memory pools = getPools(tokenAddress);
             uint256 assetReserve = assetsReserves[tokenAddress];
             for (uint256 i; i < pools.length; ++i) {
@@ -271,6 +279,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param tokenAddress Address of the token
     /// @param amount Amount transferred to address(to)
     /// @param poolShare share for corresponding pool
+    /// @custom:event AssetsReservesUpdated emits on success
     function updatePoolAssetsReserve(address pool, address tokenAddress, uint256 amount, uint256 poolShare) internal {
         uint256 poolAmountShare = (poolShare * amount) / EXP_SCALE;
         poolsAssetsReserves[pool][tokenAddress] -= poolAmountShare;

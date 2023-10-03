@@ -72,6 +72,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
 
     /// @dev Shortfall contract address setter
     /// @param shortfallContractAddress_ Address of the auction contract
+    /// @custom:event ShortfallContractUpdated emit on success
     /// @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
     function setShortfallContractAddress(address shortfallContractAddress_) external onlyOwner {
         ensureNonzeroAddress(shortfallContractAddress_);
@@ -84,6 +85,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @param bidder Amount transferred to bidder address
     /// @param amount Amount to be transferred to auction contract
     /// @return Number reserved tokens.
+    /// @custom:event TransferredReserveForAuction emit on success
     /// @custom:error InvalidShortfallAddress is thrown on invalid shortfall address
     /// @custom:error InsufficientPoolReserve is thrown when pool reserve is less than the amount needed
     function transferReserveForAuction(
@@ -132,6 +134,8 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @param comptroller Comptroller address (pool)
     /// @param asset Address of the asset(token)
     /// @param amount Amount transferred for the pool
+    /// @custom:event PoolStateUpdated emits on success
+    /// @custom:error InvalidRiskFundConverter is thrown if caller is not riskFundConverter contract
     function updatePoolState(address comptroller, address asset, uint256 amount) public {
         if (msg.sender != riskFundConverter) {
             revert InvalidRiskFundConverter();
@@ -144,6 +148,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @notice Operations to perform after sweepToken
     /// @param tokenAddress Address of the token
     /// @param amount Amount transferred to address(to)
+    /// @custom:error InsufficientBalance is thrown when amount entered is greater than balance
     function postSweepToken(address tokenAddress, uint256 amount) internal {
         uint256 balance = IERC20Upgradeable(tokenAddress).balanceOf(address(this));
         if (amount > balance) revert InsufficientBalance();
@@ -159,7 +164,11 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
         uint256 balanceDiff = balance - assetReserves;
 
         if (balanceDiff < amount) {
-            uint256 amountDiff = amount - balanceDiff;
+            uint256 amountDiff;
+            unchecked {
+                amountDiff = amount - balanceDiff;
+            }
+
             for (uint256 i; i < poolsLength; ++i) {
                 uint256 poolShare = (poolAssetsFunds[pools[i]][tokenAddress] * EXP_SCALE) / assetReserves;
                 if (poolShare == 0) continue;
@@ -173,6 +182,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @param tokenAddress Address of the token
     /// @param amount Amount transferred to address(to)
     /// @param poolShare share for corresponding pool
+    /// @custom:event PoolStateUpdated emits on success
     function updatePoolAssetsReserve(address pool, address tokenAddress, uint256 amount, uint256 poolShare) internal {
         uint256 poolAmountShare = (poolShare * amount) / EXP_SCALE;
         poolAssetsFunds[pool][tokenAddress] -= poolAmountShare;

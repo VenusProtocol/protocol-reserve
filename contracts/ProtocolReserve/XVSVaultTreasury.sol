@@ -55,12 +55,17 @@ contract XVSVaultTreasury is AccessControlledV8 {
 
     /// @dev XVS vault setter
     /// @param xvsVault_ Address of the XVS vault
+    /// @custom:event XVSVaultUpdated emits on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when XVS vault address is zero
     function setXVSVault(address xvsVault_) external onlyOwner {
         _setXVSVault(xvsVault_);
     }
 
     /// @notice This function transfers funds to the XVS vault
     /// @param amountMantissa Amount to be sent to XVS vault
+    /// @custom:event FundsTransferredToXVSStore emits on success
+    /// @custom:error InsufficientBalance is thrown when amount entered is greater than balance
+    /// @custom:access Restricted by ACM
     function fundXVSVault(uint256 amountMantissa) external {
         _checkAccessAllowed("fundXVSVault(uint256)");
 
