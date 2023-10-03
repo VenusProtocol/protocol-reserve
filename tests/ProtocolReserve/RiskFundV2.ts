@@ -1,5 +1,5 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { impersonateAccount, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { Signer, constants } from "ethers";
 import { parseUnits } from "ethers/lib/utils.js";
@@ -172,15 +172,39 @@ describe("Risk Fund: Tests", function () {
   });
 
   describe("SweepTokens", () => {
-    it("Transfer sweep tokens to owner", async () => {
+    let riskFundConverterSigner: Signer;
+    const COMPTROLLER_A_AMOUNT: string = convertToUnit(10, 18);
+
+    beforeEach(async () => {
       await riskFund.connect(admin).setConvertibleBaseAsset(tokenA.address);
-      const COMPTROLLER_A_AMOUNT = convertToUnit(10, 18);
 
       await tokenA.transfer(riskFund.address, COMPTROLLER_A_AMOUNT);
-      await riskFund.setVariable("riskFundConverter", await admin.getAddress());
-      await riskFund.connect(admin).updatePoolState(comptrollerA.address, tokenA.address, COMPTROLLER_A_AMOUNT);
+    });
 
-      await expect(riskFund.sweepToken(comptrollerA.address, tokenA.address, 1000)).to.changeTokenBalances(
+    it("Reverts on sweepToken() when amount entered is higher than balance", async () => {
+      await expect(
+        riskFund.sweepToken(tokenA.address, await admin.getAddress(), parseUnits("1000", 18)),
+      ).to.be.revertedWithCustomError(riskFund, "InsufficientBalance");
+    });
+
+    it("Transfer sweep tokens to (to) address", async () => {
+      await impersonateAccount(riskFundConverter.address);
+      riskFundConverterSigner = await ethers.getSigner(riskFundConverter.address);
+      await admin.sendTransaction({ to: riskFundConverter.address, value: ethers.utils.parseEther("10") });
+
+      await riskFund
+        .connect(riskFundConverterSigner)
+        .updatePoolState(comptrollerA.address, tokenA.address, COMPTROLLER_A_AMOUNT);
+
+      await expect(riskFund.sweepToken(tokenA.address, await admin.getAddress(), 1000)).to.changeTokenBalances(
+        tokenA,
+        [await riskFund.owner(), riskFund.address],
+        [1000, -1000],
+      );
+    });
+
+    it("Transfer untracked token to (to) address", async () => {
+      await expect(riskFund.sweepToken(tokenA.address, await admin.getAddress(), 1000)).to.changeTokenBalances(
         tokenA,
         [await riskFund.owner(), riskFund.address],
         [1000, -1000],

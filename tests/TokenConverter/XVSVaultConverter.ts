@@ -45,8 +45,13 @@ async function fixture(): Promise<void> {
   tokenOut = await MockToken.deploy("TokenOut", "tokenOut", 18);
   await tokenOut.faucet(parseUnits("1000", 18));
 
-  converter = await converterFactory.deploy();
-  await converter.initialize(accessControl.address, oracle.address, xvsVaultTreasury.address);
+  converter = await upgrades.deployProxy(
+    converterFactory,
+    [accessControl.address, oracle.address, xvsVaultTreasury.address],
+    {
+      constructorArgs: [],
+    },
+  );
 }
 
 describe("XVS vault Converter: tests", () => {

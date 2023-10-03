@@ -14,6 +14,7 @@ import { IAbstractTokenConverter } from "./IAbstractTokenConverter.sol";
 /// @title AbstractTokenConverter
 /// @author Venus
 /// @notice Abstract contract will be extended by XVSVaultConverter and RiskFundConverter
+/// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenConverter, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -48,10 +49,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         bool newEnabled
     );
     /// @notice Emitted when price oracle address is updated
-    event PriceOracleUpdated(ResilientOracle oldPriceOracle, ResilientOracle priceOracle);
+    event PriceOracleUpdated(ResilientOracle oldPriceOracle, ResilientOracle indexed priceOracle);
 
     /// @notice Emitted when destination address is updated
-    event DestinationAddressUpdated(address oldDestinationAddress, address destinationAddress);
+    event DestinationAddressUpdated(address oldDestinationAddress, address indexed destinationAddress);
 
     /// @notice Emitted when exact amount of tokens are convert for tokens
     event ConvertExactTokens(uint256 amountIn, uint256 amountOut);
@@ -66,16 +67,19 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     event ConvertForExactTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOut);
 
     /// @notice Emitted when conversion is paused
-    event ConversionPaused(address sender);
+    event ConversionPaused(address indexed sender);
 
     /// @notice Emitted when conversion is unpaused
-    event ConversionResumed(address sender);
+    event ConversionResumed(address indexed sender);
 
     /// @notice Event emitted when tokens are swept
-    event SweepToken(address indexed token);
+    event SweepToken(address indexed token, address indexed to, uint256 amount);
 
     /// @notice Thrown when given input amount is zero
     error InsufficientInputAmount();
+
+    /// @notice Thrown when given output amount is zero
+    error InsufficientOutputAmount();
 
     /// @notice Thrown when conversion is disabled or config does not exist for given pair
     error ConversionConfigNotEnabled();
@@ -103,12 +107,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Thrown when conversion is Active
     error ConversionTokensActive();
 
-    /**
-     * @notice Pause conversion of tokens
-     * @custom:event Emits ConversionPaused on success
-     * @custom:error ConversionTokensPaused thrown when convert is already paused
-     * @custom:access Restricted by ACM
-     */
+    /// @notice Pause conversion of tokens
+    /// @custom:event Emits ConversionPaused on success
+    /// @custom:error ConversionTokensPaused thrown when convert is already paused
+    /// @custom:access Restricted by ACM
     function pauseConversion() external {
         _checkAccessAllowed("pauseConversion()");
         _checkConversionPaused();
@@ -116,12 +118,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         emit ConversionPaused(msg.sender);
     }
 
-    /**
-     * @notice Resume conversion of tokens.
-     * @custom:event Emits ConversionResumed on success
-     * @custom:error ConversionTokensActive thrown when convert is already active
-     * @custom:access Restricted by ACM
-     */
+    /// @notice Resume conversion of tokens.
+    /// @custom:event Emits ConversionResumed on success
+    /// @custom:error ConversionTokensActive thrown when convert is already active
+    /// @custom:access Restricted by ACM
     function resumeConversion() external {
         _checkAccessAllowed("resumeConversion()");
         if (!conversionPaused) {
@@ -140,42 +140,44 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     }
 
     /// @notice Sets a new destination address
-    /// @param destinationAddress_ Address of the new price oracle to set
+    /// @param destinationAddress_ The new destination address to be set
     /// @custom:access Only Governance
     function setDestination(address destinationAddress_) external onlyOwner {
         _setDestination(destinationAddress_);
     }
 
     /// @notice Set the configuration for new or existing convert pair
+    /// @param tokenAddressIn Address of tokenIn
+    /// @param tokenAddressOut Address of tokenOut
     /// @param conversionConfig ConversionConfig config details to update
     /// @custom:event Emits ConversionConfigUpdated event on success
     /// @custom:error Unauthorized error is thrown when the call is not authorized by AccessControlManager
     /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
     /// @custom:access Controlled by AccessControlManager
-    function setConversionConfig(ConversionConfig calldata conversionConfig) external {
-        _checkAccessAllowed("setConversionConfig(ConversionConfig)");
-        ensureNonzeroAddress(conversionConfig.tokenAddressIn);
-        ensureNonzeroAddress(conversionConfig.tokenAddressOut);
+    function setConversionConfig(
+        address tokenAddressIn,
+        address tokenAddressOut,
+        ConversionConfig calldata conversionConfig
+    ) external {
+        _checkAccessAllowed("setConversionConfig(address,address,ConversionConfig)");
+        ensureNonzeroAddress(tokenAddressIn);
+        ensureNonzeroAddress(tokenAddressOut);
 
         if (conversionConfig.incentive > MAX_INCENTIVE) {
             revert IncentiveTooHigh(conversionConfig.incentive, MAX_INCENTIVE);
         }
 
-        ConversionConfig storage configuration = convertConfigurations[conversionConfig.tokenAddressIn][
-            conversionConfig.tokenAddressOut
-        ];
+        ConversionConfig storage configuration = convertConfigurations[tokenAddressIn][tokenAddressOut];
 
         uint256 oldIncentive = configuration.incentive;
         bool oldEnabled = configuration.enabled;
 
-        configuration.tokenAddressIn = conversionConfig.tokenAddressIn;
-        configuration.tokenAddressOut = conversionConfig.tokenAddressOut;
         configuration.incentive = conversionConfig.incentive;
         configuration.enabled = conversionConfig.enabled;
 
         emit ConversionConfigUpdated(
-            conversionConfig.tokenAddressIn,
-            conversionConfig.tokenAddressOut,
+            tokenAddressIn,
+            tokenAddressOut,
             oldIncentive,
             conversionConfig.incentive,
             oldEnabled,
@@ -237,7 +239,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param to Address of the tokenAddressOut receiver
     /// @custom:event Emits ConvertForExactTokens event on success
     /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
-    /// @custom:error AmountInOrAmountOutMismatched error is thrown when Amount of tokenAddressIn or tokenAddressOut is lower than expected fater transfer
+    /// @custom:error AmountInOrAmountOutMismatched error is thrown when Amount of tokenAddressIn or tokenAddressOut is lower than expected after transfer
     function convertForExactTokens(
         uint256 amountInMaxMantissa,
         uint256 amountOutMantissa,
@@ -341,7 +343,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         emit ConvertForExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
 
-    /// @notice A public function to sweep ERC20 tokens and transfer them to user(to address)
+    /// @notice To sweep ERC20 tokens and transfer them to user(to address)
     /// @param tokenAddress The address of the ERC-20 token to sweep
     /// @custom:event Emits SweepToken event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/to address is zero
@@ -354,7 +356,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         postSweepToken(tokenAddress, amount);
         token.safeTransfer(to, amount);
 
-        emit SweepToken(address(token));
+        emit SweepToken(tokenAddress, to, amount);
     }
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
@@ -453,7 +455,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressOut
     ) public view returns (uint256 amountConvertedMantissa, uint256 amountInMantissa) {
         if (amountOutMantissa == 0) {
-            revert InsufficientInputAmount();
+            revert InsufficientOutputAmount();
         }
 
         ConversionConfig memory configuration = convertConfigurations[tokenAddressIn][tokenAddressOut];
@@ -471,7 +473,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         /// conversion rate after considering incentive(conversionWithIncentive)
         uint256 tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
 
-        /// If contract has less liquity for tokenAddressOut than amountOutMantissa
+        /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountOutMantissa) {
             amountInMantissa = ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
             amountConvertedMantissa = maxTokenOutReserve;
@@ -599,12 +601,12 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 balanceAfterDestination = tokenIn.balanceOf(destinationAddress);
 
         IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
-        uint256 balanceBeforeTo = tokenOut.balanceOf(to);
+        uint256 balanceBefore = tokenOut.balanceOf(address(this));
         tokenOut.safeTransfer(to, amountConvertedMantissa);
-        uint256 balanceAfterTo = tokenOut.balanceOf(to);
+        uint256 balanceAfter = tokenOut.balanceOf(address(this));
 
         actualAmountIn = balanceAfterDestination - balanceBeforeDestination;
-        actualAmountOut = balanceAfterTo - balanceBeforeTo;
+        actualAmountOut = balanceBefore - balanceAfter;
     }
 
     /// @notice Sets a new price oracle
@@ -621,7 +623,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     }
 
     /// @notice Sets a new destination address
-    /// @param destinationAddress_ Address of the new price oracle to set
+    /// @param destinationAddress_ The new destination address to be set
     /// @custom:event Emits DestinationAddressUpdated event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when destination address is zero
     function _setDestination(address destinationAddress_) internal {

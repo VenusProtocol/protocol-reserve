@@ -8,12 +8,16 @@ import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contract
 import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 import { IXVSVault } from "../Interfaces/IXVSVault.sol";
 
+/// @title XVSVaultTreasury
+/// @author Venus
+/// @notice XVSVaultTreasury stores the tokens sent by XVSVaultConverter and funds XVSVault
+/// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 contract XVSVaultTreasury is AccessControlledV8 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice The xvs token address
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address public immutable xvsAddress;
+    address public immutable XVS_ADDRESS;
 
     /// @notice The xvsvault address
     address public xvsVault;
@@ -35,7 +39,7 @@ contract XVSVaultTreasury is AccessControlledV8 {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address xvsAddress_) {
         ensureNonzeroAddress(xvsAddress_);
-        xvsAddress = xvsAddress_;
+        XVS_ADDRESS = xvsAddress_;
 
         // Note that the contract is upgradeable. Use initialize() or reinitializers
         // to set the state variables.
@@ -52,21 +56,29 @@ contract XVSVaultTreasury is AccessControlledV8 {
 
     /// @dev XVS vault setter
     /// @param xvsVault_ Address of the XVS vault
+    /// @custom:event XVSVaultUpdated emits on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when XVS vault address is zero
     function setXVSVault(address xvsVault_) external onlyOwner {
         _setXVSVault(xvsVault_);
     }
 
+    /// @notice This function transfers funds to the XVS vault
+    /// @param amountMantissa Amount to be sent to XVS vault
+    /// @custom:event FundsTransferredToXVSStore emits on success
+    /// @custom:error InsufficientBalance is thrown when amount entered is greater than balance
+    /// @custom:access Restricted by ACM
     function fundXVSVault(uint256 amountMantissa) external {
-        _checkAccessAllowed("fundXVSVault(amountMantissa)");
+        _checkAccessAllowed("fundXVSVault(uint256)");
 
-        uint256 balance = IERC20Upgradeable(xvsAddress).balanceOf(address(this));
+        uint256 balance = IERC20Upgradeable(XVS_ADDRESS).balanceOf(address(this));
 
         if (balance < amountMantissa) {
             revert InsufficientBalance();
         }
 
         address xvsStore = IXVSVault(xvsVault).xvsStore();
-        IERC20Upgradeable(xvsAddress).safeTransfer(xvsStore, amountMantissa);
+        ensureNonzeroAddress(xvsStore);
+        IERC20Upgradeable(XVS_ADDRESS).safeTransfer(xvsStore, amountMantissa);
 
         emit FundsTransferredToXVSStore(xvsStore, amountMantissa);
     }

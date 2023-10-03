@@ -7,8 +7,23 @@ import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle
 
 import { AbstractTokenConverter } from "./AbstractTokenConverter.sol";
 
+/// @title XVSVaultConverter
+/// @author Venus
+/// @notice XVSVaultConverter used for token conversions and sends received token to XVSVaultTreasury
+/// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 contract XVSVaultConverter is AbstractTokenConverter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
+
+    /// @dev This empty reserved space is put in place to allow future versions to add new
+    /// variables without shifting down storage in the inheritance chain
+    uint256[50] private __gap;
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables.
+        _disableInitializers();
+    }
 
     /// @param accessControlManager_ Access control manager contract address
     /// @param priceOracle_ Resilient oracle address

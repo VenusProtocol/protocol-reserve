@@ -3,26 +3,44 @@ pragma solidity 0.8.13;
 
 import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
 
+/// @notice Interface for AbstractTokenConverter
+/// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 interface IAbstractTokenConverter {
+    /// @notice This struct represents the configuration for a token conversion.
     struct ConversionConfig {
-        /// tokenIn address
-        address tokenAddressIn;
-        /// tokenOut address
-        address tokenAddressOut;
         /// incentive on conversion of tokens in mantissa i.e 10% incentive would be 0.1 * 1e18
         uint256 incentive;
         /// whether the conversion is enabled
         bool enabled;
     }
 
+    /// @notice Pause conversion of tokens
     function pauseConversion() external;
 
+    /// @notice Resume conversion of tokens.
     function resumeConversion() external;
 
+    /// @notice Sets a new price oracle
+    /// @param priceOracle_ Address of the new price oracle to set
     function setPriceOracle(ResilientOracle priceOracle_) external;
 
-    function setConversionConfig(ConversionConfig calldata conversionConfig) external;
+    /// @notice Set the configuration for new or existing convert pair
+    /// @param tokenAddressIn Address of tokenIn
+    /// @param tokenAddressOut Address of tokenOut
+    /// @param conversionConfig ConversionConfig config details to update
+    function setConversionConfig(
+        address tokenAddressIn,
+        address tokenAddressOut,
+        ConversionConfig calldata conversionConfig
+    ) external;
 
+    /// @notice Convert exact amount of tokenAddressIn for tokenAddressOut
+    /// @dev Method does not support deflationary tokens transfer
+    /// @param amountInMantissa Amount of tokenAddressIn
+    /// @param amountOutMinMantissa Min amount of tokenAddressOut required as output
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after convert
+    /// @param to Address of the tokenAddressOut receiver
     function convertExactTokens(
         uint256 amountInMantissa,
         uint256 amountOutMinMantissa,
@@ -31,6 +49,13 @@ interface IAbstractTokenConverter {
         address to
     ) external;
 
+    /// @notice Convert tokens for tokenAddressIn for exact amount of tokenAddressOut
+    /// @dev Method does not support deflationary tokens transfer
+    /// @param amountInMaxMantissa Max amount of tokenAddressIn
+    /// @param amountOutMantissa Amount of tokenAddressOut required as output
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after convert
+    /// @param to Address of the tokenAddressOut receiver
     function convertForExactTokens(
         uint256 amountInMaxMantissa,
         uint256 amountOutMantissa,
@@ -39,6 +64,12 @@ interface IAbstractTokenConverter {
         address to
     ) external;
 
+    /// @notice Convert exact amount of tokenAddressIn for tokenAddressOut
+    /// @param amountInMantissa Amount of tokenAddressIn
+    /// @param amountOutMinMantissa Min amount of tokenAddressOut required as output
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after convert
+    /// @param to Address of the tokenAddressOut receiver
     function convertExactTokensSupportingFeeOnTransferTokens(
         uint256 amountInMantissa,
         uint256 amountOutMinMantissa,
@@ -47,6 +78,12 @@ interface IAbstractTokenConverter {
         address to
     ) external;
 
+    /// @notice Convert tokens for tokenAddressIn for exact amount of tokenAddressOut
+    /// @param amountInMaxMantissa Max amount of tokenAddressIn
+    /// @param amountOutMantissa Amount of tokenAddressOut required as output
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after convert
+    /// @param to Address of the tokenAddressOut receiver
     function convertForExactTokensSupportingFeeOnTransferTokens(
         uint256 amountInMaxMantissa,
         uint256 amountOutMantissa,
