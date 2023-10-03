@@ -7,6 +7,7 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 /// @title ReserveHelpersStorage
 /// @author Venus
 /// @dev Reserve helpers storage
+/// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 contract ReserveHelpersStorage is Ownable2StepUpgradeable {
     /// @notice Deprecated slot for assetReserves mapping
     bytes32 private __deprecatedSlot1;
@@ -28,6 +29,7 @@ contract ReserveHelpersStorage is Ownable2StepUpgradeable {
 /// @title MaxLoopsLimitHelpersStorage
 /// @author Venus
 /// @dev Max loop limit helpers storage
+/// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 contract MaxLoopsLimitHelpersStorage {
     /// @notice Limit for the loops to avoid the DOS
     /// @notice This state is deprecated, using it to prevent storage collision
@@ -42,6 +44,7 @@ contract MaxLoopsLimitHelpersStorage {
 /// @title RiskFundV1Storage
 /// @author Venus
 /// @dev Risk fund V1 storage
+/// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 contract RiskFundV1Storage is ReserveHelpersStorage, MaxLoopsLimitHelpersStorage {
     /// @notice Address of base asset
     address public convertibleBaseAsset;
@@ -57,6 +60,7 @@ contract RiskFundV1Storage is ReserveHelpersStorage, MaxLoopsLimitHelpersStorage
 /// @title RiskFundV2Storage
 /// @author Venus
 /// @dev Risk fund V2 storage
+/// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 contract RiskFundV2Storage is RiskFundV1Storage, ReentrancyGuardUpgradeable {
     /// @notice Risk fund converter address
     address public riskFundConverter;

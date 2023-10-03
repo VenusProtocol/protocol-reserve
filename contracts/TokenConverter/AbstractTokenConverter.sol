@@ -14,6 +14,7 @@ import { IAbstractTokenConverter } from "./IAbstractTokenConverter.sol";
 /// @title AbstractTokenConverter
 /// @author Venus
 /// @notice Abstract contract will be extended by XVSVaultConverter and RiskFundConverter
+/// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenConverter, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 

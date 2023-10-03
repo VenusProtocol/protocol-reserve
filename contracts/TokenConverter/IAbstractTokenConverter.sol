@@ -4,6 +4,7 @@ pragma solidity 0.8.13;
 import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
 
 /// @notice Interface for AbstractTokenConverter
+/// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 interface IAbstractTokenConverter {
     /// @notice This struct represents the configuration for a token conversion.
     struct ConversionConfig {

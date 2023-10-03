@@ -17,6 +17,7 @@ import { RiskFundV2Storage } from "./RiskFundStorage.sol";
 /// @author Venus
 /// @notice Contract with basic features to hold base asset for different Comptrollers
 /// @dev This contract does not support BNB
+/// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 

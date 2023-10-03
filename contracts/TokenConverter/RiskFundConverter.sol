@@ -16,6 +16,7 @@ import { EXP_SCALE } from "../Utils/Constants.sol";
 /// @title RiskFundConverter
 /// @author Venus
 /// @notice RiskFundConverter used for token conversions and sends received token to RiskFund
+/// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 contract RiskFundConverter is AbstractTokenConverter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 

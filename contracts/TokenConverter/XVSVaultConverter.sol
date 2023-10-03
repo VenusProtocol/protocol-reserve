@@ -10,6 +10,7 @@ import { AbstractTokenConverter } from "./AbstractTokenConverter.sol";
 /// @title XVSVaultConverter
 /// @author Venus
 /// @notice XVSVaultConverter used for token conversions and sends received token to XVSVaultTreasury
+/// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 contract XVSVaultConverter is AbstractTokenConverter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
