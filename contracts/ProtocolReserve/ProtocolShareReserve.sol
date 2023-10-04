@@ -37,7 +37,7 @@ contract ProtocolShareReserve is
     struct DistributionConfig {
         Schema schema;
         /// @dev percenatge is represented without any scale
-        uint256 percentage;
+        uint8 percentage;
         address destination;
     }
 
@@ -59,7 +59,7 @@ contract ProtocolShareReserve is
     /// @notice address of pool registry contract
     address public poolRegistry;
 
-    uint256 private constant MAX_PERCENT = 100;
+    uint8 private constant MAX_PERCENT = 100;
 
     /// @notice comptroller => asset => schema => balance
     mapping(address => mapping(address => mapping(Schema => uint256))) public assetsReserves;
@@ -70,11 +70,17 @@ contract ProtocolShareReserve is
     /// @notice configuration for different income distribution targets
     DistributionConfig[] public distributionTargets;
 
+    /// @notice asset => boolean
+    mapping(address => bool) public isInPrime;
+
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
 
     /// @notice Emitted when prime address is updated
     event PrimeUpdated(address indexed oldPrime, address indexed newPrime);
+
+    /// @notice Emitted when an asset is added to prime program
+    event PrimeAssetUpdated(address indexed asset, bool isPrimeAsset);
 
     /// @notice Event emitted after the updation of the assets reserves.
     event AssetsReservesUpdated(
@@ -106,16 +112,29 @@ contract ProtocolShareReserve is
     /// @notice Event emitted when distribution configuration is updated
     event DistributionConfigUpdated(
         address indexed destination,
-        uint256 oldPercentage,
-        uint256 newPercentage,
+        uint8 oldPercentage,
+        uint8 newPercentage,
         Schema schema
     );
 
     /// @notice Event emitted when distribution configuration is added
-    event DistributionConfigAdded(address indexed destination, uint256 percentage, Schema schema);
+    event DistributionConfigAdded(address indexed destination, uint8 percentage, Schema schema);
 
+    /// @notice Event emitted when distribution configuration is removed
+    event DistributionConfigRemoved(address indexed destination, uint8 percentage, Schema schema);
+
+    /**
+     * @dev Constructor to initialize the immutable variables
+     * @param _corePoolComptroller The address of core pool comptroller
+     * @param _wbnb The address of WBNB
+     * @param _vbnb The address of vBNB
+     */
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address _corePoolComptroller, address _wbnb, address _vbnb) {
+    constructor(
+        address _corePoolComptroller,
+        address _wbnb,
+        address _vbnb
+    ) {
         if (_corePoolComptroller == address(0)) revert InvalidAddress();
         if (_wbnb == address(0)) revert InvalidAddress();
         if (_vbnb == address(0)) revert InvalidAddress();
@@ -162,10 +181,22 @@ contract ProtocolShareReserve is
     }
 
     /**
+     * @dev Add/Remove asset to prime program.
+     * @param asset Address of the asset
+     * @param isPrimeAsset Boolean to add/remove asset from prime program
+     */
+    function addOrRemoveAssetFromPrime(address asset, bool isPrimeAsset) external {
+        _checkAccessAllowed("addOrRemoveAssetFromPrime(address,bool)");
+        if (asset == address(0)) revert InvalidAddress();
+        emit PrimeAssetUpdated(asset, isPrimeAsset);
+        isInPrime[asset] = isPrimeAsset;
+    }
+
+    /**
      * @dev Add or update destination targets based on destination address
      * @param configs configurations of the destinations.
      */
-    function addOrUpdateDistributionConfigs(DistributionConfig[] memory configs) external nonReentrant {
+    function addOrUpdateDistributionConfigs(DistributionConfig[] calldata configs) external nonReentrant {
         _checkAccessAllowed("addOrUpdateDistributionConfigs(DistributionConfig[])");
 
         //we need to accrue and release funds to prime before updating the distribution configuration
@@ -174,10 +205,11 @@ contract ProtocolShareReserve is
 
         for (uint256 i = 0; i < configs.length; ) {
             DistributionConfig memory _config = configs[i];
-            require(_config.destination != address(0), "ProtocolShareReserve: Destination address invalid");
+            if (_config.destination == address(0)) revert InvalidAddress();
 
             bool updated = false;
-            for (uint256 j = 0; j < distributionTargets.length; ) {
+            uint256 distributionTargetsLength = distributionTargets.length;
+            for (uint256 j = 0; j < distributionTargetsLength; ) {
                 DistributionConfig storage config = distributionTargets[j];
 
                 if (_config.schema == config.schema && config.destination == _config.destination) {
@@ -212,11 +244,49 @@ contract ProtocolShareReserve is
     }
 
     /**
+     * @dev Remove destionation target if percentage is 0
+     * @param schema schema of the configuration
+     * @param destination destination address of the configuration
+     */
+    function removeDistributionConfig(Schema schema, address destination) external {
+        _checkAccessAllowed("removeDistributionConfig(Schema,address)");
+
+        uint256 distributionIndex;
+        bool found = false;
+        for (uint256 i = 0; i < distributionTargets.length; ) {
+            DistributionConfig storage config = distributionTargets[i];
+
+            if (schema == config.schema && destination == config.destination && config.percentage == 0) {
+                found = true;
+                distributionIndex = i;
+                break;
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        if (found) {
+            emit DistributionConfigRemoved(
+                distributionTargets[distributionIndex].destination,
+                distributionTargets[distributionIndex].percentage,
+                distributionTargets[distributionIndex].schema
+            );
+
+            distributionTargets[distributionIndex] = distributionTargets[distributionTargets.length - 1];
+            distributionTargets.pop();
+        }
+
+        _ensurePercentages();
+    }
+
+    /**
      * @dev Release funds
      * @param comptroller the comptroller address of the pool
      * @param assets assets to be released to distribution targets
      */
-    function releaseFunds(address comptroller, address[] memory assets) external nonReentrant {
+    function releaseFunds(address comptroller, address[] calldata assets) external nonReentrant {
         _accruePrimeInterest();
 
         for (uint256 i = 0; i < assets.length; ) {
@@ -241,7 +311,8 @@ contract ProtocolShareReserve is
         address destination,
         address asset
     ) external view returns (uint256) {
-        for (uint256 i = 0; i < distributionTargets.length; ) {
+        uint256 distributionTargetsLength = distributionTargets.length;
+        for (uint256 i = 0; i < distributionTargetsLength; ) {
             DistributionConfig storage _config = distributionTargets[i];
             if (_config.schema == schema && _config.destination == destination) {
                 uint256 total = assetsReserves[comptroller][asset][schema];
@@ -262,6 +333,27 @@ contract ProtocolShareReserve is
     }
 
     /**
+     * @dev Used to find out the percentage distribution for a particular destination based on schema
+     * @param destination the destination address of the distribution target
+     * @param schema the schema of the distribution target
+     * @return percentage percentage distribution
+     */
+    function getPercentageDistribution(address destination, Schema schema) external view returns (uint256) {
+        uint256 distributionTargetsLength = distributionTargets.length;
+        for (uint256 i = 0; i < distributionTargetsLength; ) {
+            DistributionConfig memory config = distributionTargets[i];
+
+            if (config.destination == destination && config.schema == schema) {
+                return config.percentage;
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /**
      * @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
      * @param comptroller Comptroller address (pool)
      * @param asset Asset address.
@@ -279,7 +371,7 @@ contract ProtocolShareReserve is
             IPoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) == address(0)
         ) revert InvalidAddress();
 
-        Schema schema = getSchema(comptroller, asset, incomeType);
+        Schema schema = _getSchema(comptroller, asset, incomeType);
         uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
         uint256 assetReserve = totalAssetReserve[asset];
 
@@ -300,7 +392,11 @@ contract ProtocolShareReserve is
      * releases the funds to prime for each market
      */
     function _accrueAndReleaseFundsToPrime() internal {
-        address[] memory markets = IPrime(prime).allMarkets();
+        if (prime == address(0)) {
+            return;
+        }
+
+        address[] memory markets = IPrime(prime).getAllMarkets();
         for (uint256 i = 0; i < markets.length; ) {
             address market = markets[i];
             IPrime(prime).accrueInterest(market);
@@ -317,7 +413,11 @@ contract ProtocolShareReserve is
      * to prime for each market
      */
     function _accruePrimeInterest() internal {
-        address[] memory markets = IPrime(prime).allMarkets();
+        if (prime == address(0)) {
+            return;
+        }
+
+        address[] memory markets = IPrime(prime).getAllMarkets();
         for (uint256 i = 0; i < markets.length; ) {
             address market = markets[i];
             IPrime(prime).accrueInterest(market);
@@ -394,24 +494,27 @@ contract ProtocolShareReserve is
      * @param incomeType type of income
      * @return schema schema for distribution
      */
-    function getSchema(
+    function _getSchema(
         address comptroller,
         address asset,
         IncomeType incomeType
     ) internal view returns (Schema schema) {
         schema = Schema.DEFAULT;
-        address vToken = IPrime(prime).vTokenForAsset(asset);
 
-        if (vToken != address(0) && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
+        if (isInPrime[asset] && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
             schema = Schema.SPREAD_PRIME_CORE;
         }
     }
 
+    /**
+     * @dev This ensures that the total percentage of all the distribution targets is 100% or 0%
+     */
     function _ensurePercentages() internal view {
         uint256 totalSchemas = uint256(type(Schema).max) + 1;
-        uint256[] memory totalPercentages = new uint256[](totalSchemas);
+        uint8[] memory totalPercentages = new uint8[](totalSchemas);
 
-        for (uint256 i = 0; i < distributionTargets.length; ) {
+        uint256 distributionTargetsLength = distributionTargets.length;
+        for (uint256 i = 0; i < distributionTargetsLength; ) {
             DistributionConfig memory config = distributionTargets[i];
             totalPercentages[uint256(config.schema)] += config.percentage;
 

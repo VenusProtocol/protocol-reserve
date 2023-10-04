@@ -27,7 +27,11 @@ contract MockACM is AccessControl {
      * @param accountToPermit account that will be given access to the contract function
      * @custom:event Emits a {RoleGranted} and {PermissionGranted} events.
      */
-    function giveCallPermission(address contractAddress, string memory functionSig, address accountToPermit) public {
+    function giveCallPermission(
+        address contractAddress,
+        string memory functionSig,
+        address accountToPermit
+    ) public {
         bytes32 role = keccak256(abi.encodePacked(contractAddress, functionSig));
         grantRole(role, accountToPermit);
         emit PermissionGranted(accountToPermit, contractAddress, functionSig);
@@ -41,7 +45,11 @@ contract MockACM is AccessControl {
      * @param functionSig signature e.g. "functionName(uint256,bool)"
      * @custom:event Emits {RoleRevoked} and {PermissionRevoked} events.
      */
-    function revokeCallPermission(address contractAddress, string memory functionSig, address accountToRevoke) public {
+    function revokeCallPermission(
+        address contractAddress,
+        string memory functionSig,
+        address accountToRevoke
+    ) public {
         bytes32 role = keccak256(abi.encodePacked(contractAddress, functionSig));
         revokeRole(role, accountToRevoke);
         emit PermissionRevoked(accountToRevoke, contractAddress, functionSig);

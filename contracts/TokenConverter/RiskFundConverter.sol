@@ -74,7 +74,11 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param vBNB_ Address of the vBNB
     /// @param nativeWrapped_ Address of the wrapped native currency
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address corePoolComptroller_, address vBNB_, address nativeWrapped_) {
+    constructor(
+        address corePoolComptroller_,
+        address vBNB_,
+        address nativeWrapped_
+    ) {
         ensureNonzeroAddress(corePoolComptroller_);
         ensureNonzeroAddress(vBNB_);
         ensureNonzeroAddress(nativeWrapped_);
@@ -281,7 +285,12 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param amount Amount transferred to address(to)
     /// @param poolShare share for corresponding pool
     /// @custom:event AssetsReservesUpdated emits on success
-    function updatePoolAssetsReserve(address pool, address tokenAddress, uint256 amount, uint256 poolShare) internal {
+    function updatePoolAssetsReserve(
+        address pool,
+        address tokenAddress,
+        uint256 amount,
+        uint256 poolShare
+    ) internal {
         uint256 poolAmountShare = (poolShare * amount) / EXP_SCALE;
         poolsAssetsReserves[pool][tokenAddress] -= poolAmountShare;
         emit AssetsReservesUpdated(pool, tokenAddress, poolAmountShare);

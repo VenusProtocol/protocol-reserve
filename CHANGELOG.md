@@ -1,3 +1,24 @@
+## [1.0.0-dev.6](https://github.com/VenusProtocol/protocol-reserve/compare/v1.0.0-dev.5...v1.0.0-dev.6) (2023-09-25)
+
+
+### Features
+
+* func to get distribution config ([0a7c47e](https://github.com/VenusProtocol/protocol-reserve/commit/0a7c47ebb3a79b985a2725f9ce3458017133de4c))
+
+
+### Bug Fixes
+
+* added netspec and resolved lint issues ([92cc249](https://github.com/VenusProtocol/protocol-reserve/commit/92cc2491a0e1b928b2b968f5c9e729461dcca891))
+* fixed tests ([bd0e9c3](https://github.com/VenusProtocol/protocol-reserve/commit/bd0e9c38cbbc03d8745f0bf7a8518912aa712bd3))
+* PSP-01 ([762c054](https://github.com/VenusProtocol/protocol-reserve/commit/762c054693c39a693fbaa2bdb1680635146f79c1))
+
+## [1.0.0-dev.5](https://github.com/VenusProtocol/protocol-reserve/compare/v1.0.0-dev.4...v1.0.0-dev.5) (2023-09-13)
+
+
+### Bug Fixes
+
+* prime market getter for releaseFunds in psr ([838fbc3](https://github.com/VenusProtocol/protocol-reserve/commit/838fbc3cf4c659739469cf1d9eccbf957399d5b3))
+
 ## [1.0.0-dev.4](https://github.com/VenusProtocol/protocol-reserve/compare/v1.0.0-dev.3...v1.0.0-dev.4) (2023-08-25)
 
 

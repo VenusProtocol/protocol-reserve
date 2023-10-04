@@ -120,7 +120,11 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @custom:event Emits SweepToken event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/to address is zero
     /// @custom:access Only Governance
-    function sweepToken(address tokenAddress, address to, uint256 amount) external onlyOwner nonReentrant {
+    function sweepToken(
+        address tokenAddress,
+        address to,
+        uint256 amount
+    ) external onlyOwner nonReentrant {
         ensureNonzeroAddress(tokenAddress);
         ensureNonzeroAddress(to);
 
@@ -137,7 +141,11 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @param amount Amount transferred for the pool
     /// @custom:event PoolStateUpdated emits on success
     /// @custom:error InvalidRiskFundConverter is thrown if caller is not riskFundConverter contract
-    function updatePoolState(address comptroller, address asset, uint256 amount) public {
+    function updatePoolState(
+        address comptroller,
+        address asset,
+        uint256 amount
+    ) public {
         if (msg.sender != riskFundConverter) {
             revert InvalidRiskFundConverter();
         }
@@ -184,7 +192,12 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @param amount Amount transferred to address(to)
     /// @param poolShare share for corresponding pool
     /// @custom:event PoolStateUpdated emits on success
-    function updatePoolAssetsReserve(address pool, address tokenAddress, uint256 amount, uint256 poolShare) internal {
+    function updatePoolAssetsReserve(
+        address pool,
+        address tokenAddress,
+        uint256 amount,
+        uint256 poolShare
+    ) internal {
         uint256 poolAmountShare = (poolShare * amount) / EXP_SCALE;
         poolAssetsFunds[pool][tokenAddress] -= poolAmountShare;
         emit PoolStateUpdated(pool, tokenAddress, poolAmountShare);

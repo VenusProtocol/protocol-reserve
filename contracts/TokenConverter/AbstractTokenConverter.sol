@@ -348,7 +348,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @custom:event Emits SweepToken event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/to address is zero
     /// @custom:access Only Governance
-    function sweepToken(address tokenAddress, address to, uint256 amount) external onlyOwner nonReentrant {
+    function sweepToken(
+        address tokenAddress,
+        address to,
+        uint256 amount
+    ) external onlyOwner nonReentrant {
         ensureNonzeroAddress(tokenAddress);
         ensureNonzeroAddress(to);
 
@@ -661,10 +665,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
     /// @param priceOracle_ Resilient oracle address
     /// @param destinationAddress_  Address at all incoming tokens will transferred to
-    function __AbstractTokenConverter_init_unchained(
-        ResilientOracle priceOracle_,
-        address destinationAddress_
-    ) internal onlyInitializing {
+    function __AbstractTokenConverter_init_unchained(ResilientOracle priceOracle_, address destinationAddress_)
+        internal
+        onlyInitializing
+    {
         _setPriceOracle(priceOracle_);
         _setDestination(destinationAddress_);
         conversionPaused = false;

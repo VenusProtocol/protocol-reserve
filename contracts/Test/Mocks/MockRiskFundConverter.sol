@@ -23,7 +23,11 @@ contract MockRiskFundConverter is RiskFundConverter {
         assetsReserves[asset] = amount;
     }
 
-    function setPoolsAssetsReserves(address comptroller, address asset, uint256 amount) external {
+    function setPoolsAssetsReserves(
+        address comptroller,
+        address asset,
+        uint256 amount
+    ) external {
         poolsAssetsReserves[comptroller][asset] = amount;
     }
 

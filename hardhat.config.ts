@@ -1,19 +1,18 @@
+import "module-alias/register";
+
 import "@nomicfoundation/hardhat-chai-matchers";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-etherscan";
 import "@openzeppelin/hardhat-upgrades";
 import "@typechain/hardhat";
-import { ethers } from "ethers";
 import "hardhat-deploy";
-import { HardhatUserConfig, task } from "hardhat/config";
+import "hardhat-gas-reporter";
+import "solidity-coverage";
 import "solidity-docgen";
 
 //eslint-disable-next-line @typescript-eslint/no-var-requires
 require("dotenv").config();
-
-const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY;
-const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
 
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   const accounts = await hre.ethers.getSigners();
@@ -81,22 +80,51 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: isFork(),
     bsctestnet: {
-      url: process.env.BSC_TESTNET_NODE || "https://data-seed-prebsc-1-s1.binance.org:8545",
+      url: process.env.BSC_TESTNET_NODE || "https://data-seed-prebsc-2-s3.binance.org:8545/",
       chainId: 97,
       accounts: {
         mnemonic: process.env.MNEMONIC || "",
       },
-      gasPrice: ethers.utils.parseUnits("10", "gwei").toNumber(),
       gasMultiplier: 10,
       timeout: 12000000,
     },
     bscmainnet: {
       url: process.env.BSC_MAINNET_NODE || "https://bsc-dataseed.binance.org/",
-      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+      gasMultiplier: 10,
+      accounts: {
+        mnemonic: process.env.MNEMONIC || "",
+      },
+    },
+    sepolia: {
+      url: "https://rpc.notadegen.com/eth/sepolia",
+      chainId: 11155111,
+      gasPrice: 20000000000,
+      accounts: process.env.PRIVATE_KEY ? [`0x${process.env.PRIVATE_KEY}`] : [],
     },
   },
   etherscan: {
-    apiKey: BSCSCAN_API_KEY,
+    apiKey: {
+      bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      bsctestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+    },
+    customChains: [
+      {
+        network: "bscmainnet",
+        chainId: 56,
+        urls: {
+          apiURL: "https://api.bscscan.com/api",
+          browserURL: "https://bscscan.com",
+        },
+      },
+      {
+        network: "bsctestnet",
+        chainId: 97,
+        urls: {
+          apiURL: "https://api-testnet.bscscan.com/api",
+          browserURL: "https://testnet.bscscan.com",
+        },
+      },
+    ],
   },
   paths: {
     sources: "./contracts",
