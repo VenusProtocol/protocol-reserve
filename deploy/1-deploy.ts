@@ -6,14 +6,14 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 const ADDRESSES: any = {
   bsctestnet: {
     vBNBAddress: testnetDeployments.Contracts.vBNB,
-    comptroller: testnetDeployments.Contracts.Comptroller,
+    comptroller: testnetDeployments.Contracts.Unitroller,
     WBNBAddress: "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd",
     timelock: testnetDeployments.Contracts.Timelock,
     acm: "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA",
   },
   bscmainnet: {
     vBNBAddress: mainnetDeployments.Contracts.vBNB,
-    comptroller: mainnetDeployments.Contracts.Comptroller,
+    comptroller: mainnetDeployments.Contracts.Unitroller,
     WBNBAddress: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
     timelock: mainnetDeployments.Contracts.Timelock,
     acm: "0x4788629ABc6cFCA10F9f969efdEAa1cF70c23555",
