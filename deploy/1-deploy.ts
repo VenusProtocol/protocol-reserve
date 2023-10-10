@@ -43,7 +43,7 @@ module.exports = async ({ getNamedAccounts, deployments, network }: HardhatRunti
     args: [comptroller, WBNBAddress, vBNBAddress],
     proxy: {
       owner: timelock,
-      proxyContract: "OptimizedTransparentProxy",
+      proxyContract: "OpenZeppelinTransparentProxy",
       execute: {
         methodName: "initialize",
         args: [acm, loopsLimit],
