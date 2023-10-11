@@ -84,6 +84,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Thrown when conversion is disabled or config does not exist for given pair
     error ConversionConfigNotEnabled();
 
+    /// @notice Thrown when address(to) is same as tokenAddressIn or tokenAddressOut
+    error InvalidToAddress();
+
     /// @notice Thrown when incentive is higher than the MAX_INCENTIVE
     error IncentiveTooHigh(uint256 incentive, uint256 maxIncentive);
 
@@ -191,6 +194,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
     /// @custom:event Emits ConvertedExactTokens event on success
+    /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
     /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
     /// @custom:error AmountInOrAmountOutMismatched error is thrown when Amount of tokenAddressIn or tokenAddressOut is lower than expected after transfer
     function convertExactTokens(
@@ -201,6 +205,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address to
     ) external nonReentrant {
         _checkConversionPaused();
+        if (to == tokenAddressIn || to == tokenAddressOut) {
+            revert InvalidToAddress();
+        }
+
         uint256 actualAmountIn;
         uint256 amountConvertedMantissa;
         uint256 actualAmountOut;
@@ -237,6 +245,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
     /// @custom:event Emits ConvertedForExactTokens event on success
+    /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
     /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
     /// @custom:error AmountInOrAmountOutMismatched error is thrown when Amount of tokenAddressIn or tokenAddressOut is lower than expected after transfer
     function convertForExactTokens(
@@ -247,6 +256,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address to
     ) external nonReentrant {
         _checkConversionPaused();
+        if (to == tokenAddressIn || to == tokenAddressOut) {
+            revert InvalidToAddress();
+        }
+
         uint256 actualAmountIn;
         uint256 amountInMantissa;
         uint256 actualAmountOut;
@@ -282,6 +295,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
     /// @custom:event Emits ConvertedExactTokensSupportingFeeOnTransferTokens event on success
+    /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
     /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
     function convertExactTokensSupportingFeeOnTransferTokens(
         uint256 amountInMantissa,
@@ -291,6 +305,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address to
     ) external nonReentrant {
         _checkConversionPaused();
+        if (to == tokenAddressIn || to == tokenAddressOut) {
+            revert InvalidToAddress();
+        }
+
         uint256 actualAmountIn;
         uint256 amountConvertedMantissa;
         uint256 actualAmountOut;
@@ -317,6 +335,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
     /// @custom:event Emits ConvertedForExactTokensSupportingFeeOnTransferTokens event on success
+    /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
     /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
     function convertForExactTokensSupportingFeeOnTransferTokens(
         uint256 amountInMaxMantissa,
@@ -326,6 +345,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address to
     ) external nonReentrant {
         _checkConversionPaused();
+        if (to == tokenAddressIn || to == tokenAddressOut) {
+            revert InvalidToAddress();
+        }
+
         uint256 actualAmountIn;
         uint256 amountInMantissa;
         uint256 actualAmountOut;

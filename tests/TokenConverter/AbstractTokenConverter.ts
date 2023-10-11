@@ -138,6 +138,20 @@ describe("MockConverter: tests", () => {
         ),
       ).to.be.revertedWithCustomError(converter, "AmountInOrAmountOutMismatched");
     });
+
+    it("Revert when address(to) is same as tokenAddressIn or tokenAddressOut", async () => {
+      await converter.setConversionConfig(tokenIn.address, tokenOut.address, ConversionConfig);
+
+      await expect(
+        converter.convertForExactTokens(
+          convertToUnit(".5", 18),
+          convertToUnit("1.5", 18),
+          tokenIn.address,
+          tokenOut.address,
+          tokenIn.address,
+        ),
+      ).to.be.revertedWithCustomError(converter, "InvalidToAddress");
+    });
   });
 
   describe("Convert exact tokens for tokens", async () => {
@@ -206,6 +220,20 @@ describe("MockConverter: tests", () => {
         ),
       ).to.be.revertedWithCustomError(converter, "AmountInOrAmountOutMismatched");
     });
+
+    it("Revert when address(to) is same as tokenAddressIn or tokenAddressOut", async () => {
+      await converter.setConversionConfig(tokenIn.address, tokenOut.address, ConversionConfig);
+
+      await expect(
+        converter.convertExactTokens(
+          convertToUnit(".5", 18),
+          convertToUnit("1.5", 18),
+          tokenIn.address,
+          tokenOut.address,
+          tokenIn.address,
+        ),
+      ).to.be.revertedWithCustomError(converter, "InvalidToAddress");
+    });
   });
 
   describe("Convert exact tokens for tokens with supporting fee", async () => {
@@ -230,6 +258,20 @@ describe("MockConverter: tests", () => {
           await to.getAddress(),
         ),
       ).to.be.revertedWithCustomError(converter, "AmountOutLowerThanMinRequired");
+    });
+
+    it("Revert when address(to) is same as tokenAddressIn or tokenAddressOut", async () => {
+      await converter.setConversionConfig(tokenIn.address, tokenOut.address, ConversionConfig);
+
+      await expect(
+        converter.convertExactTokensSupportingFeeOnTransferTokens(
+          convertToUnit(".5", 18),
+          convertToUnit("1.5", 18),
+          tokenIn.address,
+          tokenOut.address,
+          tokenIn.address,
+        ),
+      ).to.be.revertedWithCustomError(converter, "InvalidToAddress");
     });
 
     it("Success on convert exact tokens with supporting fee", async () => {
@@ -288,6 +330,20 @@ describe("MockConverter: tests", () => {
           await to.getAddress(),
         ),
       ).to.be.revertedWithCustomError(converter, "AmountInHigherThanMax");
+    });
+
+    it("Revert when address(to) is same as tokenAddressIn or tokenAddressOut", async () => {
+      await converter.setConversionConfig(tokenIn.address, tokenOut.address, ConversionConfig);
+
+      await expect(
+        converter.convertForExactTokensSupportingFeeOnTransferTokens(
+          convertToUnit(".5", 18),
+          convertToUnit("1.5", 18),
+          tokenIn.address,
+          tokenOut.address,
+          tokenIn.address,
+        ),
+      ).to.be.revertedWithCustomError(converter, "InvalidToAddress");
     });
 
     it("Success on convert exact tokens with supporting fee", async () => {
