@@ -33,8 +33,11 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @notice Emitted when reserves are transferred for auction
     event TransferredReserveForAuction(address indexed comptroller, uint256 amount);
 
-    /// @notice Emitted when pool states is updated with amount transferred to this contract
-    event PoolStateUpdated(address indexed comptroller, address indexed asset, uint256 amount);
+    /// @notice Emitted when pool asset states is updated with amount transferred to this contract
+    event PoolAssetsIncreased(address indexed comptroller, address indexed asset, uint256 amount);
+
+    /// @notice Emitted when pool asset states is updated with amount transferred from this contract on sweeping tokens
+    event PoolAssetsDecreased(address indexed comptroller, address indexed asset, uint256 amount);
 
     /// @notice Event emitted when tokens are swept
     event SweepToken(address indexed token, address indexed to, uint256 amount);
@@ -143,7 +146,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @param comptroller Comptroller address (pool)
     /// @param asset Address of the asset(token)
     /// @param amount Amount transferred for the pool
-    /// @custom:event PoolStateUpdated emits on success
+    /// @custom:event PoolAssetsIncreased emits on success
     /// @custom:error InvalidRiskFundConverter is thrown if caller is not riskFundConverter contract
     /// @custom:access Only RiskFundConverter contract
     function updatePoolState(
@@ -156,7 +159,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
         }
 
         poolAssetsFunds[comptroller][asset] += amount;
-        emit PoolStateUpdated(comptroller, asset, amount);
+        emit PoolAssetsIncreased(comptroller, asset, amount);
     }
 
     /// @notice Operations to perform after sweepToken
@@ -196,7 +199,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @param tokenAddress Address of the token
     /// @param amount Amount of reserves that should be transferred to address(to)
     /// @param poolShare share for corresponding pool
-    /// @custom:event PoolStateUpdated emits on success
+    /// @custom:event PoolAssetsDecreased emits on success
     function updatePoolAssetsReserve(
         address pool,
         address tokenAddress,
@@ -205,6 +208,6 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     ) internal {
         uint256 poolAmountShare = (poolShare * amount) / EXP_SCALE;
         poolAssetsFunds[pool][tokenAddress] -= poolAmountShare;
-        emit PoolStateUpdated(pool, tokenAddress, poolAmountShare);
+        emit PoolAssetsDecreased(pool, tokenAddress, poolAmountShare);
     }
 }
