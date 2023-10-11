@@ -100,7 +100,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
         address comptroller,
         address bidder,
         uint256 amount
-    ) external override returns (uint256) {
+    ) external override nonReentrant returns (uint256) {
         uint256 poolReserve = poolAssetsFunds[comptroller][convertibleBaseAsset];
 
         if (msg.sender != shortfall) {

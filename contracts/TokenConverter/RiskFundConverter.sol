@@ -158,7 +158,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param asset Asset address
     /// @custom:event AssetTransferredToDestination emits when poolsAssetsDirectTransfer is enabled for entered comptroller and asset
     /// @custom:event AssetsReservesUpdated emits when poolsAssetsDirectTransfer is not enabled for entered comptroller and asset
-    function updateAssetsState(address comptroller, address asset) public {
+    function updateAssetsState(address comptroller, address asset) public nonReentrant {
         require(IComptroller(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         ensureNonzeroAddress(asset);
 

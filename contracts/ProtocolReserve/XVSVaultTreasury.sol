@@ -4,6 +4,7 @@ pragma solidity 0.8.13;
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 import { IXVSVault } from "../Interfaces/IXVSVault.sol";
@@ -12,7 +13,7 @@ import { IXVSVault } from "../Interfaces/IXVSVault.sol";
 /// @author Venus
 /// @notice XVSVaultTreasury stores the tokens sent by XVSVaultConverter and funds XVSVault
 /// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
-contract XVSVaultTreasury is AccessControlledV8 {
+contract XVSVaultTreasury is AccessControlledV8, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice The xvs token address
@@ -53,7 +54,7 @@ contract XVSVaultTreasury is AccessControlledV8 {
     /// @custom:error ZeroAddressNotAllowed is thrown when XVS vault address is zero
     function initialize(address accessControlManager_, address xvsVault_) public virtual initializer {
         __AccessControlled_init(accessControlManager_);
-
+        __ReentrancyGuard_init();
         _setXVSVault(xvsVault_);
     }
 
@@ -70,7 +71,7 @@ contract XVSVaultTreasury is AccessControlledV8 {
     /// @custom:event FundsTransferredToXVSStore emits on success
     /// @custom:error InsufficientBalance is thrown when amount entered is greater than balance
     /// @custom:access Restricted by ACM
-    function fundXVSVault(uint256 amountMantissa) external {
+    function fundXVSVault(uint256 amountMantissa) external nonReentrant {
         _checkAccessAllowed("fundXVSVault(uint256)");
 
         uint256 balance = IERC20Upgradeable(XVS_ADDRESS).balanceOf(address(this));
