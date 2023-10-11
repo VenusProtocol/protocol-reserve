@@ -73,7 +73,15 @@ async function fixture(): Promise<void> {
 
   converter = await upgrades.deployProxy(
     converterFactory,
-    [accessControl.address, oracle.address, riskFund.address, poolRegistry.address],
+    [
+      accessControl.address,
+      oracle.address,
+      riskFund.address,
+      poolRegistry.address,
+      [poolA.address],
+      [[tokenIn.address]],
+      [[true]],
+    ],
     {
       Contract: converterFactory,
       initializer: "initialize",

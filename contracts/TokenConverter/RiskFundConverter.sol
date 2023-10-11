@@ -96,16 +96,24 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param priceOracle_ Resilient oracle address
     /// @param destinationAddress_  Address at all incoming tokens will transferred to
     /// @param poolRegistry_ Address of the pool registry
+    /// @param comptrollers Addresses of the pools
+    /// @param assets Addresses of the assets need to be added for direct transfer
+    /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
+    /// @custom:event PoolAssetsDirectTransferUpdated emits on success
     function initialize(
         address accessControlManager_,
         ResilientOracle priceOracle_,
         address destinationAddress_,
-        address poolRegistry_
+        address poolRegistry_,
+        address[] calldata comptrollers,
+        address[][] calldata assets,
+        bool[][] calldata values
     ) public initializer {
         // Initialize AbstractTokenConverter
         __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
         ensureNonzeroAddress(poolRegistry_);
         poolRegistry = poolRegistry_;
+        _setPoolsAssetsDirectTransfer(comptrollers, assets, values);
     }
 
     /// @dev Pool registry setter
@@ -124,7 +132,6 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param assets Addresses of the assets need to be added for direct transfer
     /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
     /// @custom:event PoolAssetsDirectTransferUpdated emits on success
-    /// @custom:error InvalidArguments thrown when comptrollers array length is not equal to assets array length
     /// @custom:access Restricted by ACM
     function setPoolsAssetsDirectTransfer(
         address[] calldata comptrollers,
@@ -132,26 +139,7 @@ contract RiskFundConverter is AbstractTokenConverter {
         bool[][] calldata values
     ) external {
         _checkAccessAllowed("setPoolsAssetsDirectTransfer(address[],address[][],bool[][])");
-
-        uint256 comptrollersLength = comptrollers.length;
-
-        if ((comptrollersLength != assets.length) || (comptrollersLength != values.length)) {
-            revert InvalidArguments();
-        }
-
-        for (uint256 i; i < comptrollersLength; ++i) {
-            address[] memory poolAssets = assets[i];
-            bool[] memory assetsValues = values[i];
-
-            if (poolAssets.length != assetsValues.length) {
-                revert InvalidArguments();
-            }
-
-            for (uint256 j; j < poolAssets.length; ++j) {
-                poolsAssetsDirectTransfer[comptrollers[i]][poolAssets[j]] = assetsValues[j];
-                emit PoolAssetsDirectTransferUpdated(comptrollers[i], poolAssets[j], assetsValues[j]);
-            }
-        }
+        _setPoolsAssetsDirectTransfer(comptrollers, assets, values);
     }
 
     /// @dev Get the Amount of the asset in the risk fund for the specific pool
@@ -298,6 +286,38 @@ contract RiskFundConverter is AbstractTokenConverter {
         uint256 poolAmountShare = (poolShare * amount) / EXP_SCALE;
         poolsAssetsReserves[pool][tokenAddress] -= poolAmountShare;
         emit AssetsReservesUpdated(pool, tokenAddress, poolAmountShare);
+    }
+
+    /// @notice Update the poolsAssetsDirectTransfer mapping
+    /// @param comptrollers Addresses of the pools
+    /// @param assets Addresses of the assets need to be added for direct transfer
+    /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
+    /// @custom:event PoolAssetsDirectTransferUpdated emits on success
+    /// @custom:error InvalidArguments thrown when comptrollers array length is not equal to assets array length
+    function _setPoolsAssetsDirectTransfer(
+        address[] calldata comptrollers,
+        address[][] calldata assets,
+        bool[][] calldata values
+    ) internal {
+        uint256 comptrollersLength = comptrollers.length;
+
+        if ((comptrollersLength != assets.length) || (comptrollersLength != values.length)) {
+            revert InvalidArguments();
+        }
+
+        for (uint256 i; i < comptrollersLength; ++i) {
+            address[] memory poolAssets = assets[i];
+            bool[] memory assetsValues = values[i];
+
+            if (poolAssets.length != assetsValues.length) {
+                revert InvalidArguments();
+            }
+
+            for (uint256 j; j < poolAssets.length; ++j) {
+                poolsAssetsDirectTransfer[comptrollers[i]][poolAssets[j]] = assetsValues[j];
+                emit PoolAssetsDirectTransferUpdated(comptrollers[i], poolAssets[j], assetsValues[j]);
+            }
+        }
     }
 
     /// @notice This function checks for the given asset is listed in core pool or not
