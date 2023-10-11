@@ -25,7 +25,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     address public immutable CORE_POOL_COMPTROLLER;
 
     ///@notice Address of the vBNB
-    ///@dev This address is used to exclude the BNB market while in getPools method
+    ///@dev This address is used to include the BNB market while in getPools method
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable VBNB;
 
@@ -43,7 +43,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @notice Address of pool registry contract
     address public poolRegistry;
 
-    /// @notice This mapping would contain the assets for the pool which would be send to RiskFund directly
+    /// @notice The mapping contains the assets for each pool which are sent to RiskFund directly
     /// @dev Comptroller(pool) -> Asset -> bool(should transfer directly on true)
     mapping(address => mapping(address => bool)) public poolsAssetsDirectTransfer;
 

@@ -54,7 +54,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @dev Convertible base asset setter
     /// @param convertibleBaseAsset_ Address of the convertible base asset
     /// @custom:event ConvertibleBaseAssetUpdated emit on success
-    /// @custom:error ZeroAddressNotAllowed is thrown when risk fund converter address is zero
+    /// @custom:error ZeroAddressNotAllowed is thrown when convertible base asset address is zero
     /// @custom:access Only Governance
     function setConvertibleBaseAsset(address convertibleBaseAsset_) external onlyOwner {
         ensureNonzeroAddress(convertibleBaseAsset_);
@@ -86,11 +86,11 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
 
     /// @dev Transfer tokens for auction
     /// @param comptroller Comptroller of the pool
-    /// @param bidder Amount transferred to bidder address
-    /// @param amount Amount to be transferred to auction contract
-    /// @return Number reserved tokens.
+    /// @param bidder Address to which amount will be transferred
+    /// @param amount Amount to be transferred to the bidder
+    /// @return Amount of tokens transferred to the bidder
     /// @custom:event TransferredReserveForAuction emit on success
-    /// @custom:error InvalidShortfallAddress is thrown on invalid shortfall address
+    /// @custom:error InvalidShortfallAddress is thrown when caller is not shortfall contract
     /// @custom:error InsufficientPoolReserve is thrown when pool reserve is less than the amount needed
     /// @custom:access Only Shortfall contract
     function transferReserveForAuction(
@@ -117,7 +117,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
         return amount;
     }
 
-    /// @notice Function to sweep baseAsset for pool, Tokens are sent to admin (timelock)
+    /// @notice Function to sweep baseAsset for pool, Tokens are sent to address(to)
     /// @param tokenAddress Address of the asset(token)
     /// @param to Address to which assets will be transferred
     /// @param amount Amount need to sweep for the pool
@@ -194,7 +194,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @notice Update the poolAssetsReserves upon transferring the tokens
     /// @param pool Address of the pool
     /// @param tokenAddress Address of the token
-    /// @param amount Amount transferred to address(to)
+    /// @param amount Amount of reserves that should be transferred to address(to)
     /// @param poolShare share for corresponding pool
     /// @custom:event PoolStateUpdated emits on success
     function updatePoolAssetsReserve(

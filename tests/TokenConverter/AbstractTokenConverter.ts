@@ -104,7 +104,7 @@ describe("MockConverter: tests", () => {
 
       await tx.wait();
 
-      await expect(tx).to.emit(converter, "ConvertForExactTokens").withArgs(expectedResults[1], expectedResults[0]);
+      await expect(tx).to.emit(converter, "ConvertedForExactTokens").withArgs(expectedResults[1], expectedResults[0]);
     });
 
     it("Revert on lower amount out than expected", async () => {
@@ -172,7 +172,7 @@ describe("MockConverter: tests", () => {
 
       await tx.wait();
 
-      await expect(tx).to.emit(converter, "ConvertExactTokens").withArgs(expectedResults[0], expectedResults[1]);
+      await expect(tx).to.emit(converter, "ConvertedExactTokens").withArgs(expectedResults[0], expectedResults[1]);
     });
 
     it("Revert on lower amount out than expected", async () => {
@@ -261,7 +261,7 @@ describe("MockConverter: tests", () => {
           await to.getAddress(),
         ),
       )
-        .to.emit(converter, "ConvertExactTokensSupportingFeeOnTransferTokens")
+        .to.emit(converter, "ConvertedExactTokensSupportingFeeOnTransferTokens")
         .withArgs(amountTransferredAfterFees, expectedResults[1]);
     });
   });
@@ -315,7 +315,7 @@ describe("MockConverter: tests", () => {
           await to.getAddress(),
         ),
       )
-        .to.emit(converter, "ConvertForExactTokensSupportingFeeOnTransferTokens")
+        .to.emit(converter, "ConvertedForExactTokensSupportingFeeOnTransferTokens")
         .withArgs(amountTransferredAfterFees, expectedResults[0]);
     });
   });
@@ -358,7 +358,7 @@ describe("MockConverter: tests", () => {
     });
 
     it("Set converter config for first time", async () => {
-      let isExist = await converter.convertConfigurations(tokenIn.address, tokenOut.address);
+      let isExist = await converter.conversionConfigurations(tokenIn.address, tokenOut.address);
 
       expect(isExist[0]).to.equal(0);
       expect(isExist[1]).to.equal(false);
@@ -367,7 +367,7 @@ describe("MockConverter: tests", () => {
         .to.emit(converter, "ConversionConfigUpdated")
         .withArgs(tokenIn.address, tokenOut.address, 0, INCENTIVE, false, true);
 
-      isExist = await converter.convertConfigurations(tokenIn.address, tokenOut.address);
+      isExist = await converter.conversionConfigurations(tokenIn.address, tokenOut.address);
 
       expect(isExist[0]).to.equal(INCENTIVE);
       expect(isExist[1]).to.equal(true);
@@ -387,7 +387,7 @@ describe("MockConverter: tests", () => {
         .to.emit(converter, "ConversionConfigUpdated")
         .withArgs(tokenIn.address, tokenOut.address, INCENTIVE, NEW_INCENTIVE, true, true);
 
-      const isExist = await converter.convertConfigurations(tokenIn.address, tokenOut.address);
+      const isExist = await converter.conversionConfigurations(tokenIn.address, tokenOut.address);
       expect(isExist[0]).to.equal(NEW_INCENTIVE);
     });
   });

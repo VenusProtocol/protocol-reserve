@@ -26,12 +26,12 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
     /// @notice conversion configurations for the existing pairs
     /// @dev tokenAddressIn => tokenAddressOut => ConversionConfig
-    mapping(address => mapping(address => ConversionConfig)) public convertConfigurations;
+    mapping(address => mapping(address => ConversionConfig)) public conversionConfigurations;
 
-    /// @notice Address at all incoming tokens are transferred to
+    /// @notice Address that all incoming tokens are transferred to
     address public destinationAddress;
 
-    /// @notice Boolean of if convert is paused
+    /// @notice Boolean for if conversion is paused
     bool public conversionPaused;
 
     /// @dev This empty reserved space is put in place to allow future versions to add new
@@ -54,17 +54,17 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Emitted when destination address is updated
     event DestinationAddressUpdated(address oldDestinationAddress, address indexed destinationAddress);
 
-    /// @notice Emitted when exact amount of tokens are convert for tokens
-    event ConvertExactTokens(uint256 amountIn, uint256 amountOut);
+    /// @notice Emitted when exact amount of tokens are converted for tokens
+    event ConvertedExactTokens(uint256 amountIn, uint256 amountOut);
 
-    /// @notice Emitted when tokens are convert for exact amount of tokens
-    event ConvertForExactTokens(uint256 amountIn, uint256 amountOut);
+    /// @notice Emitted when tokens are converted for exact amount of tokens
+    event ConvertedForExactTokens(uint256 amountIn, uint256 amountOut);
 
-    /// @notice Emitted when exact amount of tokens are convert for tokens, for deflationary tokens
-    event ConvertExactTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOut);
+    /// @notice Emitted when exact amount of tokens are converted for tokens, for deflationary tokens
+    event ConvertedExactTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOut);
 
-    /// @notice Emitted when tokens are convert for exact amount of tokens, for deflationary tokens
-    event ConvertForExactTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOut);
+    /// @notice Emitted when tokens are converted for exact amount of tokens, for deflationary tokens
+    event ConvertedForExactTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOut);
 
     /// @notice Emitted when conversion is paused
     event ConversionPaused(address indexed sender);
@@ -109,7 +109,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
     /// @notice Pause conversion of tokens
     /// @custom:event Emits ConversionPaused on success
-    /// @custom:error ConversionTokensPaused thrown when convert is already paused
+    /// @custom:error ConversionTokensPaused thrown when conversion is already paused
     /// @custom:access Restricted by ACM
     function pauseConversion() external {
         _checkAccessAllowed("pauseConversion()");
@@ -120,7 +120,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
     /// @notice Resume conversion of tokens.
     /// @custom:event Emits ConversionResumed on success
-    /// @custom:error ConversionTokensActive thrown when convert is already active
+    /// @custom:error ConversionTokensActive thrown when conversion is already active
     /// @custom:access Restricted by ACM
     function resumeConversion() external {
         _checkAccessAllowed("resumeConversion()");
@@ -146,7 +146,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         _setDestination(destinationAddress_);
     }
 
-    /// @notice Set the configuration for new or existing convert pair
+    /// @notice Set the configuration for new or existing conversion pair
     /// @param tokenAddressIn Address of tokenIn
     /// @param tokenAddressOut Address of tokenOut
     /// @param conversionConfig ConversionConfig config details to update
@@ -167,7 +167,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             revert IncentiveTooHigh(conversionConfig.incentive, MAX_INCENTIVE);
         }
 
-        ConversionConfig storage configuration = convertConfigurations[tokenAddressIn][tokenAddressOut];
+        ConversionConfig storage configuration = conversionConfigurations[tokenAddressIn][tokenAddressOut];
 
         emit ConversionConfigUpdated(
             tokenAddressIn,
@@ -182,16 +182,17 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         configuration.enabled = conversionConfig.enabled;
     }
 
-    /// @notice Convert exact amount of tokenAddressIn for tokenAddressOut
+    /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut if there is enough tokens held by the contract,
+    ///         otherwise the amount is adjusted
     /// @dev Method does not support deflationary tokens transfer
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param amountOutMinMantissa Min amount of tokenAddressOut required as output
     /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after convert
+    /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
-    /// @custom:event Emits ConvertExactTokens event on success
+    /// @custom:event Emits ConvertedExactTokens event on success
     /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
-    /// @custom:error AmountInOrAmountOutMismatched error is thrown when Amount of tokenAddressIn or tokenAddressOut is lower than expected fater transfer
+    /// @custom:error AmountInOrAmountOutMismatched error is thrown when Amount of tokenAddressIn or tokenAddressOut is lower than expected after transfer
     function convertExactTokens(
         uint256 amountInMantissa,
         uint256 amountOutMinMantissa,
@@ -224,17 +225,18 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
 
-        emit ConvertExactTokens(actualAmountIn, actualAmountOut);
+        emit ConvertedExactTokens(actualAmountIn, actualAmountOut);
     }
 
-    /// @notice Convert tokens for tokenAddressIn for exact amount of tokenAddressOut
+    /// @notice Converts tokens for tokenAddressIn for exact amount of tokenAddressOut if there is enough tokens held by the contract,
+    ///         otherwise the amount is adjusted
     /// @dev Method does not support deflationary tokens transfer
     /// @param amountInMaxMantissa Max amount of tokenAddressIn
     /// @param amountOutMantissa Amount of tokenAddressOut required as output
     /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after convert
+    /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
-    /// @custom:event Emits ConvertForExactTokens event on success
+    /// @custom:event Emits ConvertedForExactTokens event on success
     /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
     /// @custom:error AmountInOrAmountOutMismatched error is thrown when Amount of tokenAddressIn or tokenAddressOut is lower than expected after transfer
     function convertForExactTokens(
@@ -269,16 +271,17 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
 
-        emit ConvertForExactTokens(actualAmountIn, actualAmountOut);
+        emit ConvertedForExactTokens(actualAmountIn, actualAmountOut);
     }
 
-    /// @notice Convert exact amount of tokenAddressIn for tokenAddressOut
+    /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut if there is enough tokens held by the contract,
+    ///         otherwise the amount is adjusted
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param amountOutMinMantissa Min amount of tokenAddressOut required as output
     /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after convert
+    /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
-    /// @custom:event Emits ConvertExactTokensSupportingFeeOnTransferTokens event on success
+    /// @custom:event Emits ConvertedExactTokensSupportingFeeOnTransferTokens event on success
     /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
     function convertExactTokensSupportingFeeOnTransferTokens(
         uint256 amountInMantissa,
@@ -303,16 +306,17 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
 
-        emit ConvertExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
+        emit ConvertedExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
 
-    /// @notice Convert tokens for tokenAddressIn for exact amount of tokenAddressOut
+    /// @notice Converts tokens for tokenAddressIn for exact amount of tokenAddressOut if there is enough tokens held by the contract,
+    ///         otherwise the amount is adjusted
     /// @param amountInMaxMantissa Max amount of tokenAddressIn
     /// @param amountOutMantissa Amount of tokenAddressOut required as output
     /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after convert
+    /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
-    /// @custom:event Emits ConvertForExactTokensSupportingFeeOnTransferTokens event on success
+    /// @custom:event Emits ConvertedForExactTokensSupportingFeeOnTransferTokens event on success
     /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
     function convertForExactTokensSupportingFeeOnTransferTokens(
         uint256 amountInMaxMantissa,
@@ -337,7 +341,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
 
-        emit ConvertForExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
+        emit ConvertedForExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
 
     /// @notice To sweep ERC20 tokens and transfer them to user(to address)
@@ -365,11 +369,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after convert
-    /// @return amountConvertedMantissa Amount of tokenAddressIn should be transferred after convert
-    /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @return amountConvertedMantissa Amount of tokenAddressIn should be transferred after conversion
+    /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after conversion
     /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
-    /// @custom:error ConversionConfigNotEnabled is thrown when convert is disabled or config does not exist for given pair
+    /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
     function getUpdatedAmountOut(
         uint256 amountInMantissa,
         address tokenAddressIn,
@@ -383,11 +387,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
     /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
     /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after convert
-    /// @return amountConvertedMantissa Amount of tokenAddressOut should be transferred after convert
-    /// @return amountInMantissa Amount of the tokenAddressIn sender would send to contract before convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @return amountConvertedMantissa Amount of tokenAddressOut should be transferred after conversion
+    /// @return amountInMantissa Amount of the tokenAddressIn sender would send to contract before conversion
     /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
-    /// @custom:error ConversionConfigNotEnabled is thrown when convert is disabled or config does not exist for given pair
+    /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
     function getUpdatedAmountIn(
         uint256 amountOutMantissa,
         address tokenAddressIn,
@@ -402,11 +406,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @dev This function retrieves values without altering token prices.
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after convert
-    /// @return amountConvertedMantissa Amount of tokenAddressIn should be transferred after convert
-    /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @return amountConvertedMantissa Amount of tokenAddressIn should be transferred after conversion
+    /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after conversion
     /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
-    /// @custom:error ConversionConfigNotEnabled is thrown when convert is disabled or config does not exist for given pair
+    /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
     function getAmountOut(
         uint256 amountInMantissa,
         address tokenAddressIn,
@@ -416,7 +420,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             revert InsufficientInputAmount();
         }
 
-        ConversionConfig memory configuration = convertConfigurations[tokenAddressIn][tokenAddressOut];
+        ConversionConfig memory configuration = conversionConfigurations[tokenAddressIn][tokenAddressOut];
 
         if (!configuration.enabled) {
             revert ConversionConfigNotEnabled();
@@ -447,11 +451,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @dev This function retrieves values without altering token prices.
     /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
     /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after convert
-    /// @return amountConvertedMantissa Amount of tokenAddressOut should be transferred after convert
-    /// @return amountInMantissa Amount of the tokenAddressIn sender would send to contract before convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @return amountConvertedMantissa Amount of tokenAddressOut should be transferred after conversion
+    /// @return amountInMantissa Amount of the tokenAddressIn sender would send to contract before conversion
     /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
-    /// @custom:error ConversionConfigNotEnabled is thrown when convert is disabled or config does not exist for given pair
+    /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
     function getAmountIn(
         uint256 amountOutMantissa,
         address tokenAddressIn,
@@ -461,7 +465,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             revert InsufficientOutputAmount();
         }
 
-        ConversionConfig memory configuration = convertConfigurations[tokenAddressIn][tokenAddressOut];
+        ConversionConfig memory configuration = conversionConfigurations[tokenAddressIn][tokenAddressOut];
 
         if (!configuration.enabled) {
             revert ConversionConfigNotEnabled();
@@ -496,11 +500,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param amount Amount transferred to address(to)
     function postSweepToken(address token, uint256 amount) internal virtual {}
 
-    /// @notice Convert exact amount of tokenAddressIn for tokenAddressOut
+    /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param amountOutMinMantissa Min amount of tokenAddressOut required as output
     /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after convert
+    /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
     /// @return actualAmountIn Actual amount of tokenAddressIn transferred
     /// @return amountConvertedMantissa Amount of tokenAddressIn supposed to get transferred
@@ -540,11 +544,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         );
     }
 
-    /// @notice Convert tokens for tokenAddressIn for exact amount of tokenAddressOut
+    /// @notice Converts tokens for tokenAddressIn for exact amount of tokenAddressOut
     /// @param amountInMaxMantissa Max amount of tokenAddressIn
     /// @param amountOutMantissa Amount of tokenAddressOut required as output
     /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after convert
+    /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
     /// @return actualAmountIn Actual amount of tokenAddressIn transferred
     /// @return amountInMantissa Amount of tokenAddressIn supposed to get transferred
@@ -586,7 +590,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
     /// @notice return actualAmounts from reserves for tokenAddressIn and tokenAddressOut
     /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after convert
+    /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
     /// @param amountInMantissa Amount of tokenAddressIn supposed to get transferred
     /// @param amountConvertedMantissa Amount of tokenAddressOut supposed to get transferred
@@ -634,12 +638,12 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     }
 
     /// @notice Hook to perform after converting tokens
-    /// @param tokenInAddress Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after convert
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after conversion
     /// @param amountIn Amount of tokenIn converted
     /// @param amountOut Amount of tokenOut converted
     function postConversionHook(
-        address tokenInAddress,
+        address tokenAddressIn,
         address tokenAddressOut,
         uint256 amountIn,
         uint256 amountOut
@@ -669,7 +673,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         conversionPaused = false;
     }
 
-    /// @notice To check, is convert paused
+    /// @notice To check, is conversion paused
     /// @custom:error ConversionTokensPaused is thrown when token conversion is paused
     function _checkConversionPaused() internal view {
         if (conversionPaused) {
