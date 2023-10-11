@@ -91,7 +91,7 @@ async function fixture(): Promise<void> {
   );
 }
 
-describe("Risk fund Converter: tests", () => {
+describe.only("Risk fund Converter: tests", () => {
   before(async function () {
     await loadFixture(fixture);
   });
@@ -184,6 +184,30 @@ describe("Risk fund Converter: tests", () => {
     await expect(
       converter.sweepToken(tokenIn.address, await unKnown.getAddress(), parseUnits("1000", 18)),
     ).to.be.revertedWithCustomError(converter, "InsufficientBalance");
+  });
+
+  it("Revert for non existing asset for the pool", async () => {
+    const [, fakeComptroller, fakeAsset] = await ethers.getSigners();
+
+    await expect(converter.getPoolAssetReserve(corePool.address, fakeAsset.address)).to.be.revertedWithCustomError(
+      converter,
+      "MarketNotExistInPool",
+    );
+
+    await expect(converter.getPoolAssetReserve(fakeComptroller.address, tokenIn.address)).to.be.revertedWithCustomError(
+      converter,
+      "MarketNotExistInPool",
+    );
+
+    await expect(converter.updateAssetsState(fakeComptroller.address, tokenIn.address)).to.be.revertedWithCustomError(
+      converter,
+      "MarketNotExistInPool",
+    );
+
+    await expect(converter.updateAssetsState(corePool.address, fakeAsset.address)).to.be.revertedWithCustomError(
+      converter,
+      "MarketNotExistInPool",
+    );
   });
 
   describe("Pools direct transfer", () => {

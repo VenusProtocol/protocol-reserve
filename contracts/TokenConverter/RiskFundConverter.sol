@@ -70,6 +70,9 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @notice thrown when amount entered is greater than balance
     error InsufficientBalance();
 
+    /// @notice thrown when asset does not exist in the pool
+    error MarketNotExistInPool(address comptroller, address asset);
+
     /// @param corePoolComptroller_ Address of the Comptroller pool
     /// @param vBNB_ Address of the vBNB
     /// @param nativeWrapped_ Address of the wrapped native currency
@@ -147,8 +150,8 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param asset Asset address
     /// @return Asset's reserve in risk fund
     function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256) {
-        require(IComptroller(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
-        ensureNonzeroAddress(asset);
+        if (!ensureAssetListed(comptroller, asset)) revert MarketNotExistInPool(comptroller, asset);
+
         return poolsAssetsReserves[comptroller][asset];
     }
 
@@ -158,11 +161,8 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param asset Asset address
     /// @custom:event AssetTransferredToDestination emits when poolsAssetsDirectTransfer is enabled for entered comptroller and asset
     /// @custom:event AssetsReservesUpdated emits when poolsAssetsDirectTransfer is not enabled for entered comptroller and asset
-    function updateAssetsState(address comptroller, address asset) public nonReentrant {
-        require(IComptroller(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
-        ensureNonzeroAddress(asset);
-
-        require(ensureAssetListed(comptroller, asset), "ReserveHelpers: The pool doesn't support the asset");
+    function updateAssetsState(address comptroller, address asset) public {
+        if (!ensureAssetListed(comptroller, asset)) revert MarketNotExistInPool(comptroller, asset);
 
         IERC20Upgradeable token = IERC20Upgradeable(asset);
         uint256 currentBalance = token.balanceOf(address(this));
