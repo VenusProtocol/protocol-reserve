@@ -2,6 +2,7 @@ import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
 import { parseUnits } from "ethers/lib/utils";
+import { ethers } from "hardhat";
 
 import {
   IAccessControlManagerV8,
@@ -23,6 +24,7 @@ let accessControl: FakeContract<IAccessControlManagerV8>;
 let converter: MockContract<XVSVaultConverter>;
 let tokenIn: MockContract<MockToken>;
 let tokenOut: MockContract<MockToken>;
+let xvs: MockContract<MockToken>;
 let oracle: FakeContract<ResilientOracleInterface>;
 let xvsVaultTreasury: FakeContract<XVSVaultTreasury>;
 let tokenInDeflationary: MockContract<MockDeflatingToken>;
@@ -45,9 +47,12 @@ async function fixture(): Promise<void> {
   tokenOut = await MockToken.deploy("TokenOut", "tokenOut", 18);
   await tokenOut.faucet(parseUnits("1000", 18));
 
+  xvs = await MockToken.deploy("XVS", "xvs", 18);
+  await xvs.faucet(parseUnits("1000", 18));
+
   converter = await upgrades.deployProxy(
     converterFactory,
-    [accessControl.address, oracle.address, xvsVaultTreasury.address],
+    [accessControl.address, oracle.address, xvsVaultTreasury.address, xvs.address],
     {
       constructorArgs: [],
     },
@@ -70,5 +75,18 @@ describe("XVS vault Converter: tests", () => {
     expect(await converter.balanceOf(tokenIn.address)).to.equals(TOKEN_IN_AMOUNT);
     expect(await converter.balanceOf(tokenOut.address)).to.equals(TOKEN_OUT_AMOUNT);
     expect(await converter.balanceOf(tokenInDeflationary.address)).to.equals("29700000000000000000");
+  });
+
+  it("Transfer XVS to Treasury after updateAssetsState", async () => {
+    const [, fakeComptroller] = await ethers.getSigners();
+    const XVS_AMOUNT = convertToUnit(10, 18);
+
+    await xvs.transfer(converter.address, XVS_AMOUNT);
+
+    expect(await converter.balanceOf(xvs.address)).to.equals(XVS_AMOUNT);
+
+    await converter.updateAssetsState(fakeComptroller.address, xvs.address);
+    expect(await converter.balanceOf(xvs.address)).to.equals(0);
+    expect(await xvs.balanceOf(xvsVaultTreasury.address)).to.equals(XVS_AMOUNT);
   });
 });

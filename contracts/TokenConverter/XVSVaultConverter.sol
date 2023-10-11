@@ -14,9 +14,15 @@ import { AbstractTokenConverter } from "./AbstractTokenConverter.sol";
 contract XVSVaultConverter is AbstractTokenConverter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    /// @notice Address of the xvs token
+    address public xvs;
+
     /// @dev This empty reserved space is put in place to allow future versions to add new
     /// variables without shifting down storage in the inheritance chain
-    uint256[50] private __gap;
+    uint256[49] private __gap;
+
+    /// @notice Emmitted after the funds transferred to the destination address
+    event XVSTransferredToDestination(uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -31,16 +37,29 @@ contract XVSVaultConverter is AbstractTokenConverter {
     function initialize(
         address accessControlManager_,
         ResilientOracle priceOracle_,
-        address destinationAddress_
+        address destinationAddress_,
+        address xvs_
     ) public initializer {
         // Initialize AbstractTokenConverter
         __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
+        xvs = xvs_;
     }
 
     /// @dev This function is called by protocolShareReserve
     /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address.
-    function updateAssetsState(address comptroller, address asset) public {}
+    // solhint-disable-next-line
+    function updateAssetsState(address comptroller, address asset) public {
+        uint256 xvsBalance;
+        if (asset == xvs) {
+            IERC20Upgradeable token = IERC20Upgradeable(xvs);
+            xvsBalance = token.balanceOf(address(this));
+
+            token.safeTransfer(destinationAddress, xvsBalance);
+        }
+
+        emit XVSTransferredToDestination(xvsBalance);
+    }
 
     /// @notice Get the balance for specific token
     /// @param tokenAddress Address of the token
