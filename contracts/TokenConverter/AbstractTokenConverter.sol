@@ -169,20 +169,17 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         ConversionConfig storage configuration = convertConfigurations[tokenAddressIn][tokenAddressOut];
 
-        uint256 oldIncentive = configuration.incentive;
-        bool oldEnabled = configuration.enabled;
-
-        configuration.incentive = conversionConfig.incentive;
-        configuration.enabled = conversionConfig.enabled;
-
         emit ConversionConfigUpdated(
             tokenAddressIn,
             tokenAddressOut,
-            oldIncentive,
+            configuration.incentive,
             conversionConfig.incentive,
-            oldEnabled,
+            configuration.enabled,
             conversionConfig.enabled
         );
+
+        configuration.incentive = conversionConfig.incentive;
+        configuration.enabled = conversionConfig.enabled;
     }
 
     /// @notice Convert exact amount of tokenAddressIn for tokenAddressOut
@@ -619,11 +616,8 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @custom:error ZeroAddressNotAllowed is thrown when price oracle address is zero
     function _setPriceOracle(ResilientOracle priceOracle_) internal {
         ensureNonzeroAddress(address(priceOracle_));
-
-        ResilientOracle oldPriceOracle = priceOracle;
+        emit PriceOracleUpdated(priceOracle, priceOracle_);
         priceOracle = priceOracle_;
-
-        emit PriceOracleUpdated(oldPriceOracle, priceOracle);
     }
 
     /// @notice Sets a new destination address
@@ -632,11 +626,8 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @custom:error ZeroAddressNotAllowed is thrown when destination address is zero
     function _setDestination(address destinationAddress_) internal {
         ensureNonzeroAddress(destinationAddress_);
-
-        address oldDestinationAddress = destinationAddress;
+        emit DestinationAddressUpdated(destinationAddress, destinationAddress_);
         destinationAddress = destinationAddress_;
-
-        emit DestinationAddressUpdated(oldDestinationAddress, destinationAddress);
     }
 
     /// @notice Hook to perform after converting tokens

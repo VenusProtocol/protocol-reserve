@@ -114,9 +114,8 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
     function setPoolRegistry(address poolRegistry_) external onlyOwner {
         ensureNonzeroAddress(poolRegistry_);
-        address oldPoolRegistry = poolRegistry;
+        emit PoolRegistryUpdated(poolRegistry, poolRegistry_);
         poolRegistry = poolRegistry_;
-        emit PoolRegistryUpdated(oldPoolRegistry, poolRegistry_);
     }
 
     /// @notice Update the poolsAssetsDirectTransfer mapping

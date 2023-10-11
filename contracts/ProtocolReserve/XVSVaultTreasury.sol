@@ -89,8 +89,7 @@ contract XVSVaultTreasury is AccessControlledV8 {
     /// @custom:error ZeroAddressNotAllowed is thrown when XVS vault address is zero
     function _setXVSVault(address xvsVault_) internal {
         ensureNonzeroAddress(xvsVault_);
-        address oldXVSVault = xvsVault;
+        emit XVSVaultUpdated(xvsVault, xvsVault_);
         xvsVault = xvsVault_;
-        emit XVSVaultUpdated(oldXVSVault, xvsVault_);
     }
 }
