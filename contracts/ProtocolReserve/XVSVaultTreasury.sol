@@ -6,7 +6,7 @@ import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-import { ensureNonzeroAddress } from "../Utils/Validators.sol";
+import { ensureNonzeroAddress, ensureNonzeroValue } from "../Utils/Validators.sol";
 import { IXVSVault } from "../Interfaces/IXVSVault.sol";
 
 /// @title XVSVaultTreasury
@@ -73,6 +73,7 @@ contract XVSVaultTreasury is AccessControlledV8, ReentrancyGuardUpgradeable {
     /// @custom:access Restricted by ACM
     function fundXVSVault(uint256 amountMantissa) external nonReentrant {
         _checkAccessAllowed("fundXVSVault(uint256)");
+        ensureNonzeroValue(amountMantissa);
 
         uint256 balance = IERC20Upgradeable(XVS_ADDRESS).balanceOf(address(this));
 

@@ -8,7 +8,7 @@ import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC
 import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
 
 import { MANTISSA_ONE, EXP_SCALE } from "../Utils/Constants.sol";
-import { ensureNonzeroAddress } from "../Utils/Validators.sol";
+import { ensureNonzeroAddress, ensureNonzeroValue } from "../Utils/Validators.sol";
 import { IAbstractTokenConverter } from "./IAbstractTokenConverter.sol";
 
 /// @title AbstractTokenConverter
@@ -381,6 +381,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     ) external onlyOwner nonReentrant {
         ensureNonzeroAddress(tokenAddress);
         ensureNonzeroAddress(to);
+        ensureNonzeroValue(amount);
 
         IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
         postSweepToken(tokenAddress, amount);

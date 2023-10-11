@@ -91,7 +91,7 @@ async function fixture(): Promise<void> {
   );
 }
 
-describe.only("Risk fund Converter: tests", () => {
+describe("Risk fund Converter: tests", () => {
   before(async function () {
     await loadFixture(fixture);
   });

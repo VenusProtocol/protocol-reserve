@@ -8,7 +8,7 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
 import { IRiskFundConverter } from "../Interfaces/IRiskFundConverter.sol";
 
-import { ensureNonzeroAddress } from "../Utils/Validators.sol";
+import { ensureNonzeroAddress, ensureNonzeroValue } from "../Utils/Validators.sol";
 import { EXP_SCALE } from "../Utils/Constants.sol";
 
 import { RiskFundV2Storage } from "./RiskFundStorage.sol";
@@ -134,6 +134,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     ) external onlyOwner nonReentrant {
         ensureNonzeroAddress(tokenAddress);
         ensureNonzeroAddress(to);
+        ensureNonzeroValue(amount);
 
         IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
         postSweepToken(tokenAddress, amount);

@@ -6,7 +6,7 @@ import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC
 import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
 
 import { AbstractTokenConverter } from "./AbstractTokenConverter.sol";
-import { ensureNonzeroAddress } from "../Utils/Validators.sol";
+import { ensureNonzeroAddress, ensureNonzeroValue } from "../Utils/Validators.sol";
 import { IPoolRegistry } from "../Interfaces/IPoolRegistry.sol";
 import { IComptroller } from "../Interfaces/IComptroller.sol";
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
@@ -233,6 +233,8 @@ contract RiskFundConverter is AbstractTokenConverter {
     ) internal override {
         address[] memory pools = getPools(tokenOutAddress);
         uint256 assetReserve = assetsReserves[tokenOutAddress];
+        ensureNonzeroValue(assetReserve);
+
         for (uint256 i; i < pools.length; ++i) {
             uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenOutAddress] * EXP_SCALE) / assetReserve;
             if (poolShare == 0) continue;
