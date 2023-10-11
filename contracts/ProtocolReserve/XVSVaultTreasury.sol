@@ -37,6 +37,7 @@ contract XVSVaultTreasury is AccessControlledV8 {
     error InsufficientBalance();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
+    /// @param xvsAddress_ XVS token address
     constructor(address xvsAddress_) {
         ensureNonzeroAddress(xvsAddress_);
         XVS_ADDRESS = xvsAddress_;
@@ -48,6 +49,8 @@ contract XVSVaultTreasury is AccessControlledV8 {
 
     /// @param accessControlManager_ Access control manager contract address
     /// @param xvsVault_ XVSVault address
+    /// @custom:event XVSVaultUpdated emits on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when XVS vault address is zero
     function initialize(address accessControlManager_, address xvsVault_) public virtual initializer {
         __AccessControlled_init(accessControlManager_);
 

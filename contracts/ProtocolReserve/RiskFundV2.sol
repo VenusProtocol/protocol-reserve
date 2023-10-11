@@ -55,6 +55,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @param convertibleBaseAsset_ Address of the convertible base asset
     /// @custom:event ConvertibleBaseAssetUpdated emit on success
     /// @custom:error ZeroAddressNotAllowed is thrown when risk fund converter address is zero
+    /// @custom:access Only Governance
     function setConvertibleBaseAsset(address convertibleBaseAsset_) external onlyOwner {
         ensureNonzeroAddress(convertibleBaseAsset_);
         emit ConvertibleBaseAssetUpdated(convertibleBaseAsset, convertibleBaseAsset_);
@@ -65,6 +66,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @param riskFundConverter_ Address of the risk fund converter
     /// @custom:event RiskFundConverterUpdated emit on success
     /// @custom:error ZeroAddressNotAllowed is thrown when risk fund converter address is zero
+    /// @custom:access Only Governance
     function setRiskFundConverter(address riskFundConverter_) external onlyOwner {
         ensureNonzeroAddress(riskFundConverter_);
         emit RiskFundConverterUpdated(riskFundConverter, riskFundConverter_);
@@ -75,6 +77,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @param shortfallContractAddress_ Address of the auction contract
     /// @custom:event ShortfallContractUpdated emit on success
     /// @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
+    /// @custom:access Only Governance
     function setShortfallContractAddress(address shortfallContractAddress_) external onlyOwner {
         ensureNonzeroAddress(shortfallContractAddress_);
         emit ShortfallContractUpdated(shortfall, shortfallContractAddress_);
@@ -89,6 +92,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @custom:event TransferredReserveForAuction emit on success
     /// @custom:error InvalidShortfallAddress is thrown on invalid shortfall address
     /// @custom:error InsufficientPoolReserve is thrown when pool reserve is less than the amount needed
+    /// @custom:access Only Shortfall contract
     function transferReserveForAuction(
         address comptroller,
         address bidder,
@@ -141,6 +145,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @param amount Amount transferred for the pool
     /// @custom:event PoolStateUpdated emits on success
     /// @custom:error InvalidRiskFundConverter is thrown if caller is not riskFundConverter contract
+    /// @custom:access Only RiskFundConverter contract
     function updatePoolState(
         address comptroller,
         address asset,

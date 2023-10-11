@@ -44,6 +44,7 @@ contract XVSVaultConverter is AbstractTokenConverter {
 
     /// @notice Get the balance for specific token
     /// @param tokenAddress Address of the token
+    /// @return tokenBalance Balance of the token the contract has
     function balanceOf(address tokenAddress) public view override returns (uint256 tokenBalance) {
         IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
         tokenBalance = token.balanceOf(address(this));

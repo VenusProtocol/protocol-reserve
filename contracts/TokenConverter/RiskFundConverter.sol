@@ -112,6 +112,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param poolRegistry_ Address of the pool registry
     /// @custom:event PoolRegistryUpdated emits on success
     /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
+    /// @custom:access Only Governance
     function setPoolRegistry(address poolRegistry_) external onlyOwner {
         ensureNonzeroAddress(poolRegistry_);
         emit PoolRegistryUpdated(poolRegistry, poolRegistry_);
@@ -121,6 +122,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @notice Update the poolsAssetsDirectTransfer mapping
     /// @param comptrollers Addresses of the pools
     /// @param assets Addresses of the assets need to be added for direct transfer
+    /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
     /// @custom:event PoolAssetsDirectTransferUpdated emits on success
     /// @custom:error InvalidArguments thrown when comptrollers array length is not equal to assets array length
     /// @custom:access Restricted by ACM
@@ -203,12 +205,14 @@ contract RiskFundConverter is AbstractTokenConverter {
 
     /// @notice Get the balance for specific token
     /// @param tokenAddress Address of the token
+    /// @return Reserves of the token the contract has
     function balanceOf(address tokenAddress) public view override returns (uint256) {
         return assetsReserves[tokenAddress];
     }
 
     /// @notice Get the array of all pools addresses
     /// @param tokenAddress Address of the token
+    /// @return Array of the pools addresses in which token is available
     function getPools(address tokenAddress) public view returns (address[] memory) {
         address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenAddress);
 
@@ -256,6 +260,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @notice Operations to perform after sweepToken
     /// @param tokenAddress Address of the token
     /// @param amount Amount transferred to address(to)
+    /// @custom:error InsufficientBalance is thrown when amount entered is greater than balance of token
     function postSweepToken(address tokenAddress, uint256 amount) internal override {
         uint256 balance = IERC20Upgradeable(tokenAddress).balanceOf(address(this));
         if (amount > balance) revert InsufficientBalance();
@@ -295,6 +300,9 @@ contract RiskFundConverter is AbstractTokenConverter {
         emit AssetsReservesUpdated(pool, tokenAddress, poolAmountShare);
     }
 
+    /// @notice This function checks for the given asset is listed in core pool or not
+    /// @param tokenAddress Address of the asset
+    /// @return isAssetListed true if the asset is listed
     function isAssetListedInCore(address tokenAddress) internal view returns (bool isAssetListed) {
         address[] memory coreMarkets = IComptroller(CORE_POOL_COMPTROLLER).getAllMarkets();
 
@@ -312,6 +320,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @notice This function checks for the given asset is listed or not
     /// @param comptroller Address of the comptroller
     /// @param asset Address of the asset
+    /// @return true if the asset is listed
     function ensureAssetListed(address comptroller, address asset) internal view returns (bool) {
         if (comptroller == CORE_POOL_COMPTROLLER) {
             return isAssetListedInCore(asset);

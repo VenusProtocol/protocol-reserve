@@ -342,6 +342,8 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
     /// @notice To sweep ERC20 tokens and transfer them to user(to address)
     /// @param tokenAddress The address of the ERC-20 token to sweep
+    /// @param to The address to which tokens will be transferred
+    /// @param amount The amount to transfer
     /// @custom:event Emits SweepToken event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/to address is zero
     /// @custom:access Only Governance
@@ -486,6 +488,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
     /// @notice Get the balance for specific token
     /// @param token Address of the token
+    /// @return tokenBalance Balance of the token the contract has
     function balanceOf(address token) public view virtual returns (uint256 tokenBalance) {}
 
     /// @notice Operations to perform after sweepToken
@@ -631,7 +634,8 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     }
 
     /// @notice Hook to perform after converting tokens
-    /// @param tokenInAddress Address of the token
+    /// @param tokenInAddress Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after convert
     /// @param amountIn Amount of tokenIn converted
     /// @param amountOut Amount of tokenOut converted
     function postConversionHook(
@@ -666,6 +670,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     }
 
     /// @notice To check, is convert paused
+    /// @custom:error ConversionTokensPaused is thrown when token conversion is paused
     function _checkConversionPaused() internal view {
         if (conversionPaused) {
             revert ConversionTokensPaused();
