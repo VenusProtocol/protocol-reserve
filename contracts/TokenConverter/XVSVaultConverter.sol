@@ -17,10 +17,6 @@ contract XVSVaultConverter is AbstractTokenConverter {
     /// @notice Address of the xvs token
     address public xvs;
 
-    /// @dev This empty reserved space is put in place to allow future versions to add new
-    /// variables without shifting down storage in the inheritance chain
-    uint256[49] private __gap;
-
     /// @notice Emmitted after the funds transferred to the destination address
     event XVSTransferredToDestination(uint256 amount);
 

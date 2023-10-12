@@ -23,11 +23,6 @@ contract XVSVaultTreasury is AccessControlledV8, ReentrancyGuardUpgradeable {
     /// @notice The xvsvault address
     address public xvsVault;
 
-    /// @dev This empty reserved space is put in place to allow future versions to add new
-    /// variables without shifting down storage in the inheritance chain.
-    /// See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-    uint256[48] private __gap;
-
     /// @notice Emitted when XVS vault address is updated
     event XVSVaultUpdated(address indexed oldXVSVault, address indexed newXVSVault);
 
@@ -52,7 +47,7 @@ contract XVSVaultTreasury is AccessControlledV8, ReentrancyGuardUpgradeable {
     /// @param xvsVault_ XVSVault address
     /// @custom:event XVSVaultUpdated emits on success
     /// @custom:error ZeroAddressNotAllowed is thrown when XVS vault address is zero
-    function initialize(address accessControlManager_, address xvsVault_) public virtual initializer {
+    function initialize(address accessControlManager_, address xvsVault_) public initializer {
         __AccessControlled_init(accessControlManager_);
         __ReentrancyGuard_init();
         _setXVSVault(xvsVault_);

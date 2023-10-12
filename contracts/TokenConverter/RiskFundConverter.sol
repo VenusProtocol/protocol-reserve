@@ -47,10 +47,6 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @dev Comptroller(pool) -> Asset -> bool(should transfer directly on true)
     mapping(address => mapping(address => bool)) public poolsAssetsDirectTransfer;
 
-    /// @dev This empty reserved space is put in place to allow future versions to add new
-    /// variables without shifting down storage in the inheritance chain
-    uint256[46] private __gap;
-
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
 
