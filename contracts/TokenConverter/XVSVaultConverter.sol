@@ -64,4 +64,9 @@ contract XVSVaultConverter is AbstractTokenConverter {
         IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
         tokenBalance = token.balanceOf(address(this));
     }
+
+    /// @notice Get base asset address
+    function _getDestinationBaseAsset() internal view override returns (address) {
+        return xvs;
+    }
 }

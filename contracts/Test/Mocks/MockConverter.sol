@@ -3,9 +3,10 @@ pragma solidity ^0.8.10;
 
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
 
 import { AbstractTokenConverter } from "../../TokenConverter/AbstractTokenConverter.sol";
-import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
+import { IRiskFundGetters } from "../../Interfaces/IRiskFund.sol";
 
 contract MockConverter is AbstractTokenConverter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -21,5 +22,10 @@ contract MockConverter is AbstractTokenConverter {
     function balanceOf(address tokenAddress) public view override returns (uint256 tokenBalance) {
         IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
         tokenBalance = token.balanceOf(address(this));
+    }
+
+    /// @notice Get base asset address
+    function _getDestinationBaseAsset() internal view override returns (address) {
+        return IRiskFundGetters(destinationAddress).convertibleBaseAsset();
     }
 }

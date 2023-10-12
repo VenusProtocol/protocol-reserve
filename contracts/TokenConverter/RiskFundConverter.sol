@@ -9,7 +9,7 @@ import { AbstractTokenConverter } from "./AbstractTokenConverter.sol";
 import { ensureNonzeroAddress, ensureNonzeroValue } from "../Utils/Validators.sol";
 import { IPoolRegistry } from "../Interfaces/IPoolRegistry.sol";
 import { IComptroller } from "../Interfaces/IComptroller.sol";
-import { IRiskFund } from "../Interfaces/IRiskFund.sol";
+import { IRiskFund, IRiskFundGetters } from "../Interfaces/IRiskFund.sol";
 import { IVToken } from "../Interfaces/IVToken.sol";
 import { EXP_SCALE } from "../Utils/Constants.sol";
 
@@ -345,5 +345,10 @@ contract RiskFundConverter is AbstractTokenConverter {
         }
 
         return IPoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0);
+    }
+
+    /// @notice Get base asset address of the RiskFund
+    function _getDestinationBaseAsset() internal view override returns (address) {
+        return IRiskFundGetters(destinationAddress).convertibleBaseAsset();
     }
 }

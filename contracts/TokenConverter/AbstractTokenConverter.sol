@@ -110,6 +110,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Thrown when conversion is Active
     error ConversionTokensActive();
 
+    /// @notice Thrown when tokenInAddress is same as tokeOutAdress OR tokeInAddress is not the base asset of the destination
+    error InvalidTokenConfigAddresses();
+
     /// @notice Pause conversion of tokens
     /// @custom:event Emits ConversionPaused on success
     /// @custom:error ConversionTokensPaused thrown when conversion is already paused
@@ -168,6 +171,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         if (conversionConfig.incentive > MAX_INCENTIVE) {
             revert IncentiveTooHigh(conversionConfig.incentive, MAX_INCENTIVE);
+        }
+
+        if ((tokenAddressIn == tokenAddressOut) || (tokenAddressIn != _getDestinationBaseAsset())) {
+            revert InvalidTokenConfigAddresses();
         }
 
         ConversionConfig storage configuration = conversionConfigurations[tokenAddressIn][tokenAddressOut];
@@ -704,4 +711,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             revert ConversionTokensPaused();
         }
     }
+
+    /// @notice Get base asset address of the destination contract
+    function _getDestinationBaseAsset() internal view virtual returns (address) {}
 }

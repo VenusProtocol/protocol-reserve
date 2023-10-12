@@ -8,6 +8,7 @@ import { ethers } from "hardhat";
 
 import {
   IAccessControlManagerV8,
+  IRiskFundGetters,
   MockConverter,
   MockConverter__factory,
   MockDeflatingToken,
@@ -22,13 +23,13 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 let accessControl: FakeContract<IAccessControlManagerV8>;
+let destination: FakeContract<IRiskFundGetters>;
 let converter: MockContract<MockConverter>;
 let tokenIn: MockContract<MockToken>;
 let tokenOut: MockContract<MockToken>;
 let oracle: FakeContract<ResilientOracle>;
 let tokenInDeflationary: MockContract<MockDeflatingToken>;
 let to: Signer;
-let destination: Signer;
 let owner: Signer;
 let ConversionConfig: {
   incentive: string;
@@ -42,10 +43,12 @@ const TOKEN_OUT_PRICE = convertToUnit("0.5", 18);
 const MANTISSA_ONE = convertToUnit("1", 18);
 
 async function fixture(): Promise<void> {
-  [owner, destination, to] = await ethers.getSigners();
+  [owner, to] = await ethers.getSigners();
   const Converter = await smock.mock<MockConverter__factory>("MockConverter");
 
   accessControl = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
+  destination = await smock.fake<IRiskFundGetters>("IRiskFundGetters");
+
   oracle = await smock.fake<ResilientOracle>("ResilientOracle");
 
   const MockToken = await smock.mock<MockToken__factory>("MockToken");
@@ -59,7 +62,7 @@ async function fixture(): Promise<void> {
   await tokenOut.faucet(parseUnits("1000", 18));
 
   converter = await Converter.deploy();
-  await converter.AbstractTokenConverter_init(accessControl.address, oracle.address, await destination.getAddress());
+  await converter.AbstractTokenConverter_init(accessControl.address, oracle.address, destination.address);
   accessControl.isAllowedToCall.returns(true);
 
   ConversionConfig = {
@@ -75,6 +78,8 @@ describe("MockConverter: tests", () => {
 
   describe("Convert tokens for exact tokens", async () => {
     beforeEach(async () => {
+      await destination.convertibleBaseAsset.returns(tokenIn.address);
+
       await tokenInDeflationary.connect(owner).approve(converter.address, convertToUnit("1", 18));
       await tokenIn.connect(owner).approve(converter.address, convertToUnit("1", 18));
       await tokenOut.transfer(converter.address, convertToUnit("1.5", 18));
@@ -121,6 +126,8 @@ describe("MockConverter: tests", () => {
     });
 
     it("Revert on deflationary token transfer", async () => {
+      await destination.convertibleBaseAsset.returns(tokenInDeflationary.address);
+
       const ConversionConfig = {
         incentive: INCENTIVE,
         enabled: true,
@@ -140,6 +147,7 @@ describe("MockConverter: tests", () => {
     });
 
     it("Revert when address(to) is same as tokenAddressIn or tokenAddressOut", async () => {
+      await destination.convertibleBaseAsset.returns(tokenIn.address);
       await converter.setConversionConfig(tokenIn.address, tokenOut.address, ConversionConfig);
 
       await expect(
@@ -203,6 +211,7 @@ describe("MockConverter: tests", () => {
     });
 
     it("Revert on deflationary token transfer", async () => {
+      await destination.convertibleBaseAsset.returns(tokenInDeflationary.address);
       const ConversionConfig = {
         incentive: INCENTIVE,
         enabled: true,
@@ -222,6 +231,7 @@ describe("MockConverter: tests", () => {
     });
 
     it("Revert when address(to) is same as tokenAddressIn or tokenAddressOut", async () => {
+      await destination.convertibleBaseAsset.returns(tokenIn.address);
       await converter.setConversionConfig(tokenIn.address, tokenOut.address, ConversionConfig);
 
       await expect(
@@ -275,6 +285,7 @@ describe("MockConverter: tests", () => {
     });
 
     it("Success on convert exact tokens with supporting fee", async () => {
+      await destination.convertibleBaseAsset.returns(tokenInDeflationary.address);
       const ConversionConfig = {
         tokenAddressIn: tokenInDeflationary.address,
         tokenAddressOut: tokenOut.address,
@@ -310,6 +321,7 @@ describe("MockConverter: tests", () => {
 
   describe("Convert tokens for exact tokens with supporting fee", async () => {
     beforeEach(async () => {
+      await destination.convertibleBaseAsset.returns(tokenIn.address);
       await tokenInDeflationary.connect(owner).approve(converter.address, convertToUnit("1", 18));
       await tokenIn.connect(owner).approve(converter.address, convertToUnit("1", 18));
       await tokenOut.transfer(converter.address, convertToUnit("1.5", 18));
@@ -347,6 +359,7 @@ describe("MockConverter: tests", () => {
     });
 
     it("Success on convert exact tokens with supporting fee", async () => {
+      await destination.convertibleBaseAsset.returns(tokenInDeflationary.address);
       const ConversionConfig = {
         incentive: INCENTIVE,
         enabled: true,
@@ -378,6 +391,7 @@ describe("MockConverter: tests", () => {
 
   describe("Set convert configurations", () => {
     beforeEach(async () => {
+      await destination.convertibleBaseAsset.returns(tokenIn.address);
       accessControl.isAllowedToCall.returns(true);
     });
 

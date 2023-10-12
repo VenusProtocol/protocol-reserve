@@ -17,3 +17,12 @@ interface IRiskFund {
 
     function getPoolsBaseAssetReserves(address comptroller) external view returns (uint256);
 }
+
+/**
+ * @title IRiskFundGetters
+ * @author Venus
+ * @notice Interface implemented by `RiskFund` for getter methods.
+ */
+interface IRiskFundGetters {
+    function convertibleBaseAsset() external view returns (address);
+}
