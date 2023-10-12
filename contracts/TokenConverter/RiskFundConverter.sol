@@ -247,11 +247,11 @@ contract RiskFundConverter is AbstractTokenConverter {
         assetsReserves[tokenOutAddress] -= amountOut;
     }
 
-    /// @notice Operations to perform after sweepToken
+    /// @notice Operations to perform before sweeping tokens
     /// @param tokenAddress Address of the token
     /// @param amount Amount transferred to address(to)
     /// @custom:error InsufficientBalance is thrown when amount entered is greater than balance of token
-    function postSweepToken(address tokenAddress, uint256 amount) internal override {
+    function preSweepToken(address tokenAddress, uint256 amount) internal override {
         uint256 balance = IERC20Upgradeable(tokenAddress).balanceOf(address(this));
         if (amount > balance) revert InsufficientBalance();
         uint256 balanceDiff = balance - assetsReserves[tokenAddress];

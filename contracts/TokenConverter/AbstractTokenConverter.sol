@@ -384,7 +384,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         ensureNonzeroValue(amount);
 
         IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
-        postSweepToken(tokenAddress, amount);
+        preSweepToken(tokenAddress, amount);
         token.safeTransfer(to, amount);
 
         emit SweepToken(tokenAddress, to, amount);
@@ -519,10 +519,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @return tokenBalance Balance of the token the contract has
     function balanceOf(address token) public view virtual returns (uint256 tokenBalance) {}
 
-    /// @notice Operations to perform after sweepToken
+    /// @notice Operations to perform before sweeping tokens
     /// @param token Address of the token
     /// @param amount Amount transferred to address(to)
-    function postSweepToken(address token, uint256 amount) internal virtual {}
+    function preSweepToken(address token, uint256 amount) internal virtual {}
 
     /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut
     /// @param amountInMantissa Amount of tokenAddressIn

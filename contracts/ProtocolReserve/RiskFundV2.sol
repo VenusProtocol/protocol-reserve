@@ -137,7 +137,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
         ensureNonzeroValue(amount);
 
         IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
-        postSweepToken(tokenAddress, amount);
+        preSweepToken(tokenAddress, amount);
         token.safeTransfer(to, amount);
 
         emit SweepToken(tokenAddress, to, amount);
@@ -163,11 +163,11 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
         emit PoolAssetsIncreased(comptroller, asset, amount);
     }
 
-    /// @notice Operations to perform after sweepToken
+    /// @notice Operations to perform before sweeping tokens
     /// @param tokenAddress Address of the token
     /// @param amount Amount transferred to address(to)
     /// @custom:error InsufficientBalance is thrown when amount entered is greater than balance
-    function postSweepToken(address tokenAddress, uint256 amount) internal {
+    function preSweepToken(address tokenAddress, uint256 amount) internal {
         uint256 balance = IERC20Upgradeable(tokenAddress).balanceOf(address(this));
         if (amount > balance) revert InsufficientBalance();
 
