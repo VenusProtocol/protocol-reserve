@@ -7,15 +7,13 @@ pragma solidity 0.8.13;
  * @notice Interface implemented by `RiskFund`.
  */
 interface IRiskFund {
-    function transferReserveForAuction(
-        address comptroller,
-        address bidder,
-        uint256 amount
-    ) external returns (uint256);
+    function transferReserveForAuction(address comptroller, uint256 amount) external returns (uint256);
 
     function updatePoolState(
         address comptroller,
         address asset,
         uint256 amount
     ) external;
+
+    function getPoolsBaseAssetReserves(address comptroller) external view returns (uint256);
 }

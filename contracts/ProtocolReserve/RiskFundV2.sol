@@ -87,20 +87,20 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
         shortfall = shortfallContractAddress_;
     }
 
-    /// @dev Transfer tokens for auction
+    /// @dev Transfer tokens for auction to bidder address
     /// @param comptroller Comptroller of the pool
-    /// @param bidder Address to which amount will be transferred
     /// @param amount Amount to be transferred to the bidder
     /// @return Amount of tokens transferred to the bidder
     /// @custom:event TransferredReserveForAuction emit on success
     /// @custom:error InvalidShortfallAddress is thrown when caller is not shortfall contract
     /// @custom:error InsufficientPoolReserve is thrown when pool reserve is less than the amount needed
     /// @custom:access Only Shortfall contract
-    function transferReserveForAuction(
-        address comptroller,
-        address bidder,
-        uint256 amount
-    ) external override nonReentrant returns (uint256) {
+    function transferReserveForAuction(address comptroller, uint256 amount)
+        external
+        override
+        nonReentrant
+        returns (uint256)
+    {
         uint256 poolReserve = poolAssetsFunds[comptroller][convertibleBaseAsset];
 
         if (msg.sender != shortfall) {
@@ -114,7 +114,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
             poolAssetsFunds[comptroller][convertibleBaseAsset] = poolReserve - amount;
         }
 
-        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(bidder, amount);
+        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(shortfall, amount);
         emit TransferredReserveForAuction(comptroller, amount);
 
         return amount;
@@ -141,6 +141,15 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
         token.safeTransfer(to, amount);
 
         emit SweepToken(tokenAddress, to, amount);
+    }
+
+    /**
+     * @notice Get the Amount of the Base asset in the risk fund for the specific pool.
+     * @param comptroller  Comptroller address(pool).
+     * @return Base Asset's reserve in risk fund.
+     */
+    function getPoolsBaseAssetReserves(address comptroller) external view returns (uint256) {
+        return poolAssetsFunds[comptroller][convertibleBaseAsset];
     }
 
     /// @dev Update the reserve of the asset for the specific pool after transferring to risk fund
