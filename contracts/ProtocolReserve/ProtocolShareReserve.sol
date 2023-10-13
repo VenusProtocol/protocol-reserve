@@ -59,7 +59,7 @@ contract ProtocolShareReserve is
     /// @notice address of pool registry contract
     address public poolRegistry;
 
-    uint8 private constant MAX_PERCENT = 100;
+    uint8 public constant MAX_PERCENT = 100;
 
     /// @notice comptroller => asset => schema => balance
     mapping(address => mapping(address => mapping(Schema => uint256))) public assetsReserves;
