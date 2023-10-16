@@ -238,8 +238,8 @@ contract RiskFundConverter is AbstractTokenConverter {
         for (uint256 i; i < poolsLength; ++i) {
             uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenOutAddress] * EXP_SCALE) / assetReserve;
             if (poolShare == 0) continue;
-            updatePoolAssetsReserve(pools[i], tokenOutAddress, amountOut, poolShare);
-            uint256 poolAmountInShare = (poolShare * amountIn) / EXP_SCALE;
+            updatePoolAssetsReserve(pools[i], tokenOutAddress, amountOut, assetReserve);
+            uint256 poolAmountInShare = (amountIn * poolsAssetsReserves[pools[i]][tokenOutAddress]) / assetReserve;
             emit AssetTransferredToDestination(pools[i], tokenInAddress, poolAmountInShare);
             IRiskFund(destinationAddress).updatePoolState(pools[i], tokenInAddress, poolAmountInShare);
         }
@@ -268,7 +268,7 @@ contract RiskFundConverter is AbstractTokenConverter {
             for (uint256 i; i < poolsLength; ++i) {
                 uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenAddress] * EXP_SCALE) / assetReserve;
                 if (poolShare == 0) continue;
-                updatePoolAssetsReserve(pools[i], tokenAddress, amountDiff, poolShare);
+                updatePoolAssetsReserve(pools[i], tokenAddress, amountDiff, assetReserve);
             }
             assetsReserves[tokenAddress] -= amountDiff;
         }
@@ -278,15 +278,15 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param pool Address of the pool
     /// @param tokenAddress Address of the token
     /// @param amount Amount transferred to address(to)
-    /// @param poolShare share for corresponding pool
+    /// @param assetReserve Asset's reserve for the pool
     /// @custom:event AssetsReservesUpdated emits on success
     function updatePoolAssetsReserve(
         address pool,
         address tokenAddress,
         uint256 amount,
-        uint256 poolShare
+        uint256 assetReserve
     ) internal {
-        uint256 poolAmountShare = (poolShare * amount) / EXP_SCALE;
+        uint256 poolAmountShare = (poolsAssetsReserves[pool][tokenAddress] * amount) / assetReserve;
         poolsAssetsReserves[pool][tokenAddress] -= poolAmountShare;
         emit AssetsReservesUpdated(pool, tokenAddress, poolAmountShare);
     }

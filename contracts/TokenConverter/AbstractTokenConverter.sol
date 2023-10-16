@@ -468,10 +468,13 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         /// amount of tokenAddressOut after including incentive
         uint256 conversionWithIncentive = MANTISSA_ONE + configuration.incentive;
         /// conversion rate after considering incentive(conversionWithIncentive)
-        uint256 tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
 
-        amountOutMantissa = (amountInMantissa * tokenInToOutConversion) / EXP_SCALE;
+        amountOutMantissa =
+            (amountInMantissa * tokenInUnderlyingPrice * conversionWithIncentive) /
+            (tokenOutUnderlyingPrice * EXP_SCALE);
         amountConvertedMantissa = amountInMantissa;
+
+        uint256 tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
 
         /// If contract has less liquity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountOutMantissa) {
