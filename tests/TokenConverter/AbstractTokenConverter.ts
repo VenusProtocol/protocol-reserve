@@ -416,6 +416,13 @@ describe("MockConverter: tests", () => {
       ).to.be.revertedWithCustomError(converter, "ZeroAddressNotAllowed");
     });
 
+    it("Revert on cyclic conversion", async () => {
+      await converter.setConversionConfig(tokenIn.address, tokenOut.address, ConversionConfig),
+        await expect(
+          converter.setConversionConfig(tokenOut.address, tokenIn.address, ConversionConfig),
+        ).to.be.revertedWithCustomError(converter, "InvalidTokenConfigAddresses");
+    });
+
     it("Revert on high incentive percentage", async () => {
       const ConverterConfig = {
         ...ConversionConfig,
