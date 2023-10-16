@@ -87,10 +87,10 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
         shortfall = shortfallContractAddress_;
     }
 
-    /// @dev Transfer tokens for auction to bidder address
+    /// @dev Transfer tokens for auction to shortfall contract
     /// @param comptroller Comptroller of the pool
-    /// @param amount Amount to be transferred to the bidder
-    /// @return Amount of tokens transferred to the bidder
+    /// @param amount Amount to be transferred to the shortfall
+    /// @return Amount of tokens transferred to the shortfall
     /// @custom:event TransferredReserveForAuction emit on success
     /// @custom:error InvalidShortfallAddress is thrown when caller is not shortfall contract
     /// @custom:error InsufficientPoolReserve is thrown when pool reserve is less than the amount needed

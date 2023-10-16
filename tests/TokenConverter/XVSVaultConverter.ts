@@ -52,9 +52,10 @@ async function fixture(): Promise<void> {
 
   converter = await upgrades.deployProxy(
     converterFactory,
-    [accessControl.address, oracle.address, xvsVaultTreasury.address, xvs.address],
+    [accessControl.address, oracle.address, xvsVaultTreasury.address],
     {
-      constructorArgs: [],
+      unsafeAllow: ["constructor", "state-variable-immutable"],
+      constructorArgs: [xvs.address],
     },
   );
 }
