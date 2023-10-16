@@ -30,8 +30,8 @@ contract ProtocolShareReserve is
     /// The first schema is the default one
     /// The second schema is for spread income from prime markets in core protocol
     enum Schema {
-        DEFAULT,
-        SPREAD_PRIME_CORE
+        PROTOCOL_RESERVES,
+        ADDITIONAL_REVENUE
     }
 
     struct DistributionConfig {
@@ -500,10 +500,10 @@ contract ProtocolShareReserve is
         address asset,
         IncomeType incomeType
     ) internal view returns (Schema schema) {
-        schema = Schema.DEFAULT;
+        schema = Schema.ADDITIONAL_REVENUE;
 
         if (isInPrime[asset] && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
-            schema = Schema.SPREAD_PRIME_CORE;
+            schema = Schema.PROTOCOL_RESERVES;
         }
     }
 
