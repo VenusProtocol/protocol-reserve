@@ -9,7 +9,6 @@ import {
   ComptrollerInterface,
   IAccessControlManagerV8,
   IIncomeDestination,
-  IPrime,
   MockToken,
   PoolRegistryInterface,
   ProtocolShareReserve,
@@ -29,7 +28,6 @@ type SetupProtocolShareReserveFixture = {
   mockUSDT: MockToken;
   riskFundSwapper: FakeContract<IIncomeDestination>;
   dao: FakeContract<IIncomeDestination>;
-  prime: FakeContract<IPrime>;
   poolRegistry: FakeContract<PoolRegistryInterface>;
   protocolShareReserve: ProtocolShareReserve;
   xvsVaultSwapper: FakeContract<IIncomeDestination>;
@@ -63,7 +61,6 @@ const fixture = async (): Promise<SetupProtocolShareReserveFixture> => {
   const riskFundSwapper = await smock.fake<IIncomeDestination>("IIncomeDestination");
   const dao = await smock.fake<IIncomeDestination>("IIncomeDestination");
   const xvsVaultSwapper = await smock.fake<IIncomeDestination>("IIncomeDestination");
-  const prime = await smock.fake<IPrime>("IPrime");
   const poolRegistry = await smock.fake<PoolRegistryInterface>("PoolRegistryInterface");
 
   await corePoolComptroller.isComptroller.returns(true);
@@ -79,7 +76,6 @@ const fixture = async (): Promise<SetupProtocolShareReserveFixture> => {
   });
 
   await protocolShareReserve.setPoolRegistry(poolRegistry.address);
-  await protocolShareReserve.setPrime(prime.address);
 
   return {
     mockDAI,
@@ -87,7 +83,6 @@ const fixture = async (): Promise<SetupProtocolShareReserveFixture> => {
     mockUSDT,
     riskFundSwapper,
     dao,
-    prime,
     poolRegistry,
     protocolShareReserve,
     xvsVaultSwapper,
@@ -114,13 +109,8 @@ const configureDistribution = async (setup: SetupProtocolShareReserveFixture) =>
     },
     {
       schema: SCHEMA_PROTOCOL_RESERVE,
-      percentage: 20,
+      percentage: 40,
       destination: setup.dao.address,
-    },
-    {
-      schema: SCHEMA_PROTOCOL_RESERVE,
-      percentage: 20,
-      destination: setup.prime.address,
     },
     {
       schema: SCHEMA_ADDITIONAL_REVENUE,
@@ -159,7 +149,6 @@ describe("ProtocolShareReserve: Tests", function () {
     const config4 = await protocolShareReserve.distributionTargets(3);
     const config5 = await protocolShareReserve.distributionTargets(4);
     const config6 = await protocolShareReserve.distributionTargets(5);
-    const config7 = await protocolShareReserve.distributionTargets(6);
 
     expect(config1.schema).to.equal(SCHEMA_PROTOCOL_RESERVE);
     expect(config1.destination).to.equal(setup.riskFundSwapper.address);
@@ -171,23 +160,19 @@ describe("ProtocolShareReserve: Tests", function () {
 
     expect(config3.schema).to.equal(SCHEMA_PROTOCOL_RESERVE);
     expect(config3.destination).to.equal(setup.dao.address);
-    expect(config3.percentage).to.equal(20);
+    expect(config3.percentage).to.equal(40);
 
-    expect(config4.schema).to.equal(SCHEMA_PROTOCOL_RESERVE);
-    expect(config4.destination).to.equal(setup.prime.address);
-    expect(config4.percentage).to.equal(20);
+    expect(config4.schema).to.equal(SCHEMA_ADDITIONAL_REVENUE);
+    expect(config4.destination).to.equal(setup.riskFundSwapper.address);
+    expect(config4.percentage).to.equal(48);
 
     expect(config5.schema).to.equal(SCHEMA_ADDITIONAL_REVENUE);
-    expect(config5.destination).to.equal(setup.riskFundSwapper.address);
-    expect(config5.percentage).to.equal(48);
+    expect(config5.destination).to.equal(setup.xvsVaultSwapper.address);
+    expect(config5.percentage).to.equal(26);
 
     expect(config6.schema).to.equal(SCHEMA_ADDITIONAL_REVENUE);
-    expect(config6.destination).to.equal(setup.xvsVaultSwapper.address);
+    expect(config6.destination).to.equal(setup.dao.address);
     expect(config6.percentage).to.equal(26);
-
-    expect(config7.schema).to.equal(SCHEMA_ADDITIONAL_REVENUE);
-    expect(config7.destination).to.equal(setup.dao.address);
-    expect(config7.percentage).to.equal(26);
   });
 
   it("update configuration of schemas", async () => {
@@ -224,7 +209,7 @@ describe("ProtocolShareReserve: Tests", function () {
 
   it("remove configuration", async () => {
     const protocolShareReserve = setup.protocolShareReserve;
-    expect(await protocolShareReserve.totalDistributions()).to.be.equal(7);
+    expect(await protocolShareReserve.totalDistributions()).to.be.equal(6);
 
     const ONE_ADDRESS = "0x0000000000000000000000000000000000000001";
     const TWO_ADDRESS = "0x0000000000000000000000000000000000000002";
@@ -236,9 +221,9 @@ describe("ProtocolShareReserve: Tests", function () {
         destination: ONE_ADDRESS,
       },
     ]);
-    expect(await protocolShareReserve.totalDistributions()).to.be.equal(8);
+    expect(await protocolShareReserve.totalDistributions()).to.be.equal(7);
 
-    let config = await protocolShareReserve.distributionTargets(7);
+    let config = await protocolShareReserve.distributionTargets(6);
 
     expect(config.schema).to.equal(SCHEMA_PROTOCOL_RESERVE);
     expect(config.destination).to.equal(ONE_ADDRESS);
@@ -246,8 +231,8 @@ describe("ProtocolShareReserve: Tests", function () {
 
     await protocolShareReserve.removeDistributionConfig(SCHEMA_PROTOCOL_RESERVE, ONE_ADDRESS);
 
-    expect(protocolShareReserve.distributionTargets(7)).to.have.reverted;
-    expect(await protocolShareReserve.totalDistributions()).to.be.equal(7);
+    expect(protocolShareReserve.distributionTargets(6)).to.have.reverted;
+    expect(await protocolShareReserve.totalDistributions()).to.be.equal(6);
 
     await protocolShareReserve.addOrUpdateDistributionConfigs([
       {
@@ -262,26 +247,26 @@ describe("ProtocolShareReserve: Tests", function () {
       },
     ]);
 
-    config = await protocolShareReserve.distributionTargets(7);
+    config = await protocolShareReserve.distributionTargets(6);
 
     expect(config.schema).to.equal(SCHEMA_PROTOCOL_RESERVE);
     expect(config.destination).to.equal(ONE_ADDRESS);
     expect(config.percentage).to.equal(0);
 
-    config = await protocolShareReserve.distributionTargets(8);
+    config = await protocolShareReserve.distributionTargets(7);
 
     expect(config.schema).to.equal(SCHEMA_PROTOCOL_RESERVE);
     expect(config.destination).to.equal(TWO_ADDRESS);
     expect(config.percentage).to.equal(0);
 
-    expect(await protocolShareReserve.totalDistributions()).to.be.equal(9);
+    expect(await protocolShareReserve.totalDistributions()).to.be.equal(8);
 
     await protocolShareReserve.removeDistributionConfig(SCHEMA_PROTOCOL_RESERVE, ONE_ADDRESS);
 
-    expect(protocolShareReserve.distributionTargets(8)).to.have.reverted;
-    expect(await protocolShareReserve.totalDistributions()).to.be.equal(8);
+    await expect(protocolShareReserve.distributionTargets(8)).to.have.reverted;
+    expect(await protocolShareReserve.totalDistributions()).to.be.equal(7);
 
-    config = await protocolShareReserve.distributionTargets(7);
+    config = await protocolShareReserve.distributionTargets(6);
 
     expect(config.schema).to.equal(SCHEMA_PROTOCOL_RESERVE);
     expect(config.destination).to.equal(TWO_ADDRESS);
@@ -299,71 +284,71 @@ describe("ProtocolShareReserve: Tests", function () {
     const riskFundSwapper = setup.riskFundSwapper;
     const xvsVaultSwapper = setup.xvsVaultSwapper;
     const dao = setup.dao;
-    const prime = setup.prime;
 
     //Transfer liquidation and spread income from asset part of prime program
     await mockDAI.transfer(protocolShareReserve.address, 100);
-    await protocolShareReserve.addOrRemoveAssetFromPrime(mockDAI.address, true);
     await protocolShareReserve.updateAssetsState(corePoolComptroller.address, mockDAI.address, SPREAD_INCOME);
     await mockDAI.transfer(protocolShareReserve.address, 100);
     await protocolShareReserve.updateAssetsState(corePoolComptroller.address, mockDAI.address, LIQUIDATION_INCOME);
-
-    await protocolShareReserve.addOrRemoveAssetFromPrime(mockDAI.address, false);
 
     expect(
       await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockDAI.address, SCHEMA_PROTOCOL_RESERVE),
     ).to.equal(100);
     expect(
-      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockDAI.address, SCHEMA_ADDITIONAL_REVENUE),
+      await protocolShareReserve.assetsReserves(
+        corePoolComptroller.address,
+        mockDAI.address,
+        SCHEMA_ADDITIONAL_REVENUE,
+      ),
     ).to.equal(100);
 
-    //Transfer liquidation and spread income from asset not part of prime program
     await mockUSDC.transfer(protocolShareReserve.address, 100);
     await protocolShareReserve.updateAssetsState(corePoolComptroller.address, mockUSDC.address, SPREAD_INCOME);
     expect(
-      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockUSDC.address, SCHEMA_ADDITIONAL_REVENUE),
+      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockUSDC.address, SCHEMA_PROTOCOL_RESERVE),
     ).to.equal(100);
 
     await mockUSDC.transfer(protocolShareReserve.address, 100);
     await protocolShareReserve.updateAssetsState(corePoolComptroller.address, mockUSDC.address, LIQUIDATION_INCOME);
     expect(
-      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockUSDC.address, SCHEMA_ADDITIONAL_REVENUE),
-    ).to.equal(200);
+      await protocolShareReserve.assetsReserves(
+        corePoolComptroller.address,
+        mockUSDC.address,
+        SCHEMA_ADDITIONAL_REVENUE,
+      ),
+    ).to.equal(100);
 
     //Transfer liquidation and spread income from asset part of IL
     await poolRegistry.getVTokenForAsset.returns(ONE_ADDRESS);
     await mockUSDT.transfer(protocolShareReserve.address, 100);
     await protocolShareReserve.updateAssetsState(isolatedPoolComptroller.address, mockUSDT.address, SPREAD_INCOME);
     expect(
-      await protocolShareReserve.assetsReserves(isolatedPoolComptroller.address, mockUSDT.address, SCHEMA_ADDITIONAL_REVENUE),
+      await protocolShareReserve.assetsReserves(
+        isolatedPoolComptroller.address,
+        mockUSDT.address,
+        SCHEMA_PROTOCOL_RESERVE,
+      ),
     ).to.equal(100);
     await mockUSDT.transfer(protocolShareReserve.address, 100);
     await protocolShareReserve.updateAssetsState(isolatedPoolComptroller.address, mockUSDT.address, LIQUIDATION_INCOME);
     expect(
-      await protocolShareReserve.assetsReserves(isolatedPoolComptroller.address, mockUSDT.address, SCHEMA_ADDITIONAL_REVENUE),
-    ).to.equal(200);
+      await protocolShareReserve.assetsReserves(
+        isolatedPoolComptroller.address,
+        mockUSDT.address,
+        SCHEMA_ADDITIONAL_REVENUE,
+      ),
+    ).to.equal(100);
 
     //Release core comptroller income
     await protocolShareReserve.releaseFunds(corePoolComptroller.address, [mockDAI.address, mockUSDC.address]);
 
-    expect(await mockDAI.balanceOf(prime.address)).to.equal(20);
-    expect(await mockDAI.balanceOf(xvsVaultSwapper.address)).to.equal(46); // 20 + 26
-    expect(await mockDAI.balanceOf(riskFundSwapper.address)).to.equal(88); // 40 + 48
-    expect(await mockDAI.balanceOf(dao.address)).to.equal(46); // 20 + 26
+    expect(await mockDAI.balanceOf(xvsVaultSwapper.address)).to.equal(46);
+    expect(await mockDAI.balanceOf(riskFundSwapper.address)).to.equal(88);
+    expect(await mockDAI.balanceOf(dao.address)).to.equal(66);
 
-    expect(await mockUSDC.balanceOf(prime.address)).to.equal(0);
-    expect(await mockUSDC.balanceOf(xvsVaultSwapper.address)).to.equal(52); // 26 + 26
-    expect(await mockUSDC.balanceOf(riskFundSwapper.address)).to.equal(96); // 48 + 48
-    expect(await mockUSDC.balanceOf(dao.address)).to.equal(52); // 26 + 26
-
-    expect(
-      await protocolShareReserve.getUnreleasedFunds(
-        isolatedPoolComptroller.address,
-        SCHEMA_PROTOCOL_RESERVE,
-        prime.address,
-        mockUSDT.address,
-      ),
-    ).to.be.equal(0);
+    expect(await mockUSDC.balanceOf(xvsVaultSwapper.address)).to.equal(46);
+    expect(await mockUSDC.balanceOf(riskFundSwapper.address)).to.equal(88);
+    expect(await mockUSDC.balanceOf(dao.address)).to.equal(66);
 
     expect(
       await protocolShareReserve.getUnreleasedFunds(
@@ -372,7 +357,7 @@ describe("ProtocolShareReserve: Tests", function () {
         xvsVaultSwapper.address,
         mockUSDT.address,
       ),
-    ).to.be.equal(52);
+    ).to.be.equal(26);
 
     expect(
       await protocolShareReserve.getUnreleasedFunds(
@@ -381,7 +366,7 @@ describe("ProtocolShareReserve: Tests", function () {
         riskFundSwapper.address,
         mockUSDT.address,
       ),
-    ).to.be.equal(96);
+    ).to.be.equal(48);
 
     expect(
       await protocolShareReserve.getUnreleasedFunds(
@@ -390,34 +375,53 @@ describe("ProtocolShareReserve: Tests", function () {
         dao.address,
         mockUSDT.address,
       ),
-    ).to.be.equal(52);
+    ).to.be.equal(26);
 
     //Release isolated comptroller income
     await protocolShareReserve.releaseFunds(isolatedPoolComptroller.address, [mockUSDT.address]);
 
-    expect(await mockUSDT.balanceOf(prime.address)).to.equal(0);
-    expect(await mockUSDT.balanceOf(xvsVaultSwapper.address)).to.equal(52); // 20 + 26
-    expect(await mockUSDT.balanceOf(riskFundSwapper.address)).to.equal(96); // 40 + 48
-    expect(await mockUSDT.balanceOf(dao.address)).to.equal(52); // 20 + 26
+    expect(await mockUSDT.balanceOf(xvsVaultSwapper.address)).to.equal(46);
+    expect(await mockUSDT.balanceOf(riskFundSwapper.address)).to.equal(88);
+    expect(await mockUSDT.balanceOf(dao.address)).to.equal(66);
 
     //Check if all funds are released
     expect(
       await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockDAI.address, SCHEMA_PROTOCOL_RESERVE),
     ).to.equal(0);
     expect(
-      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockDAI.address, SCHEMA_ADDITIONAL_REVENUE),
+      await protocolShareReserve.assetsReserves(
+        corePoolComptroller.address,
+        mockDAI.address,
+        SCHEMA_ADDITIONAL_REVENUE,
+      ),
     ).to.equal(0);
     expect(
-      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockUSDC.address, SCHEMA_ADDITIONAL_REVENUE),
+      await protocolShareReserve.assetsReserves(
+        corePoolComptroller.address,
+        mockUSDC.address,
+        SCHEMA_ADDITIONAL_REVENUE,
+      ),
     ).to.equal(0);
     expect(
-      await protocolShareReserve.assetsReserves(corePoolComptroller.address, mockUSDC.address, SCHEMA_ADDITIONAL_REVENUE),
+      await protocolShareReserve.assetsReserves(
+        corePoolComptroller.address,
+        mockUSDC.address,
+        SCHEMA_ADDITIONAL_REVENUE,
+      ),
     ).to.equal(0);
     expect(
-      await protocolShareReserve.assetsReserves(isolatedPoolComptroller.address, mockUSDT.address, SCHEMA_ADDITIONAL_REVENUE),
+      await protocolShareReserve.assetsReserves(
+        isolatedPoolComptroller.address,
+        mockUSDT.address,
+        SCHEMA_ADDITIONAL_REVENUE,
+      ),
     ).to.equal(0);
     expect(
-      await protocolShareReserve.assetsReserves(isolatedPoolComptroller.address, mockUSDT.address, SCHEMA_ADDITIONAL_REVENUE),
+      await protocolShareReserve.assetsReserves(
+        isolatedPoolComptroller.address,
+        mockUSDT.address,
+        SCHEMA_ADDITIONAL_REVENUE,
+      ),
     ).to.equal(0);
   });
 });
