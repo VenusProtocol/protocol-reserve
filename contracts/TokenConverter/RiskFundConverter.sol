@@ -204,8 +204,11 @@ contract RiskFundConverter is AbstractTokenConverter {
             uint256 poolsLength = pools.length;
             address[] memory poolsWithCore = new address[](poolsLength + 1);
 
-            for (uint256 i; i < poolsLength; ++i) {
+            for (uint256 i; i < poolsLength; ) {
                 poolsWithCore[i] = pools[i];
+                unchecked {
+                    ++i;
+                }
             }
             poolsWithCore[poolsLength] = CORE_POOL_COMPTROLLER;
             return poolsWithCore;
@@ -231,7 +234,8 @@ contract RiskFundConverter is AbstractTokenConverter {
         uint256 assetReserve = assetsReserves[tokenOutAddress];
         ensureNonzeroValue(assetReserve);
 
-        for (uint256 i; i < pools.length; ++i) {
+        uint256 poolsLength = pools.length;
+        for (uint256 i; i < poolsLength; ++i) {
             uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenOutAddress] * EXP_SCALE) / assetReserve;
             if (poolShare == 0) continue;
             updatePoolAssetsReserve(pools[i], tokenOutAddress, amountOut, poolShare);
@@ -260,7 +264,8 @@ contract RiskFundConverter is AbstractTokenConverter {
 
             address[] memory pools = getPools(tokenAddress);
             uint256 assetReserve = assetsReserves[tokenAddress];
-            for (uint256 i; i < pools.length; ++i) {
+            uint256 poolsLength = pools.length;
+            for (uint256 i; i < poolsLength; ++i) {
                 uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenAddress] * EXP_SCALE) / assetReserve;
                 if (poolShare == 0) continue;
                 updatePoolAssetsReserve(pools[i], tokenAddress, amountDiff, poolShare);
@@ -303,17 +308,25 @@ contract RiskFundConverter is AbstractTokenConverter {
             revert InvalidArguments();
         }
 
-        for (uint256 i; i < comptrollersLength; ++i) {
+        for (uint256 i; i < comptrollersLength; ) {
             address[] memory poolAssets = assets[i];
             bool[] memory assetsValues = values[i];
+            uint256 poolAssetsLength = poolAssets.length;
 
-            if (poolAssets.length != assetsValues.length) {
+            if (poolAssetsLength != assetsValues.length) {
                 revert InvalidArguments();
             }
 
-            for (uint256 j; j < poolAssets.length; ++j) {
+            for (uint256 j; j < poolAssetsLength; ) {
                 poolsAssetsDirectTransfer[comptrollers[i]][poolAssets[j]] = assetsValues[j];
                 emit PoolAssetsDirectTransferUpdated(comptrollers[i], poolAssets[j], assetsValues[j]);
+                unchecked {
+                    ++j;
+                }
+            }
+
+            unchecked {
+                ++i;
             }
         }
     }
@@ -324,13 +337,18 @@ contract RiskFundConverter is AbstractTokenConverter {
     function isAssetListedInCore(address tokenAddress) internal view returns (bool isAssetListed) {
         address[] memory coreMarkets = IComptroller(CORE_POOL_COMPTROLLER).getAllMarkets();
 
-        for (uint256 i; i < coreMarkets.length; ++i) {
+        uint256 coreMarketsLength = coreMarkets.length;
+        for (uint256 i; i < coreMarketsLength; ) {
             isAssetListed = (VBNB == coreMarkets[i])
                 ? (tokenAddress == NATIVE_WRAPPED)
                 : (IVToken(coreMarkets[i]).underlying() == tokenAddress);
 
             if (isAssetListed) {
                 break;
+            }
+
+            unchecked {
+                ++i;
             }
         }
     }

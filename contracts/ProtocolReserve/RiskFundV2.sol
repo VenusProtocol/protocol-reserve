@@ -184,8 +184,11 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
 
         uint256 assetReserves;
         uint256 poolsLength = pools.length;
-        for (uint256 i; i < poolsLength; ++i) {
+        for (uint256 i; i < poolsLength; ) {
             assetReserves += poolAssetsFunds[pools[i]][tokenAddress];
+            unchecked {
+                ++i;
+            }
         }
 
         uint256 balanceDiff = balance - assetReserves;
