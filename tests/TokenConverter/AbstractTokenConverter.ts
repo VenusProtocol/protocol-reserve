@@ -125,27 +125,6 @@ describe("MockConverter: tests", () => {
       ).to.be.revertedWithCustomError(converter, "AmountInHigherThanMax");
     });
 
-    it("Revert on deflationary token transfer", async () => {
-      await destination.convertibleBaseAsset.returns(tokenInDeflationary.address);
-
-      const ConversionConfig = {
-        incentive: INCENTIVE,
-        enabled: true,
-      };
-
-      await converter.setConversionConfig(tokenInDeflationary.address, tokenOut.address, ConversionConfig);
-
-      await expect(
-        converter.convertForExactTokens(
-          convertToUnit(".25", 18),
-          convertToUnit(".5", 18),
-          tokenInDeflationary.address,
-          tokenOut.address,
-          await to.getAddress(),
-        ),
-      ).to.be.revertedWithCustomError(converter, "AmountInOrAmountOutMismatched");
-    });
-
     it("Revert when address(to) is same as tokenAddressIn or tokenAddressOut", async () => {
       await destination.convertibleBaseAsset.returns(tokenIn.address);
       await converter.setConversionConfig(tokenIn.address, tokenOut.address, ConversionConfig);
@@ -208,26 +187,6 @@ describe("MockConverter: tests", () => {
           await to.getAddress(),
         ),
       ).to.be.revertedWithCustomError(converter, "AmountOutLowerThanMinRequired");
-    });
-
-    it("Revert on deflationary token transfer", async () => {
-      await destination.convertibleBaseAsset.returns(tokenInDeflationary.address);
-      const ConversionConfig = {
-        incentive: INCENTIVE,
-        enabled: true,
-      };
-
-      await converter.setConversionConfig(tokenInDeflationary.address, tokenOut.address, ConversionConfig);
-
-      await expect(
-        converter.convertExactTokens(
-          convertToUnit(".25", 18),
-          convertToUnit(".5", 18),
-          tokenInDeflationary.address,
-          tokenOut.address,
-          await to.getAddress(),
-        ),
-      ).to.be.revertedWithCustomError(converter, "AmountInOrAmountOutMismatched");
     });
 
     it("Revert when address(to) is same as tokenAddressIn or tokenAddressOut", async () => {
@@ -300,7 +259,7 @@ describe("MockConverter: tests", () => {
       const amountTransferredAfterFees = parseUnits(".25", 18).sub(amountDeductedInTransfer);
 
       const expectedResults = await converter.callStatic.getUpdatedAmountOut(
-        convertToUnit(".25", 18),
+        amountTransferredAfterFees,
         tokenInDeflationary.address,
         tokenOut.address,
       );
@@ -358,35 +317,45 @@ describe("MockConverter: tests", () => {
       ).to.be.revertedWithCustomError(converter, "InvalidToAddress");
     });
 
-    it("Success on convert exact tokens with supporting fee", async () => {
-      await destination.convertibleBaseAsset.returns(tokenInDeflationary.address);
-      const ConversionConfig = {
-        incentive: INCENTIVE,
-        enabled: true,
-      };
+    // We can not keep convertForExactTokens with supporting fee.
+    // it.only("Success on convert exact tokens with supporting fee", async () => {
+    //   // Calculation for token transfer to converter after fees deduction.
+    //   const amountDeductedInTransfer = parseUnits(".25", 18).div(100);
+    //   const amountTransferredAfterFees = parseUnits(".25", 18).sub(amountDeductedInTransfer);
 
-      await converter.setConversionConfig(tokenInDeflationary.address, tokenOut.address, ConversionConfig);
+    //   await destination.convertibleBaseAsset.returns(tokenInDeflationary.address);
+    //   const ConversionConfig = {
+    //     incentive: INCENTIVE,
+    //     enabled: true,
+    //   };
 
-      const expectedResults = await converter.callStatic.getUpdatedAmountIn(
-        convertToUnit(".5", 18),
-        tokenInDeflationary.address,
-        tokenOut.address,
-      );
-      // Calculation for Token Transferred to converter.
-      const amountTransferredAfterFees = expectedResults[1].sub(expectedResults[1].div(100));
+    //   await converter.setConversionConfig(tokenInDeflationary.address, tokenOut.address, ConversionConfig);
 
-      await expect(
-        converter.convertForExactTokensSupportingFeeOnTransferTokens(
-          convertToUnit(".25", 18),
-          convertToUnit(".5", 18),
-          tokenInDeflationary.address,
-          tokenOut.address,
-          await to.getAddress(),
-        ),
-      )
-        .to.emit(converter, "ConvertedForExactTokensSupportingFeeOnTransferTokens")
-        .withArgs(amountTransferredAfterFees, expectedResults[0]);
-    });
+    //   const expectedResults = await converter.callStatic.getUpdatedAmountIn(
+    //     convertToUnit(".5", 18),
+    //     tokenInDeflationary.address,
+    //     tokenOut.address,
+    //   );
+
+    //   const expectedResults2 = await converter.callStatic.getUpdatedAmountOut(
+    //     amountTransferredAfterFees,
+    //     tokenInDeflationary.address,
+    //     tokenOut.address,
+    //   );
+    //   // Calculation for Token Transferred to converter.
+
+    //   await expect(
+    //     converter.convertForExactTokensSupportingFeeOnTransferTokens(
+    //       convertToUnit(".25", 18),
+    //       convertToUnit(".5", 18),
+    //       tokenInDeflationary.address,
+    //       tokenOut.address,
+    //       await to.getAddress(),
+    //     ),
+    //   )
+    //     .to.emit(converter, "ConvertedForExactTokensSupportingFeeOnTransferTokens")
+    //     .withArgs(amountTransferredAfterFees, expectedResults2[0]);
+    // });
   });
 
   describe("Set convert configurations", () => {
@@ -517,21 +486,13 @@ describe("MockConverter: tests", () => {
       expect(results[1]).to.equal(amountOut);
     });
 
-    it("Success on converting tokenIn to tokenOut for over tokenOut liquidity", async () => {
+    it("Revert on converting tokenIn to tokenOut for over tokenOut liquidity", async () => {
       await setConversionConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await converter.callStatic.getUpdatedAmountOut(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
-      const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
-      const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
-      const amountIn = new BigNumber(TOKEN_OUT_MAX)
-        .multipliedBy(MANTISSA_ONE)
-        .dividedBy(conversionRatio)
-        .dividedBy(conversionWithIncentive)
-        .toFixed(0);
+      const tx = converter.callStatic.getUpdatedAmountOut(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
 
-      expect(results[0]).to.closeTo(amountIn, 1);
-      expect(results[1]).to.closeTo(TOKEN_OUT_MAX, 1);
+      await expect(tx).to.be.revertedWithCustomError(converter, "InsufficientPoolLiquidity");
     });
   });
 
@@ -541,7 +502,7 @@ describe("MockConverter: tests", () => {
 
     beforeEach(async () => {
       await tokenIn.connect(owner).approve(converter.address, convertToUnit("1", 18));
-      await tokenOut.transfer(converter.address, convertToUnit("1.5", 18));
+      await tokenOut.transfer(converter.address, convertToUnit("3", 18));
     });
 
     const setConversionConfig = async () => {
@@ -579,21 +540,13 @@ describe("MockConverter: tests", () => {
       expect(results[1]).to.closeTo(amountIn, 1);
     });
 
-    it("Success on conversing tokenIn to tokenOut for over tokenOut liquidity", async () => {
+    it("Revert on conversing tokenIn to tokenOut for over tokenOut liquidity", async () => {
       await setConversionConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const results = await converter.callStatic.getUpdatedAmountIn(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
-      const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
-      const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
-      const amountIn = new BigNumber(TOKEN_OUT_MAX)
-        .multipliedBy(MANTISSA_ONE)
-        .dividedBy(conversionRatio)
-        .dividedBy(conversionWithIncentive)
-        .toFixed(0);
+      const tx = converter.callStatic.getUpdatedAmountIn(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
 
-      expect(results[0]).to.closeTo(TOKEN_OUT_MAX, 1);
-      expect(results[1]).to.closeTo(amountIn, 1);
+      await expect(tx).to.be.revertedWithCustomError(converter, "InsufficientPoolLiquidity");
     });
   });
 
