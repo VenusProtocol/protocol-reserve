@@ -1,3 +1,44 @@
+## [1.0.0-dev.7](https://github.com/VenusProtocol/protocol-reserve/compare/v1.0.0-dev.6...v1.0.0-dev.7) (2023-10-18)
+
+
+### Features
+
+* add asset to prime and make prime optional ([4ddd2ae](https://github.com/VenusProtocol/protocol-reserve/commit/4ddd2aeb22739479e309d7bc6d2fcade024f4033))
+* added deploy script ([d89237e](https://github.com/VenusProtocol/protocol-reserve/commit/d89237eee4e60af3d265653e547f755375275ed7))
+* added mainnet deployments ([d781471](https://github.com/VenusProtocol/protocol-reserve/commit/d781471e5ac52b9e6cc9403b0ca297a8a059f421))
+* deployed new contract ([01b3e62](https://github.com/VenusProtocol/protocol-reserve/commit/01b3e621f60f41dc88727df268eb6259ca8c7bf3))
+* remove zero percentage config ([c7ef4b0](https://github.com/VenusProtocol/protocol-reserve/commit/c7ef4b0939446c84312b1e44b8e6034ac584ba8a))
+
+
+### Bug Fixes
+
+* added 3 indexes ([bd73c11](https://github.com/VenusProtocol/protocol-reserve/commit/bd73c112deae980b0281a68894eb68707709acf9))
+* added event when config removed ([4346fa9](https://github.com/VenusProtocol/protocol-reserve/commit/4346fa92db4347b6b56483b7ff6dfda52ce87a2b))
+* added indexed to asset ([0614f4f](https://github.com/VenusProtocol/protocol-reserve/commit/0614f4f9ab339793e7c5121e19e703f6618ef32c))
+* change getScheme to _getSchema ([aee1f22](https://github.com/VenusProtocol/protocol-reserve/commit/aee1f22f6f779129b610b419becbb967a117d387))
+* change memory to calldata ([1805452](https://github.com/VenusProtocol/protocol-reserve/commit/1805452f3228d261e1bae952585ddc242a0a353e))
+* change percentage type from uint256 to uint8 ([4a97743](https://github.com/VenusProtocol/protocol-reserve/commit/4a977439961a14a364537338cfa80c8a2fef7e4c))
+* changed prime address ([b2753f5](https://github.com/VenusProtocol/protocol-reserve/commit/b2753f57adb5c22d497d5e131382a73a010d72fd))
+* deployed new contracts ([f29643c](https://github.com/VenusProtocol/protocol-reserve/commit/f29643c6ea47350ba371c110b133253d1c633150))
+* deployed new contracts with max percent fix ([ef57366](https://github.com/VenusProtocol/protocol-reserve/commit/ef573669e574509500034622f98721b0cf19d771))
+* deployed to mainnet ([3a568cc](https://github.com/VenusProtocol/protocol-reserve/commit/3a568ccd3e9f53b3b92d593bbae6fb4b82c874d7))
+* fixed ci test ([9660452](https://github.com/VenusProtocol/protocol-reserve/commit/9660452a497e78d7acb0bde0cf44434e09ac174b))
+* fixed comptroller address and redeployed ([2f49a58](https://github.com/VenusProtocol/protocol-reserve/commit/2f49a58301ac0f8d7cd1de716737dd3d0e6f3e74))
+* fixed dependency ([b80107e](https://github.com/VenusProtocol/protocol-reserve/commit/b80107e9b18ffaa44e529fcc824dd4dc4976d5ce))
+* fixed func signature ([db7f946](https://github.com/VenusProtocol/protocol-reserve/commit/db7f94667323a35ce7281a868e8c7cf3f7237eb2))
+* new testnet deployment ([f407ca5](https://github.com/VenusProtocol/protocol-reserve/commit/f407ca55fdcd14d493b80709c11739d50f0bcefc))
+* optimise removal of config ([18c16f7](https://github.com/VenusProtocol/protocol-reserve/commit/18c16f785f8cfd07e1e1f778d0d1208fbc86b4fc))
+* re-deployed contracts ([4ea9364](https://github.com/VenusProtocol/protocol-reserve/commit/4ea9364cb12ff953b61a50ee47fc316186023069))
+* re-deployed with existing proxy admin ([b36a718](https://github.com/VenusProtocol/protocol-reserve/commit/b36a71808524166f465f4d1dc5bb50e98aafc423))
+* redeployed contracts ([abebfe5](https://github.com/VenusProtocol/protocol-reserve/commit/abebfe5a956afd06e87d15e20cc3e2b120cade70))
+* redeployed with new proxy ([e98455c](https://github.com/VenusProtocol/protocol-reserve/commit/e98455cdeffa10a260f319e43b0d7e9af417e418))
+* remove prime dependency ([60286c4](https://github.com/VenusProtocol/protocol-reserve/commit/60286c49517b8ccf3c93b01c47b0c47bd284e809))
+* removed require statement ([01dee59](https://github.com/VenusProtocol/protocol-reserve/commit/01dee59345c17db2192a0154b734e23c7853fa75))
+* revert added 3 indexes ([cae16fa](https://github.com/VenusProtocol/protocol-reserve/commit/cae16fa864802c6666e9cd82b4722faf0026e71d))
+* updated deployment ([a7242b8](https://github.com/VenusProtocol/protocol-reserve/commit/a7242b8c713ca957ae002290fc22bc64a3b56acc))
+* updated schemas ([010c545](https://github.com/VenusProtocol/protocol-reserve/commit/010c545dce8ac7757792816a1fa81bad0ed0c3de))
+* VEN-12 ([65c4f91](https://github.com/VenusProtocol/protocol-reserve/commit/65c4f91f239a454f6bb820242b02dcd64511901b))
+
 ## [1.0.0-dev.6](https://github.com/VenusProtocol/protocol-reserve/compare/v1.0.0-dev.5...v1.0.0-dev.6) (2023-09-25)
 
 
