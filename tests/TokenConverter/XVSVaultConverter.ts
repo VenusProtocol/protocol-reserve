@@ -11,8 +11,8 @@ import {
   MockToken,
   MockToken__factory,
   ResilientOracleInterface,
-  XVSVaultConverter,
-  XVSVaultConverter__factory,
+  SingleTokenConverter,
+  SingleTokenConverter__factory,
   XVSVaultTreasury,
 } from "../../typechain";
 import { convertToUnit } from "../utils";
@@ -21,7 +21,7 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 let accessControl: FakeContract<IAccessControlManagerV8>;
-let converter: MockContract<XVSVaultConverter>;
+let converter: MockContract<SingleTokenConverter>;
 let tokenIn: MockContract<MockToken>;
 let tokenOut: MockContract<MockToken>;
 let xvs: MockContract<MockToken>;
@@ -30,7 +30,7 @@ let xvsVaultTreasury: FakeContract<XVSVaultTreasury>;
 let tokenInDeflationary: MockContract<MockDeflatingToken>;
 
 async function fixture(): Promise<void> {
-  const converterFactory = await smock.mock<XVSVaultConverter__factory>("XVSVaultConverter");
+  const converterFactory = await smock.mock<SingleTokenConverter__factory>("SingleTokenConverter");
 
   xvsVaultTreasury = await smock.fake<XVSVaultTreasury>("XVSVaultTreasury");
 

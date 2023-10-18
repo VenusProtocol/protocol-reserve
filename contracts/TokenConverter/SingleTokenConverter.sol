@@ -8,25 +8,25 @@ import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle
 import { AbstractTokenConverter } from "./AbstractTokenConverter.sol";
 import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 
-/// @title XVSVaultConverter
+/// @title SingleTokenConverter
 /// @author Venus
-/// @notice XVSVaultConverter used for token conversions and sends received token to XVSVaultTreasury
+/// @notice SingleTokenConverter used for token conversions and sends received tokens
 /// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
-contract XVSVaultConverter is AbstractTokenConverter {
+contract SingleTokenConverter is AbstractTokenConverter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    /// @notice Address of the XVS token
-    address public immutable XVS;
+    /// @notice Address of the BASE_ASSET token
+    address public immutable BASE_ASSET;
 
     /// @notice Emmitted after the funds transferred to the destination address
-    event XVSTransferredToDestination(uint256 amount);
+    event AssetTransferredToDestination(uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    /// @param xvs_ Address of the XVS token
+    /// @param baseAsset_ Address of the BASE_ASSET token
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address xvs_) {
-        ensureNonzeroAddress(xvs_);
-        XVS = xvs_;
+    constructor(address baseAsset_) {
+        ensureNonzeroAddress(baseAsset_);
+        BASE_ASSET = baseAsset_;
 
         // Note that the contract is upgradeable. Use initialize() or reinitializers
         // to set the state variables.
@@ -50,15 +50,15 @@ contract XVSVaultConverter is AbstractTokenConverter {
     /// @param asset Asset address.
     // solhint-disable-next-line
     function updateAssetsState(address comptroller, address asset) public {
-        uint256 xvsBalance;
-        if (asset == XVS) {
-            IERC20Upgradeable token = IERC20Upgradeable(XVS);
-            xvsBalance = token.balanceOf(address(this));
+        uint256 balance;
+        if (asset == BASE_ASSET) {
+            IERC20Upgradeable token = IERC20Upgradeable(BASE_ASSET);
+            balance = token.balanceOf(address(this));
 
-            token.safeTransfer(destinationAddress, xvsBalance);
+            token.safeTransfer(destinationAddress, balance);
         }
 
-        emit XVSTransferredToDestination(xvsBalance);
+        emit AssetTransferredToDestination(balance);
     }
 
     /// @notice Get the balance for specific token
@@ -71,6 +71,6 @@ contract XVSVaultConverter is AbstractTokenConverter {
 
     /// @notice Get base asset address
     function _getDestinationBaseAsset() internal view override returns (address) {
-        return XVS;
+        return BASE_ASSET;
     }
 }
