@@ -75,6 +75,12 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Event emitted when tokens are swept
     event SweepToken(address indexed token, address indexed to, uint256 amount);
 
+    /// @notice Thrown when actualAmountOut does not match with amountOutMantissa for convertForExactTokens
+    error AmountOutMismatched();
+
+    /// @notice Thrown when actualAmountIn does not match with amountInMantissa for convertForExactTokens
+    error AmountInMismatched();
+
     /// @notice Thrown when given input amount is zero
     error InsufficientInputAmount();
 
@@ -190,8 +196,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         configuration.enabled = conversionConfig.enabled;
     }
 
-    /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut if there is enough tokens held by the contract,
-    ///         otherwise the amount is adjusted
+    /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut if there is enough tokens held by the contract
     /// @dev Method does not support deflationary tokens transfer
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param amountOutMinMantissa Min amount of tokenAddressOut required as output
@@ -201,6 +206,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @custom:event Emits ConvertedExactTokens event on success
     /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
     /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
+    /// @custom:error AmountInMismatched error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
     function convertExactTokens(
         uint256 amountInMantissa,
         uint256 amountOutMinMantissa,
@@ -221,6 +227,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             to
         );
 
+        if (actualAmountIn != amountInMantissa) {
+            revert AmountInMismatched();
+        }
+
         postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
 
         emit ConvertedExactTokens(actualAmountIn, actualAmountOut);
@@ -237,6 +247,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @custom:event Emits ConvertedForExactTokens event on success
     /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
     /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
+    /// @custom:error AmountOutMismatched error is thrown when actualAmountOut is does not match amountOutMantissa
     function convertForExactTokens(
         uint256 amountInMaxMantissa,
         uint256 amountOutMantissa,
@@ -257,12 +268,15 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             to
         );
 
+        if (actualAmountOut != amountOutMantissa) {
+            revert AmountOutMismatched();
+        }
+
         postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
         emit ConvertedForExactTokens(actualAmountIn, actualAmountOut);
     }
 
-    /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut if there is enough tokens held by the contract,
-    ///         otherwise the amount is adjusted
+    /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut if there is enough tokens held by the contract
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param amountOutMinMantissa Min amount of tokenAddressOut required as output
     /// @param tokenAddressIn Address of the token to convert
@@ -395,19 +409,21 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut
     ) public returns (uint256 amountConvertedMantissa, uint256 amountInMantissa) {
-        priceOracle.updateAssetPrice(tokenAddressIn);
-        priceOracle.updateAssetPrice(tokenAddressOut);
-        (amountConvertedMantissa, amountInMantissa, ) = _getAmountIn(
-            amountOutMantissa,
-            tokenAddressIn,
-            tokenAddressOut
-        );
         uint256 maxTokenOutReserve = balanceOf(tokenAddressOut);
 
         /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountOutMantissa) {
             revert InsufficientPoolLiquidity();
         }
+
+        priceOracle.updateAssetPrice(tokenAddressIn);
+        priceOracle.updateAssetPrice(tokenAddressOut);
+
+        (amountConvertedMantissa, amountInMantissa, ) = _getAmountIn(
+            amountOutMantissa,
+            tokenAddressIn,
+            tokenAddressOut
+        );
     }
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
@@ -504,11 +520,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         (, uint256 amountOutMantissa) = getUpdatedAmountOut(actualAmountIn, tokenAddressIn, tokenAddressOut);
 
-        if (amountOutMantissa < amountOutMinMantissa) {
+        actualAmountOut = _actualAmountOut(tokenAddressOut, to, amountOutMantissa);
+
+        if (actualAmountOut < amountOutMinMantissa) {
             revert AmountOutLowerThanMinRequired(amountOutMantissa, amountOutMinMantissa);
         }
-
-        actualAmountOut = _actualAmountOut(tokenAddressOut, to, amountOutMantissa);
     }
 
     /// @notice Converts tokens for tokenAddressIn for exact amount of tokenAddressOut
@@ -529,11 +545,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     ) internal returns (uint256 actualAmountIn, uint256 actualAmountOut) {
         (, uint256 amountInMantissa) = getUpdatedAmountIn(amountOutMantissa, tokenAddressIn, tokenAddressOut);
 
-        if (amountInMantissa > amountInMaxMantissa) {
+        actualAmountIn = _actualAmountIn(tokenAddressIn, amountInMantissa);
+
+        if (actualAmountIn > amountInMaxMantissa) {
             revert AmountInHigherThanMax(amountInMantissa, amountInMaxMantissa);
         }
-
-        actualAmountIn = _actualAmountIn(tokenAddressIn, amountInMantissa);
 
         (, amountOutMantissa) = getUpdatedAmountOut(actualAmountIn, tokenAddressIn, tokenAddressOut);
 

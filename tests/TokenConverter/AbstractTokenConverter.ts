@@ -276,6 +276,26 @@ describe("MockConverter: tests", () => {
         .to.emit(converter, "ConvertedExactTokensSupportingFeeOnTransferTokens")
         .withArgs(amountTransferredAfterFees, expectedResults[1]);
     });
+
+    it("Revert on deflationary token transfer", async () => {
+      await destination.convertibleBaseAsset.returns(tokenInDeflationary.address);
+      const ConversionConfig = {
+        incentive: INCENTIVE,
+        enabled: true,
+      };
+
+      await converter.setConversionConfig(tokenInDeflationary.address, tokenOut.address, ConversionConfig);
+
+      await expect(
+        converter.convertExactTokens(
+          convertToUnit(".25", 18),
+          convertToUnit(".5", 18),
+          tokenInDeflationary.address,
+          tokenOut.address,
+          await to.getAddress(),
+        ),
+      ).to.be.revertedWithCustomError(converter, "AmountInMismatched");
+    });
   });
 
   describe("Convert tokens for exact tokens with supporting fee", async () => {
@@ -315,6 +335,27 @@ describe("MockConverter: tests", () => {
           tokenIn.address,
         ),
       ).to.be.revertedWithCustomError(converter, "InvalidToAddress");
+    });
+
+    it("Revert on deflationary token transfer", async () => {
+      await destination.convertibleBaseAsset.returns(tokenInDeflationary.address);
+
+      const ConversionConfig = {
+        incentive: INCENTIVE,
+        enabled: true,
+      };
+
+      await converter.setConversionConfig(tokenInDeflationary.address, tokenOut.address, ConversionConfig);
+
+      await expect(
+        converter.convertForExactTokens(
+          convertToUnit(".25", 18),
+          convertToUnit(".5", 18),
+          tokenInDeflationary.address,
+          tokenOut.address,
+          await to.getAddress(),
+        ),
+      ).to.be.revertedWithCustomError(converter, "AmountOutMismatched");
     });
 
     // We can not keep convertForExactTokens with supporting fee.

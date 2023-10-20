@@ -240,11 +240,11 @@ contract RiskFundConverter is AbstractTokenConverter {
         uint256 distributedInShare;
 
         for (uint256 i; i < poolsLength; ++i) {
-            uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenOutAddress] * EXP_SCALE) / assetReserve;
-            if (poolShare == 0) continue;
+            uint256 currentPoolsAssetsReserves = poolsAssetsReserves[pools[i]][tokenOutAddress];
+            if (currentPoolsAssetsReserves == 0) continue;
             if (i < (poolsLength - 1)) {
                 distributedOutShare += updatePoolAssetsReserve(pools[i], tokenOutAddress, amountOut, assetReserve);
-                poolAmountInShare = (amountIn * poolsAssetsReserves[pools[i]][tokenOutAddress]) / assetReserve;
+                poolAmountInShare = (amountIn * currentPoolsAssetsReserves) / assetReserve;
                 distributedInShare += poolAmountInShare;
             } else {
                 uint256 distributedDiff = amountOut - distributedOutShare;
@@ -280,8 +280,7 @@ contract RiskFundConverter is AbstractTokenConverter {
             uint256 distributedShare;
 
             for (uint256 i; i < poolsLength; ++i) {
-                uint256 poolShare = (poolsAssetsReserves[pools[i]][tokenAddress] * EXP_SCALE) / assetReserve;
-                if (poolShare == 0) continue;
+                if (poolsAssetsReserves[pools[i]][tokenAddress] == 0) continue;
                 if (i < (poolsLength - 1)) {
                     distributedShare += updatePoolAssetsReserve(pools[i], tokenAddress, amountDiff, assetReserve);
                 } else {

@@ -11,7 +11,7 @@ import { IXVSVault } from "../Interfaces/IXVSVault.sol";
 
 /// @title XVSVaultTreasury
 /// @author Venus
-/// @notice XVSVaultTreasury stores the tokens sent by XVSVaultConverter and funds XVSVault
+/// @notice XVSVaultTreasury stores the tokens sent by SingleTokenConverter(XVS) and funds XVSVault
 /// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 contract XVSVaultTreasury is AccessControlledV8, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
