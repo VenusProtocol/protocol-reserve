@@ -526,15 +526,6 @@ describe("MockConverter: tests", () => {
       expect(results[0]).to.equal(AMOUNT_IN_UNDER);
       expect(results[1]).to.equal(amountOut);
     });
-
-    it("Revert on converting tokenIn to tokenOut for over tokenOut liquidity", async () => {
-      await setConversionConfig();
-      await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
-      await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const tx = converter.callStatic.getUpdatedAmountOut(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
-
-      await expect(tx).to.be.revertedWithCustomError(converter, "InsufficientPoolLiquidity");
-    });
   });
 
   describe("Get amount in", () => {
@@ -579,15 +570,6 @@ describe("MockConverter: tests", () => {
 
       expect(results[0]).to.closeTo(AMOUNT_IN_UNDER, 1);
       expect(results[1]).to.closeTo(amountIn, 1);
-    });
-
-    it("Revert on conversing tokenIn to tokenOut for over tokenOut liquidity", async () => {
-      await setConversionConfig();
-      await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
-      await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-      const tx = converter.callStatic.getUpdatedAmountIn(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
-
-      await expect(tx).to.be.revertedWithCustomError(converter, "InsufficientPoolLiquidity");
     });
   });
 
