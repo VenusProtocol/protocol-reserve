@@ -13,6 +13,7 @@ type Addresses = {
     poolDeFi: string;
     poolGameFi: string;
     poolTron: string;
+    poolLiquidStakedBNB: string;
     USDT: string;
     vBNB: string;
     wBNB: string;
@@ -27,6 +28,7 @@ type Addresses = {
     poolStableCoin: string;
     poolDeFi: string;
     poolGameFi: string;
+    poolLiquidStakedBNB: string;
     poolTron: string;
     USDT: string;
     vBNB: string;
@@ -49,6 +51,7 @@ const addresses: Addresses = {
     poolStableCoin: "0x10b57706AD2345e590c2eA4DC02faef0d9f5b08B",
     poolDeFi: "0x23a73971A6B9f6580c048B9CB188869B2A2aA2aD",
     poolGameFi: "0x1F4f0989C51f12DAcacD4025018176711f3Bf289",
+    poolLiquidStakedBNB: "0x596B11acAACF03217287939f88d63b51d3771704",
     poolTron: "0x11537D023f489E4EF0C7157cc729C7B69CbE0c97",
     USDT: "0xA11c8D9DC9b66E209Ef60F0C8D969D3CD988782c",
     vBNB: "0x2E7222e51c0f6e98610A1543Aa3836E092CDe62c",
@@ -64,6 +67,7 @@ const addresses: Addresses = {
     poolStableCoin: "0x94c1495cD4c557f1560Cbd68EAB0d197e6291571",
     poolDeFi: "0x3344417c9360b963ca93A4e8305361AEde340Ab9",
     poolGameFi: "0x1b43ea8622e76627B81665B1eCeBB4867566B963",
+    poolLiquidStakedBNB: "0xd933909A4a2b7A4638903028f44D1d38ce27c352",
     poolTron: "0x23b4404E4E5eC5FF5a6FFb70B7d14E3FabF237B0",
     USDT: "0x55d398326f99059fF775485246999027B3197955",
     vBNB: "0xA07c5b74C9B40447a954e1466938b865b6BBea36",
@@ -86,6 +90,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     poolStableCoin,
     poolDeFi,
     poolGameFi,
+    poolLiquidStakedBNB,
     poolTron,
     USDT,
     vBNB,
@@ -93,9 +98,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     proxyOwnerAddress,
   } = addresses[network.name];
 
-  comptrollers = [corePool, poolStableCoin, poolDeFi, poolGameFi, poolTron];
-  assets = [[USDT], [USDT], [USDT], [USDT], [USDT]];
-  values = [[true], [true], [true], [true], [true]];
+  comptrollers = [corePool, poolStableCoin, poolDeFi, poolGameFi, poolLiquidStakedBNB, poolTron];
+  assets = [[USDT], [USDT], [USDT], [USDT], [USDT], [USDT]];
+  values = [[true], [true], [true], [true], [true], [true]];
 
   await deploy("RiskFundConverter", {
     from: deployer,
