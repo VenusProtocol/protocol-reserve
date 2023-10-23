@@ -1,3 +1,10 @@
+## [1.0.1-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v1.0.0...v1.0.1-dev.1) (2023-10-23)
+
+
+### Bug Fixes
+
+* remove duplicate directory ([cd3c32e](https://github.com/VenusProtocol/protocol-reserve/commit/cd3c32e17f91dbcee0aa40a096c9df008a50f00d))
+
 ## 1.0.0 (2023-10-19)
 
 
