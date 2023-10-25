@@ -1,3 +1,10 @@
+## [1.1.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v1.0.1-dev.1...v1.1.0-dev.1) (2023-10-25)
+
+
+### Features
+
+* replace dependency of isolated-pools ([4eb584a](https://github.com/VenusProtocol/protocol-reserve/commit/4eb584abbe5d750134bf2f91d60a4e4de6298cbe))
+
 ## [1.0.1-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v1.0.0...v1.0.1-dev.1) (2023-10-23)
 
 
