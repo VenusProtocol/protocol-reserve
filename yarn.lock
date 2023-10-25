@@ -3013,21 +3013,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/isolated-pools@npm:^2.0.0":
-  version: 2.0.0
-  resolution: "@venusprotocol/isolated-pools@npm:2.0.0"
-  dependencies:
-    "@openzeppelin/contracts": ^4.8.3
-    "@openzeppelin/contracts-upgradeable": ^4.8.3
-    "@openzeppelin/hardhat-upgrades": ^1.21.0
-    "@solidity-parser/parser": ^0.13.2
-    ethers: ^5.7.0
-    hardhat-deploy: ^0.11.14
-    module-alias: ^2.2.2
-  checksum: b68c5c5c93547f56482731c3ae28a7de7bc7077c95fbb6d9daa454417a18d6bd90ed373a8754586bba95636e5da9b76bd4e0a880919474e47f7ca15b2f0fddf5
-  languageName: node
-  linkType: hard
-
 "@venusprotocol/oracle@npm:1.7.2":
   version: 1.7.2
   resolution: "@venusprotocol/oracle@npm:1.7.2"
@@ -3076,8 +3061,8 @@ __metadata:
     "@typescript-eslint/eslint-plugin": ^5.27.1
     "@typescript-eslint/parser": ^5.27.1
     "@venusprotocol/governance-contracts": ^1.0.0
-    "@venusprotocol/isolated-pools": ^2.0.0
     "@venusprotocol/oracle": 1.7.2
+    "@venusprotocol/solidity-utilities": 1.0.1
     "@venusprotocol/venus-protocol": 3.0.0-dev.18
     bignumber.js: 9.0.0
     chai: ^4.3.6
@@ -3107,6 +3092,13 @@ __metadata:
     typescript: ^4.6.3
   languageName: unknown
   linkType: soft
+
+"@venusprotocol/solidity-utilities@npm:1.0.1":
+  version: 1.0.1
+  resolution: "@venusprotocol/solidity-utilities@npm:1.0.1"
+  checksum: bba7e09c732c1364980e73d22ea3ce2d5b1fc3e20ddbfdcb318bfa480cb258e55c1df7de5622f060399424adbd8155c148553cbe1b6e1cbeba45d64b48758e07
+  languageName: node
+  linkType: hard
 
 "@venusprotocol/venus-protocol@npm:0.7.0":
   version: 0.7.0
