@@ -14,6 +14,57 @@ import { IAbstractTokenConverter } from "./IAbstractTokenConverter.sol";
 /// @title AbstractTokenConverter
 /// @author Venus
 /// @notice Abstract contract will be extended by SingleTokenConverter and RiskFundConverter
+/*
+ * This contract specifies four functions for converting tokens, each applicable under following circumstances:
+ *
+ * Case I: TokenIn -> deflationary token, TokenOut -> deflationary token
+ * In this scenario, functions supporting fees can only be utilized to convert tokens which are:
+ * a. convertExactTokensSupportingFeeOnTransferTokens
+ * b. convertForExactTokensSupportingFeeOnTransferTokens
+ *
+ * Case II: TokenIn -> deflationary token, TokenOut -> non-deflationary token
+ * In this scenario, functions supporting fee can only be utilized to convert tokens which are:
+ * similar to Case I.
+ *
+ * Case III: TokenIn -> non-deflationary token, TokenOut -> deflationary token
+ * In this scenario, functions with or without supporting fee can be utilized to convert tokens which are:
+ * a. convertExactTokens
+ * b. convertForExactTokens
+ * c. convertExactTokensSupportingFeeOnTransferTokens
+ * d. convertForExactTokensSupportingFeeOnTransferTokens
+ *
+ * Case IV: TokenIn -> non-deflationary token, TokenOut -> non-deflationary token
+ * In this scenario, functions with or without supporting fee can be utilized to convert tokens which are:
+ * similar to Case III.
+ *
+ * Example 1:-
+ *    tokenInAddress - 0xaaaa.....
+ *    tokenOutAddress - 0xbbbb.....
+ *    tokenInAmount - 100
+ *    tokenOutMinAmount - minimum amount desired by the user(let's say 70)
+ * Here user can use `convertExactTokens` or `convertExactTokensSupportingFeeOnTransferTokens`, if tokenIn is deflationary
+ * then `convertExactTokensSupportingFeeOnTransferTokens` should be used(let's suppose `convertExactTokens` is used).
+ * Now first tokenInAddress tokens will be transferred from the user to the contract, on the basis of amount
+ * received(as tokenInAddress can be deflationary token) tokenAmountOut will be calculated and will be transferred
+ * to the user and if amount sent is less than tokenOutMinAmount, tx will revert. If amount sent is satisfied(let's say
+ * 80 or even 70) then at last the actual amount received and the amount that was supposed to be received by the contract will
+ * be compared, if they differ then the whole tx will revert as user was supposed to use `convertExactTokensSupportingFeeOnTransferTokens`
+ * function for tokenIn as deflationary token.
+ *
+ * Example 2:-
+ *    tokenInAddress - 0xaaaa.....
+ *    tokenOutAddress - 0xbbbb.....
+ *    tokenInMaxAmount - maximum amount user is willing to provide(let's say 100)
+ *    tokenOutAmount - 70
+ * Here user can use `convertForExactTokens` or `convertForExactTokensSupportingFeeOnTransferTokens`, if tokenIn is deflationary
+ * then `convertForExactTokensSupportingFeeOnTransferTokens` should be used(let's suppose `convertForExactTokens` is used),
+ * which on the basis of tokenOutAmount provided will calculate tokenInAmount based on the tokens prices and will transfer
+ * tokens from the user to the contract, now the actual amount received(as tokenInAddress can be deflationary token) will be
+ * compared with tokenInMaxAmount if it is greater, tx will revert. If In amount is satisfied(let's say 90 or even 100) then
+ * new tokenOutAmount will be calculated, and tokenOutAddress tokens will be transferred to the user, but at last the
+ * old tokenOutAmount and new tokenOutAmount will be compared and if they differ whole tx will revert, because user was
+ * supposed to use `convertForExactTokensSupportingFeeOnTransferTokens` function for tokenIn as deflationary token.
+ */
 /// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenConverter, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
