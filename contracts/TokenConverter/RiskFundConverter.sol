@@ -151,42 +151,6 @@ contract RiskFundConverter is AbstractTokenConverter {
         return poolsAssetsReserves[comptroller][asset];
     }
 
-    /// @dev Update the reserve of the asset for the specific pool after transferring to risk fund
-    /// and transferring funds to the protocol share reserve
-    /// @param comptroller Comptroller address (pool)
-    /// @param asset Asset address
-    /// @custom:event AssetTransferredToDestination emits when poolsAssetsDirectTransfer is enabled for entered comptroller and asset
-    /// @custom:event AssetsReservesUpdated emits when poolsAssetsDirectTransfer is not enabled for entered comptroller and asset
-    function updateAssetsState(address comptroller, address asset) public {
-        if (!ensureAssetListed(comptroller, asset)) revert MarketNotExistInPool(comptroller, asset);
-
-        IERC20Upgradeable token = IERC20Upgradeable(asset);
-        uint256 currentBalance = token.balanceOf(address(this));
-        uint256 assetReserve = assetsReserves[asset];
-        if (currentBalance > assetReserve) {
-            uint256 balanceDifference;
-            unchecked {
-                balanceDifference = currentBalance - assetReserve;
-            }
-            if (poolsAssetsDirectTransfer[comptroller][asset]) {
-                uint256 previousDestinationBalance = token.balanceOf(destinationAddress);
-                token.safeTransfer(destinationAddress, balanceDifference);
-                uint256 newDestinationBalance = token.balanceOf(destinationAddress);
-
-                emit AssetTransferredToDestination(comptroller, asset, balanceDifference);
-                IRiskFund(destinationAddress).updatePoolState(
-                    comptroller,
-                    asset,
-                    newDestinationBalance - previousDestinationBalance
-                );
-            } else {
-                assetsReserves[asset] += balanceDifference;
-                poolsAssetsReserves[comptroller][asset] += balanceDifference;
-                emit AssetsReservesUpdated(comptroller, asset, balanceDifference);
-            }
-        }
-    }
-
     /// @notice Get the balance for specific token
     /// @param tokenAddress Address of the token
     /// @return Reserves of the token the contract has
@@ -347,6 +311,59 @@ contract RiskFundConverter is AbstractTokenConverter {
             unchecked {
                 ++i;
             }
+        }
+    }
+
+    /// @dev Update the reserve of the asset for the specific pool after transferring to risk fund
+    /// and transferring funds to the protocol share reserve
+    /// @param comptroller Comptroller address (pool)
+    /// @param asset Asset address
+    /// @custom:event AssetTransferredToDestination emits when poolsAssetsDirectTransfer is enabled for entered comptroller and asset
+    /// @custom:event AssetsReservesUpdated emits when poolsAssetsDirectTransfer is not enabled for entered comptroller and asset
+    function _updateAssetsState(address comptroller, address asset) internal override returns (uint256) {
+        if (!ensureAssetListed(comptroller, asset)) revert MarketNotExistInPool(comptroller, asset);
+
+        IERC20Upgradeable token = IERC20Upgradeable(asset);
+        uint256 currentBalance = token.balanceOf(address(this));
+        uint256 assetReserve = assetsReserves[asset];
+        if (currentBalance > assetReserve) {
+            uint256 balanceDifference;
+            unchecked {
+                balanceDifference = currentBalance - assetReserve;
+            }
+            if (poolsAssetsDirectTransfer[comptroller][asset]) {
+                uint256 previousDestinationBalance = token.balanceOf(destinationAddress);
+                token.safeTransfer(destinationAddress, balanceDifference);
+                uint256 newDestinationBalance = token.balanceOf(destinationAddress);
+
+                emit AssetTransferredToDestination(comptroller, asset, balanceDifference);
+                IRiskFund(destinationAddress).updatePoolState(
+                    comptroller,
+                    asset,
+                    newDestinationBalance - previousDestinationBalance
+                );
+                return 0;
+            }
+            return balanceDifference;
+        }
+    }
+
+    function _postPrivateConversion(
+        address comptroller,
+        address tokenAddressIn,
+        uint256 convertedTokenInBalance,
+        address tokenAddressOut,
+        uint256 convertedTokenOutBalance
+    ) internal override {
+        if (convertedTokenInBalance > 0) {
+            assetsReserves[tokenAddressIn] += convertedTokenInBalance;
+            poolsAssetsReserves[comptroller][tokenAddressIn] += convertedTokenInBalance;
+            emit AssetsReservesUpdated(comptroller, tokenAddressIn, convertedTokenInBalance);
+        }
+        if (convertedTokenOutBalance > 0) {
+            assetsReserves[tokenAddressOut] += convertedTokenOutBalance;
+            poolsAssetsReserves[comptroller][tokenAddressOut] += convertedTokenOutBalance;
+            emit AssetsReservesUpdated(comptroller, tokenAddressOut, convertedTokenOutBalance);
         }
     }
 

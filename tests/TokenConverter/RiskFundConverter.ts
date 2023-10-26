@@ -9,6 +9,7 @@ import { ethers, upgrades } from "hardhat";
 import {
   IAccessControlManagerV8,
   IComptroller,
+  IConverterNetwork,
   IPoolRegistry,
   IVToken,
   MockDeflatingToken,
@@ -33,6 +34,7 @@ let oracle: FakeContract<ResilientOracleInterface>;
 let poolRegistry: FakeContract<IPoolRegistry>;
 let newPoolRegistry: FakeContract<IPoolRegistry>;
 let riskFund: FakeContract<RiskFundV2>;
+let converterNetwork: FakeContract<IConverterNetwork>;
 let tokenInDeflationary: MockContract<MockDeflatingToken>;
 let unKnown: Signer;
 let corePool: FakeContract<IComptroller>;
@@ -60,6 +62,7 @@ async function fixture(): Promise<void> {
 
   accessControl = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
   oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+  converterNetwork = await smock.fake<IConverterNetwork>("IConverterNetwork");
 
   const MockToken = await smock.mock<MockToken__factory>("MockToken");
   const MockTokenDeflationary = await smock.mock<MockDeflatingToken__factory>("MockDeflatingToken");
@@ -89,6 +92,8 @@ async function fixture(): Promise<void> {
       constructorArgs: [corePool.address, vBNB.address, WBNB.address],
     },
   );
+
+  await converter.setConverterNetwork(converterNetwork.address);
 }
 
 describe("Risk fund Converter: tests", () => {

@@ -100,7 +100,7 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8 {
 
         for (uint128 i; i < convertersLength; ) {
             AbstractTokenConverter converter = allConverters[i];
-            (, bool enabled) = converter.conversionConfigurations(_tokenAddressIn, _tokenAddressOut);
+            (, bool enabled, ) = converter.conversionConfigurations(_tokenAddressIn, _tokenAddressOut);
 
             if (enabled && msg.sender != address(converter)) {
                 converters[count] = address(converter);
@@ -130,8 +130,8 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8 {
     /// @notice This function checks for given address is converter or not
     /// @param _tokenConverter Address of the token converter
     /// @return boolean true if given address is converter otherwise false
-    function isTokenConverter(AbstractTokenConverter _tokenConverter) external view returns (bool) {
-        uint128 index = _findConverterIndex(_tokenConverter);
+    function isTokenConverter(address _tokenConverter) external view returns (bool) {
+        uint128 index = _findConverterIndex(AbstractTokenConverter(_tokenConverter));
 
         if (index == type(uint128).max) return false;
         return true;

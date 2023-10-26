@@ -82,6 +82,11 @@ async function fixture(): Promise<void> {
     accessControl.address,
     [usdcConverter.address, usdtConverter.address, btcConverter.address],
   ]);
+
+  await usdcConverter.setConverterNetwork(converterNetwork.address);
+  await usdtConverter.setConverterNetwork(converterNetwork.address);
+  await btcConverter.setConverterNetwork(converterNetwork.address);
+  await ethConverter.setConverterNetwork(converterNetwork.address);
 }
 
 describe("ConverterNetwork: tests", () => {

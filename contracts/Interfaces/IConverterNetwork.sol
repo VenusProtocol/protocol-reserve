@@ -33,5 +33,5 @@ interface IConverterNetwork {
     /// @notice This function checks for given address is converter or not
     /// @param _tokenConverter Address of the token converter
     /// @return boolean true if given address is converter otherwise false
-    function isTokenConverter(AbstractTokenConverter _tokenConverter) external view returns (bool);
+    function isTokenConverter(address _tokenConverter) external view returns (bool);
 }

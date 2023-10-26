@@ -12,6 +12,8 @@ interface IAbstractTokenConverter {
         uint256 incentive;
         /// whether the conversion is enabled
         bool enabled;
+        /// enable or disable conversion for users(true: disable for users, false: enable for users)
+        bool onlyForPrivateConversions;
     }
 
     /// @notice Pause conversion of tokens
@@ -47,7 +49,7 @@ interface IAbstractTokenConverter {
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external;
+    ) external returns (uint256 actualAmountIn, uint256 actualAmountOut);
 
     /// @notice Convert tokens for tokenAddressIn for exact amount of tokenAddressOut
     /// @dev Method does not support deflationary tokens transfer
@@ -62,7 +64,7 @@ interface IAbstractTokenConverter {
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external;
+    ) external returns (uint256 actualAmountIn, uint256 actualAmountOut);
 
     /// @notice Convert exact amount of tokenAddressIn for tokenAddressOut
     /// @param amountInMantissa Amount of tokenAddressIn
@@ -76,7 +78,7 @@ interface IAbstractTokenConverter {
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external;
+    ) external returns (uint256 actualAmountIn, uint256 actualAmountOut);
 
     /// @notice Convert tokens for tokenAddressIn for exact amount of tokenAddressOut
     /// @param amountInMaxMantissa Max amount of tokenAddressIn
@@ -90,5 +92,19 @@ interface IAbstractTokenConverter {
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external;
+    ) external returns (uint256 actualAmountIn, uint256 actualAmountOut);
+
+    /// @notice To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
+    /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @return amountConvertedMantissa Amount of tokenAddressOut should be transferred after conversion
+    /// @return amountInMantissa Amount of the tokenAddressIn sender would send to contract before conversion
+    /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
+    /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
+    function getUpdatedAmountIn(
+        uint256 amountOutMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut
+    ) external returns (uint256 amountConvertedMantissa, uint256 amountInMantissa);
 }

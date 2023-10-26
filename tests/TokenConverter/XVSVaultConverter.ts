@@ -6,6 +6,7 @@ import { ethers } from "hardhat";
 
 import {
   IAccessControlManagerV8,
+  IConverterNetwork,
   MockDeflatingToken,
   MockDeflatingToken__factory,
   MockToken,
@@ -26,6 +27,7 @@ let tokenIn: MockContract<MockToken>;
 let tokenOut: MockContract<MockToken>;
 let xvs: MockContract<MockToken>;
 let oracle: FakeContract<ResilientOracleInterface>;
+let converterNetwork: FakeContract<IConverterNetwork>;
 let xvsVaultTreasury: FakeContract<XVSVaultTreasury>;
 let tokenInDeflationary: MockContract<MockDeflatingToken>;
 
@@ -36,6 +38,7 @@ async function fixture(): Promise<void> {
 
   accessControl = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
   oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+  converterNetwork = await smock.fake<IConverterNetwork>("IConverterNetwork");
 
   const MockToken = await smock.mock<MockToken__factory>("MockToken");
   const MockTokenDeflationary = await smock.mock<MockDeflatingToken__factory>("MockDeflatingToken");
@@ -58,6 +61,8 @@ async function fixture(): Promise<void> {
       constructorArgs: [xvs.address],
     },
   );
+
+  await converter.setConverterNetwork(converterNetwork.address);
 }
 
 describe("XVS vault Converter: tests", () => {

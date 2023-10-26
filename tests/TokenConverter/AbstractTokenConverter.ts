@@ -8,6 +8,7 @@ import { ethers } from "hardhat";
 
 import {
   IAccessControlManagerV8,
+  IConverterNetwork,
   IRiskFundGetters,
   MockConverter,
   MockConverter__factory,
@@ -24,6 +25,7 @@ chai.use(smock.matchers);
 
 let accessControl: FakeContract<IAccessControlManagerV8>;
 let destination: FakeContract<IRiskFundGetters>;
+let converterNetwork: FakeContract<IConverterNetwork>;
 let converter: MockContract<MockConverter>;
 let tokenIn: MockContract<MockToken>;
 let tokenOut: MockContract<MockToken>;
@@ -48,6 +50,7 @@ async function fixture(): Promise<void> {
 
   accessControl = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
   destination = await smock.fake<IRiskFundGetters>("IRiskFundGetters");
+  converterNetwork = await smock.fake<IConverterNetwork>("IConverterNetwork");
 
   oracle = await smock.fake<ResilientOracle>("ResilientOracle");
 
@@ -64,6 +67,8 @@ async function fixture(): Promise<void> {
   converter = await Converter.deploy();
   await converter.AbstractTokenConverter_init(accessControl.address, oracle.address, destination.address);
   accessControl.isAllowedToCall.returns(true);
+
+  await converter.setConverterNetwork(converterNetwork.address);
 
   ConversionConfig = {
     incentive: INCENTIVE,

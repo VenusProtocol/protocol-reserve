@@ -10,6 +10,7 @@ import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle
 import { MANTISSA_ONE, EXP_SCALE } from "../Utils/Constants.sol";
 import { ensureNonzeroAddress, ensureNonzeroValue } from "../Utils/Validators.sol";
 import { IAbstractTokenConverter } from "./IAbstractTokenConverter.sol";
+import { IConverterNetwork } from "../Interfaces/IConverterNetwork.sol";
 
 /// @title AbstractTokenConverter
 /// @author Venus
@@ -85,6 +86,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Boolean for if conversion is paused
     bool public conversionPaused;
 
+    /// @notice Address of the converterNetwork contract
+    address public converterNetwork;
+
     /// @dev This empty reserved space is put in place to allow future versions to add new
     /// variables without shifting down storage in the inheritance chain.
     /// See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
@@ -100,10 +104,13 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         bool newEnabled
     );
     /// @notice Emitted when price oracle address is updated
-    event PriceOracleUpdated(ResilientOracle oldPriceOracle, ResilientOracle indexed priceOracle);
+    event PriceOracleUpdated(ResilientOracle indexed oldPriceOracle, ResilientOracle indexed priceOracle);
 
     /// @notice Emitted when destination address is updated
-    event DestinationAddressUpdated(address oldDestinationAddress, address indexed destinationAddress);
+    event DestinationAddressUpdated(address indexed oldDestinationAddress, address indexed destinationAddress);
+
+    /// @notice Emitted when converterNetwork address is updated
+    event ConverterNetworkAddressUpdated(address indexed oldconverterNetwork, address indexed converterNetwork);
 
     /// @notice Emitted when exact amount of tokens are converted for tokens
     event ConvertedExactTokens(uint256 amountIn, uint256 amountOut);
@@ -140,6 +147,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
     /// @notice Thrown when conversion is disabled or config does not exist for given pair
     error ConversionConfigNotEnabled();
+
+    /// @notice Thrown when conversion is enabled only for private conversions
+    error ConversionEnabledOnlyForPrivateConversions();
 
     /// @notice Thrown when address(to) is same as tokenAddressIn or tokenAddressOut
     error InvalidToAddress();
@@ -203,6 +213,13 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         _setDestination(destinationAddress_);
     }
 
+    /// @notice Sets a converter network contract address
+    /// @param converterNetwork_ The converterNetwork address to be set
+    /// @custom:access Only Governance
+    function setConverterNetwork(address converterNetwork_) external onlyOwner {
+        _setConverterNetwork(converterNetwork_);
+    }
+
     /// @notice Set the configuration for new or existing conversion pair
     /// @param tokenAddressIn Address of tokenIn
     /// @param tokenAddressOut Address of tokenOut
@@ -245,6 +262,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         configuration.incentive = conversionConfig.incentive;
         configuration.enabled = conversionConfig.enabled;
+        configuration.onlyForPrivateConversions = conversionConfig.onlyForPrivateConversions;
     }
 
     /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut if there is enough tokens held by the contract
@@ -264,13 +282,13 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external nonReentrant {
+    ) external nonReentrant returns (uint256 actualAmountIn, uint256 actualAmountOut) {
         _checkConversionPaused();
         if (to == tokenAddressIn || to == tokenAddressOut) {
             revert InvalidToAddress();
         }
 
-        (uint256 actualAmountIn, uint256 actualAmountOut) = _convertExactTokens(
+        (actualAmountIn, actualAmountOut) = _convertExactTokens(
             amountInMantissa,
             amountOutMinMantissa,
             tokenAddressIn,
@@ -305,13 +323,13 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external nonReentrant {
+    ) external nonReentrant returns (uint256 actualAmountIn, uint256 actualAmountOut) {
         _checkConversionPaused();
         if (to == tokenAddressIn || to == tokenAddressOut) {
             revert InvalidToAddress();
         }
 
-        (uint256 actualAmountIn, uint256 actualAmountOut) = _convertForExactTokens(
+        (actualAmountIn, actualAmountOut) = _convertForExactTokens(
             amountInMaxMantissa,
             amountOutMantissa,
             tokenAddressIn,
@@ -342,13 +360,13 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external nonReentrant {
+    ) external nonReentrant returns (uint256 actualAmountIn, uint256 actualAmountOut) {
         _checkConversionPaused();
         if (to == tokenAddressIn || to == tokenAddressOut) {
             revert InvalidToAddress();
         }
 
-        (uint256 actualAmountIn, uint256 actualAmountOut) = _convertExactTokens(
+        (actualAmountIn, actualAmountOut) = _convertExactTokens(
             amountInMantissa,
             amountOutMinMantissa,
             tokenAddressIn,
@@ -377,13 +395,13 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external nonReentrant {
+    ) external nonReentrant returns (uint256 actualAmountIn, uint256 actualAmountOut) {
         _checkConversionPaused();
         if (to == tokenAddressIn || to == tokenAddressOut) {
             revert InvalidToAddress();
         }
 
-        (uint256 actualAmountIn, uint256 actualAmountOut) = _convertForExactTokens(
+        (actualAmountIn, actualAmountOut) = _convertForExactTokens(
             amountInMaxMantissa,
             amountOutMantissa,
             tokenAddressIn,
@@ -433,6 +451,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut
     ) external view returns (uint256 amountConvertedMantissa, uint256 amountOutMantissa) {
+        if (!(conversionConfigurations[tokenAddressIn][tokenAddressOut].onlyForPrivateConversions)) {
+            revert ConversionEnabledOnlyForPrivateConversions();
+        }
+
         uint256 tokenInToOutConversion;
         (amountConvertedMantissa, amountOutMantissa, tokenInToOutConversion) = _getAmountOut(
             amountInMantissa,
@@ -465,6 +487,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut
     ) external view returns (uint256 amountConvertedMantissa, uint256 amountInMantissa) {
+        if (!(conversionConfigurations[tokenAddressIn][tokenAddressOut].onlyForPrivateConversions)) {
+            revert ConversionEnabledOnlyForPrivateConversions();
+        }
+
         uint256 tokenInToOutConversion;
         (amountConvertedMantissa, amountInMantissa, tokenInToOutConversion) = _getAmountIn(
             amountOutMantissa,
@@ -526,6 +552,17 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             tokenAddressIn,
             tokenAddressOut
         );
+    }
+
+    /// @dev call _updateAssetsState to update the states related to the comptroller and asset transfer to the specific converter then it
+    /// it calls the _privateConversion which will convert the asset into destination's base asset and transfer it to destination address
+    /// @param comptroller Comptroller address (pool)
+    /// @param asset Asset address
+    function updateAssetsState(address comptroller, address asset) public {
+        uint256 balanceDiff = _updateAssetsState(comptroller, asset);
+        if (balanceDiff > 0) {
+            _privateConversion(comptroller, asset, balanceDiff);
+        }
     }
 
     /// @notice Get the balance for specific token
@@ -647,6 +684,16 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         destinationAddress = destinationAddress_;
     }
 
+    /// @notice Sets a converter network contract address
+    /// @param converterNetwork_ The converterNetwork address to be set
+    /// @custom:event Emits ConverterNetworkAddressUpdated event on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when address is zero
+    function _setConverterNetwork(address converterNetwork_) internal {
+        ensureNonzeroAddress(converterNetwork_);
+        emit ConverterNetworkAddressUpdated(converterNetwork, converterNetwork_);
+        converterNetwork = converterNetwork_;
+    }
+
     /// @notice Hook to perform after converting tokens
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after conversion
@@ -683,6 +730,77 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         conversionPaused = false;
     }
 
+    /// @dev _updateAssetsState hook to update the states of reserves transferred for the specific comptroller
+    /// @param comptroller Comptroller address (pool)
+    /// @param asset Asset address
+    function _updateAssetsState(address comptroller, address asset) internal virtual returns (uint256) {}
+
+    /// @dev This method is used to convert asset into base asset by converting them with other converters which supports the pair and transfer the funds to
+    /// destination contract as destination's base asset
+    /// @param comptroller Comptroller address (pool)
+    /// @param tokenAddressOut Address of the token transferred to converter, and through _privateConversion it will be converted into base asset
+    /// @param balanceDiff Amount of the tokenAddressOut transferred to converter
+    function _privateConversion(
+        address comptroller,
+        address tokenAddressOut,
+        uint256 balanceDiff
+    ) internal {
+        address tokenAddressIn = _getDestinationBaseAsset();
+        (address[] memory converterAddresses, uint256[] memory converterBalances) = IConverterNetwork(converterNetwork)
+        .findTokenConverter(tokenAddressOut, tokenAddressIn);
+        uint256 convertedTokenOutBalance = balanceDiff;
+        uint256 convertedTokenInBalance;
+        uint256 convertersLength = converterAddresses.length;
+        for (uint256 i; i < convertersLength; ) {
+            uint256 amountOutMantissa = converterBalances[i];
+            (, uint256 amountIn) = IAbstractTokenConverter(converterAddresses[i]).getUpdatedAmountIn(
+                amountOutMantissa,
+                tokenAddressOut,
+                tokenAddressIn
+            );
+            if (converterBalances[i] > convertedTokenOutBalance) {
+                amountIn = convertedTokenOutBalance;
+            }
+            (, uint256 actualAmountOut) = IAbstractTokenConverter(converterAddresses[i]).convertExactTokens(
+                amountIn,
+                0,
+                tokenAddressOut,
+                tokenAddressIn,
+                destinationAddress
+            );
+            convertedTokenOutBalance -= amountIn;
+            convertedTokenInBalance += actualAmountOut;
+
+            if (convertedTokenOutBalance == 0) break;
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        _postPrivateConversion(
+            comptroller,
+            tokenAddressIn,
+            convertedTokenInBalance,
+            tokenAddressOut,
+            convertedTokenOutBalance
+        );
+    }
+
+    /// @dev This hook is used to update states for the converter after the privateConversion
+    /// @param comptroller Comptroller address (pool)
+    /// @param tokenAddressIn Address of the destination's base asset
+    /// @param convertedTokenInBalance Amount of the base asset received after the conversion
+    /// @param tokenAddressOut Address of the asset transferred to other converter in exchange of base asset
+    /// @param convertedTokenOutBalance Amount of tokenAddressOut transferred from this converter
+    function _postPrivateConversion(
+        address comptroller,
+        address tokenAddressIn,
+        uint256 convertedTokenInBalance,
+        address tokenAddressOut,
+        uint256 convertedTokenOutBalance
+    ) internal virtual {}
+
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @dev This function retrieves values without altering token prices.
     /// @param amountInMantissa Amount of tokenAddressIn
@@ -718,8 +836,13 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 tokenInUnderlyingPrice = priceOracle.getPrice(tokenAddressIn);
         uint256 tokenOutUnderlyingPrice = priceOracle.getPrice(tokenAddressOut);
 
+        uint256 incentive = configuration.incentive;
+        if (IConverterNetwork(converterNetwork).isTokenConverter(msg.sender)) {
+            incentive = 0;
+        }
+
         /// amount of tokenAddressOut after including incentive
-        uint256 conversionWithIncentive = MANTISSA_ONE + configuration.incentive;
+        uint256 conversionWithIncentive = MANTISSA_ONE + incentive;
         /// conversion rate after considering incentive(conversionWithIncentive)
 
         amountOutMantissa =
@@ -765,8 +888,13 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 tokenInUnderlyingPrice = priceOracle.getPrice(tokenAddressIn);
         uint256 tokenOutUnderlyingPrice = priceOracle.getPrice(tokenAddressOut);
 
+        uint256 incentive = configuration.incentive;
+        if (IConverterNetwork(converterNetwork).isTokenConverter(msg.sender)) {
+            incentive = 0;
+        }
+
         /// amount of tokenAddressOut after including incentive
-        uint256 conversionWithIncentive = MANTISSA_ONE + configuration.incentive;
+        uint256 conversionWithIncentive = MANTISSA_ONE + incentive;
         /// conversion rate after considering incentive(conversionWithIncentive)
         tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
 

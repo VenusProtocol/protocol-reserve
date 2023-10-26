@@ -45,13 +45,24 @@ contract SingleTokenConverter is AbstractTokenConverter {
         __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
     }
 
+    /// @notice Get the balance for specific token
+    /// @param tokenAddress Address of the token
+    /// @return tokenBalance Balance of the token the contract has
+    function balanceOf(address tokenAddress) public view override returns (uint256 tokenBalance) {
+        IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
+        tokenBalance = token.balanceOf(address(this));
+    }
+
     /// @dev This function is called by protocolShareReserve
     /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address.
     // solhint-disable-next-line
-    function updateAssetsState(address comptroller, address asset) public {
+    function _updateAssetsState(address comptroller, address asset) internal override returns (uint256 balanceLeft) {
         uint256 balance;
+        balanceLeft = balance;
+
         if (asset == BASE_ASSET) {
+            balanceLeft = 0;
             IERC20Upgradeable token = IERC20Upgradeable(BASE_ASSET);
             balance = token.balanceOf(address(this));
 
@@ -59,14 +70,6 @@ contract SingleTokenConverter is AbstractTokenConverter {
         }
 
         emit AssetTransferredToDestination(balance);
-    }
-
-    /// @notice Get the balance for specific token
-    /// @param tokenAddress Address of the token
-    /// @return tokenBalance Balance of the token the contract has
-    function balanceOf(address tokenAddress) public view override returns (uint256 tokenBalance) {
-        IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
-        tokenBalance = token.balanceOf(address(this));
     }
 
     /// @notice Get base asset address
