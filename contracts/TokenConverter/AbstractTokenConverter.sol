@@ -591,6 +591,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressOut,
         address to
     ) internal returns (uint256 actualAmountIn, uint256 actualAmountOut) {
+        _checkPrivateConversion(tokenAddressIn, tokenAddressOut);
         actualAmountIn = _doTransferIn(tokenAddressIn, amountInMantissa);
 
         (, uint256 amountOutMantissa) = getUpdatedAmountOut(actualAmountIn, tokenAddressIn, tokenAddressOut);
@@ -618,6 +619,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressOut,
         address to
     ) internal returns (uint256 actualAmountIn, uint256 actualAmountOut) {
+        _checkPrivateConversion(tokenAddressIn, tokenAddressOut);
         (, uint256 amountInMantissa) = getUpdatedAmountIn(amountOutMantissa, tokenAddressIn, tokenAddressOut);
 
         actualAmountIn = _doTransferIn(tokenAddressIn, amountInMantissa);
@@ -753,6 +755,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 convertersLength = converterAddresses.length;
         for (uint256 i; i < convertersLength; ) {
             uint256 amountOutMantissa = converterBalances[i];
+            if (amountOutMantissa == 0) continue;
             (, uint256 amountIn) = IAbstractTokenConverter(converterAddresses[i]).getUpdatedAmountIn(
                 amountOutMantissa,
                 tokenAddressOut,
@@ -900,6 +903,16 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         amountInMantissa = ((amountOutMantissa * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
         amountConvertedMantissa = amountOutMantissa;
+    }
+
+    /// @notice Check if msg.sender is allowed to convert as per onlyForPrivateConversions flag
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    function _checkPrivateConversion(address tokenAddressIn, address tokenAddressOut) internal view {
+        bool isConverter = IConverterNetwork(converterNetwork).isTokenConverter(msg.sender);
+        if ((!(isConverter) && (conversionConfigurations[tokenAddressIn][tokenAddressOut].onlyForPrivateConversions))) {
+            revert ConversionEnabledOnlyForPrivateConversions();
+        }
     }
 
     /// @notice To check, is conversion paused
