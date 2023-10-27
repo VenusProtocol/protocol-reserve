@@ -457,7 +457,7 @@ describe("MockConverter: tests", () => {
 
       await expect(converter.setConversionConfig(tokenIn.address, tokenOut.address, ConversionConfig))
         .to.emit(converter, "ConversionConfigUpdated")
-        .withArgs(tokenIn.address, tokenOut.address, 0, INCENTIVE, false, true);
+        .withArgs(tokenIn.address, tokenOut.address, 0, INCENTIVE, false, true, false, false);
 
       isExist = await converter.conversionConfigurations(tokenIn.address, tokenOut.address);
 
@@ -477,7 +477,7 @@ describe("MockConverter: tests", () => {
 
       await expect(converter.setConversionConfig(tokenIn.address, tokenOut.address, ConverterConfig))
         .to.emit(converter, "ConversionConfigUpdated")
-        .withArgs(tokenIn.address, tokenOut.address, INCENTIVE, NEW_INCENTIVE, true, true);
+        .withArgs(tokenIn.address, tokenOut.address, INCENTIVE, NEW_INCENTIVE, true, true, false, false);
 
       const isExist = await converter.conversionConfigurations(tokenIn.address, tokenOut.address);
       expect(isExist[0]).to.equal(NEW_INCENTIVE);

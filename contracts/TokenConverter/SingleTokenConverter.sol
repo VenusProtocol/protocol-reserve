@@ -58,7 +58,7 @@ contract SingleTokenConverter is AbstractTokenConverter {
     /// @param asset Asset address.
     // solhint-disable-next-line
     function _updateAssetsState(address comptroller, address asset) internal override returns (uint256 balanceLeft) {
-        IERC20Upgradeable token = IERC20Upgradeable(BASE_ASSET);
+        IERC20Upgradeable token = IERC20Upgradeable(asset);
         uint256 balance = token.balanceOf(address(this));
         balanceLeft = balance;
 

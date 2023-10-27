@@ -765,7 +765,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
                 tokenAddressOut,
                 tokenAddressIn
             );
-            if (converterBalances[i] > convertedTokenOutBalance) {
+            if (amountIn > convertedTokenOutBalance) {
                 amountIn = convertedTokenOutBalance;
             }
             IERC20Upgradeable(tokenAddressOut).approve(converterAddresses[i], amountIn);
