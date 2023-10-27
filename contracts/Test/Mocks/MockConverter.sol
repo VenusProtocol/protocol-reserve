@@ -11,6 +11,14 @@ import { IRiskFundGetters } from "../../Interfaces/IRiskFund.sol";
 contract MockConverter is AbstractTokenConverter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    function mockPrivateConversion(
+        address comptroller,
+        address tokenAddressOut,
+        uint256 balanceDiff
+    ) external {
+        _privateConversion(comptroller, tokenAddressOut, balanceDiff);
+    }
+
     function AbstractTokenConverter_init(
         address accessControlManager_,
         ResilientOracle priceOracle_,

@@ -101,7 +101,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 oldIncentive,
         uint256 newIncentive,
         bool oldEnabled,
-        bool newEnabled
+        bool newEnabled,
+        bool oldOnlyForPrivateConversion,
+        bool newOnlyForPrivateConversion
     );
     /// @notice Emitted when price oracle address is updated
     event PriceOracleUpdated(ResilientOracle indexed oldPriceOracle, ResilientOracle indexed priceOracle);
@@ -257,7 +259,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             configuration.incentive,
             conversionConfig.incentive,
             configuration.enabled,
-            conversionConfig.enabled
+            conversionConfig.enabled,
+            configuration.onlyForPrivateConversions,
+            conversionConfig.onlyForPrivateConversions
         );
 
         configuration.incentive = conversionConfig.incentive;
@@ -451,7 +455,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut
     ) external view returns (uint256 amountConvertedMantissa, uint256 amountOutMantissa) {
-        if (!(conversionConfigurations[tokenAddressIn][tokenAddressOut].onlyForPrivateConversions)) {
+        if (conversionConfigurations[tokenAddressIn][tokenAddressOut].onlyForPrivateConversions) {
             revert ConversionEnabledOnlyForPrivateConversions();
         }
 
@@ -487,7 +491,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut
     ) external view returns (uint256 amountConvertedMantissa, uint256 amountInMantissa) {
-        if (!(conversionConfigurations[tokenAddressIn][tokenAddressOut].onlyForPrivateConversions)) {
+        if (conversionConfigurations[tokenAddressIn][tokenAddressOut].onlyForPrivateConversions) {
             revert ConversionEnabledOnlyForPrivateConversions();
         }
 
@@ -755,7 +759,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 convertersLength = converterAddresses.length;
         for (uint256 i; i < convertersLength; ) {
             uint256 amountOutMantissa = converterBalances[i];
-            if (amountOutMantissa == 0) continue;
+            if (amountOutMantissa == 0) break;
             (, uint256 amountIn) = IAbstractTokenConverter(converterAddresses[i]).getUpdatedAmountIn(
                 amountOutMantissa,
                 tokenAddressOut,
@@ -764,6 +768,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             if (converterBalances[i] > convertedTokenOutBalance) {
                 amountIn = convertedTokenOutBalance;
             }
+            IERC20Upgradeable(tokenAddressOut).approve(converterAddresses[i], amountIn);
             (, uint256 actualAmountOut) = IAbstractTokenConverter(converterAddresses[i]).convertExactTokens(
                 amountIn,
                 0,
