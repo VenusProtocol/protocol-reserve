@@ -76,7 +76,7 @@ async function fixture(): Promise<void> {
   };
 }
 
-describe("MockConverter: tests", () => {
+describe.only("MockConverter: tests", () => {
   beforeEach(async () => {
     await loadFixture(fixture);
   });
@@ -144,6 +144,24 @@ describe("MockConverter: tests", () => {
         ),
       ).to.be.revertedWithCustomError(converter, "InvalidToAddress");
     });
+
+    it("Revert for user if onlyForPrivateConversion is enabled", async () => {
+      const updatedConfig = {
+        ...ConversionConfig,
+        onlyForPrivateConversions: true,
+      };
+      await converter.setConversionConfig(tokenIn.address, tokenOut.address, updatedConfig);
+
+      await expect(
+        converter.convertForExactTokens(
+          convertToUnit(".5", 18),
+          convertToUnit("1.5", 18),
+          tokenIn.address,
+          tokenOut.address,
+          await to.getAddress(),
+        ),
+      ).to.be.revertedWithCustomError(converter, "ConversionEnabledOnlyForPrivateConversions");
+    });
   });
 
   describe("Convert exact tokens for tokens", async () => {
@@ -207,6 +225,24 @@ describe("MockConverter: tests", () => {
           tokenIn.address,
         ),
       ).to.be.revertedWithCustomError(converter, "InvalidToAddress");
+    });
+
+    it("Revert for user if onlyForPrivateConversion is enabled", async () => {
+      const updatedConfig = {
+        ...ConversionConfig,
+        onlyForPrivateConversions: true,
+      };
+      await converter.setConversionConfig(tokenIn.address, tokenOut.address, updatedConfig);
+
+      await expect(
+        converter.convertExactTokens(
+          convertToUnit(".5", 18),
+          convertToUnit("1.5", 18),
+          tokenIn.address,
+          tokenOut.address,
+          await to.getAddress(),
+        ),
+      ).to.be.revertedWithCustomError(converter, "ConversionEnabledOnlyForPrivateConversions");
     });
   });
 
@@ -301,6 +337,24 @@ describe("MockConverter: tests", () => {
         ),
       ).to.be.revertedWithCustomError(converter, "AmountInMismatched");
     });
+
+    it("Revert for user if onlyForPrivateConversion is enabled", async () => {
+      const updatedConfig = {
+        ...ConversionConfig,
+        onlyForPrivateConversions: true,
+      };
+      await converter.setConversionConfig(tokenInDeflationary.address, tokenOut.address, updatedConfig);
+
+      await expect(
+        converter.convertExactTokensSupportingFeeOnTransferTokens(
+          convertToUnit(".25", 18),
+          convertToUnit(".5", 18),
+          tokenInDeflationary.address,
+          tokenOut.address,
+          await to.getAddress(),
+        ),
+      ).to.be.revertedWithCustomError(converter, "ConversionEnabledOnlyForPrivateConversions");
+    });
   });
 
   describe("Convert tokens for exact tokens with supporting fee", async () => {
@@ -361,6 +415,25 @@ describe("MockConverter: tests", () => {
           await to.getAddress(),
         ),
       ).to.be.revertedWithCustomError(converter, "AmountOutMismatched");
+    });
+
+    it("Revert for user if onlyForPrivateConversion is enabled", async () => {
+      const updatedConfig = {
+        incentive: INCENTIVE,
+        enabled: true,
+        onlyForPrivateConversions: true,
+      };
+      await converter.setConversionConfig(tokenIn.address, tokenOut.address, updatedConfig);
+
+      await expect(
+        converter.convertForExactTokensSupportingFeeOnTransferTokens(
+          convertToUnit(".5", 18),
+          convertToUnit("1.5", 18),
+          tokenIn.address,
+          tokenOut.address,
+          await to.getAddress(),
+        ),
+      ).to.be.revertedWithCustomError(converter, "ConversionEnabledOnlyForPrivateConversions");
     });
 
     // We can not keep convertForExactTokens with supporting fee.
@@ -482,11 +555,29 @@ describe("MockConverter: tests", () => {
       const isExist = await converter.conversionConfigurations(tokenIn.address, tokenOut.address);
       expect(isExist[0]).to.equal(NEW_INCENTIVE);
     });
+
+    it("Update the onlyForPrivateConversions flag", async () => {
+      await converter.setConversionConfig(tokenIn.address, tokenOut.address, ConversionConfig);
+
+      let value = await converter.conversionConfigurations(tokenIn.address, tokenOut.address);
+      expect(value[2]).to.equal(false);
+
+      const ConverterConfig = {
+        ...ConversionConfig,
+        onlyForPrivateConversions: true,
+      };
+
+      await expect(converter.setConversionConfig(tokenIn.address, tokenOut.address, ConverterConfig))
+        .to.emit(converter, "ConversionConfigUpdated")
+        .withArgs(tokenIn.address, tokenOut.address, INCENTIVE, INCENTIVE, true, true, false, true);
+
+      value = await converter.conversionConfigurations(tokenIn.address, tokenOut.address);
+      expect(value[2]).to.equal(true);
+    });
   });
 
   describe("Get amount out", () => {
     const AMOUNT_IN_UNDER = convertToUnit("5", 17);
-    const AMOUNT_IN_OVER = convertToUnit("1", 18);
 
     beforeEach(async () => {
       await tokenIn.connect(owner).approve(converter.address, convertToUnit("1", 18));
@@ -531,15 +622,42 @@ describe("MockConverter: tests", () => {
       expect(results[0]).to.equal(AMOUNT_IN_UNDER);
       expect(results[1]).to.equal(amountOut);
     });
+
+    it("Success on converting tokenIn to tokenOut for under tokenOut liquidity for converters", async () => {
+      await setConversionConfig();
+      await converterNetwork.isTokenConverter.returns(true);
+      const results = await converter.callStatic.getUpdatedAmountOut(
+        AMOUNT_IN_UNDER,
+        tokenIn.address,
+        tokenOut.address,
+      );
+      const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
+      const amountOut = new BigNumber(AMOUNT_IN_UNDER).multipliedBy(conversionRatio).toFixed(0);
+
+      expect(results[0]).to.equal(AMOUNT_IN_UNDER);
+      expect(results[1]).to.equal(amountOut);
+    });
+
+    it("Revert on onlyForPrivateConversions enabled", async () => {
+      const updatedConfig = {
+        ...ConversionConfig,
+        onlyForPrivateConversions: true,
+      };
+      await converter.setConversionConfig(tokenIn.address, tokenOut.address, updatedConfig);
+
+      await expect(
+        converter.getAmountOut(TOKEN_OUT_MAX, tokenIn.address, tokenOut.address),
+      ).to.be.revertedWithCustomError(converter, "ConversionEnabledOnlyForPrivateConversions");
+    });
   });
 
   describe("Get amount in", () => {
     const AMOUNT_IN_UNDER = convertToUnit("1", 18);
-    const AMOUNT_IN_OVER = convertToUnit("2", 18);
 
     beforeEach(async () => {
       await tokenIn.connect(owner).approve(converter.address, convertToUnit("1", 18));
       await tokenOut.transfer(converter.address, convertToUnit("3", 18));
+      await converterNetwork.isTokenConverter.returns(false);
     });
 
     const setConversionConfig = async () => {
@@ -576,6 +694,30 @@ describe("MockConverter: tests", () => {
       expect(results[0]).to.closeTo(AMOUNT_IN_UNDER, 1);
       expect(results[1]).to.closeTo(amountIn, 1);
     });
+
+    it("Success on conversing tokenIn to tokenOut for under tokenOut liquidity for converters", async () => {
+      await setConversionConfig();
+      await converterNetwork.isTokenConverter.returns(true);
+
+      const results = await converter.callStatic.getUpdatedAmountIn(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address);
+      const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
+      const amountIn = new BigNumber(AMOUNT_IN_UNDER).dividedBy(conversionRatio).toFixed(0);
+
+      expect(results[0]).to.closeTo(AMOUNT_IN_UNDER, 1);
+      expect(results[1]).to.closeTo(amountIn, 1);
+    });
+
+    it("Revert on onlyForPrivateConversions enabled", async () => {
+      const updatedConfig = {
+        ...ConversionConfig,
+        onlyForPrivateConversions: true,
+      };
+      await converter.setConversionConfig(tokenIn.address, tokenOut.address, updatedConfig);
+
+      await expect(
+        converter.getAmountIn(TOKEN_OUT_MAX, tokenIn.address, tokenOut.address),
+      ).to.be.revertedWithCustomError(converter, "ConversionEnabledOnlyForPrivateConversions");
+    });
   });
 
   describe("Set price oracle", () => {
@@ -604,6 +746,35 @@ describe("MockConverter: tests", () => {
       await expect(converter.setPriceOracle(newOracle.address))
         .to.emit(converter, "PriceOracleUpdated")
         .withArgs(oracle.address, newOracle.address);
+    });
+  });
+
+  describe("Set converter network", () => {
+    let newNetwork: FakeContract<IConverterNetwork>;
+
+    before(async () => {
+      newNetwork = await smock.fake<IConverterNetwork>("IConverterNetwork");
+    });
+
+    it("Revert on non-owner call", async () => {
+      const [, nonOwner] = await ethers.getSigners();
+
+      await expect(converter.connect(nonOwner).setConverterNetwork(newNetwork.address)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
+    });
+
+    it("Revert on invalid oracle address", async () => {
+      await expect(converter.setConverterNetwork(ethers.constants.AddressZero)).to.be.revertedWithCustomError(
+        converter,
+        "ZeroAddressNotAllowed",
+      );
+    });
+
+    it("Success on new price oracle update", async () => {
+      await expect(converter.setConverterNetwork(newNetwork.address))
+        .to.emit(converter, "ConverterNetworkAddressUpdated")
+        .withArgs(converterNetwork.address, newNetwork.address);
     });
   });
 
