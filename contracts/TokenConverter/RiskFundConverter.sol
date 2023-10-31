@@ -157,7 +157,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param asset Asset address
     /// @custom:event AssetTransferredToDestination emits when poolsAssetsDirectTransfer is enabled for entered comptroller and asset
     /// @custom:event AssetsReservesUpdated emits when poolsAssetsDirectTransfer is not enabled for entered comptroller and asset
-    function updateAssetsState(address comptroller, address asset) public {
+    function updateAssetsState(address comptroller, address asset) public nonReentrant {
         if (!ensureAssetListed(comptroller, asset)) revert MarketNotExistInPool(comptroller, asset);
 
         IERC20Upgradeable token = IERC20Upgradeable(asset);
