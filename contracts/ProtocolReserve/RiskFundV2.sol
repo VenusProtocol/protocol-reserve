@@ -199,15 +199,19 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
                 amountDiff = amount - balanceDiff;
             }
             uint256 distributedShare;
-            for (uint256 i; i < poolsLength; ++i) {
+            for (uint256 i; i < poolsLength; ) {
                 uint256 poolShare = (poolAssetsFunds[pools[i]][tokenAddress] * EXP_SCALE) / assetReserves;
-                if (poolShare == 0) continue;
-                if (i < (poolsLength - 1)) {
-                    distributedShare += updatePoolAssetsReserve(pools[i], tokenAddress, amountDiff, poolShare);
-                } else {
-                    uint256 distributedDiff = amountDiff - distributedShare;
-                    poolAssetsFunds[pools[i]][tokenAddress] -= distributedDiff;
-                    emit PoolAssetsDecreased(pools[i], tokenAddress, distributedDiff);
+                if (poolShare != 0) {
+                    if (i < (poolsLength - 1)) {
+                        distributedShare += updatePoolAssetsReserve(pools[i], tokenAddress, amountDiff, poolShare);
+                    } else {
+                        uint256 distributedDiff = amountDiff - distributedShare;
+                        poolAssetsFunds[pools[i]][tokenAddress] -= distributedDiff;
+                        emit PoolAssetsDecreased(pools[i], tokenAddress, distributedDiff);
+                    }
+                }
+                unchecked {
+                    ++i;
                 }
             }
         }

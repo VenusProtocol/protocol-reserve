@@ -239,21 +239,25 @@ contract RiskFundConverter is AbstractTokenConverter {
         uint256 poolAmountInShare;
         uint256 distributedInShare;
 
-        for (uint256 i; i < poolsLength; ++i) {
+        for (uint256 i; i < poolsLength; ) {
             uint256 currentPoolsAssetsReserves = poolsAssetsReserves[pools[i]][tokenOutAddress];
-            if (currentPoolsAssetsReserves == 0) continue;
-            if (i < (poolsLength - 1)) {
-                distributedOutShare += updatePoolAssetsReserve(pools[i], tokenOutAddress, amountOut, assetReserve);
-                poolAmountInShare = (amountIn * currentPoolsAssetsReserves) / assetReserve;
-                distributedInShare += poolAmountInShare;
-            } else {
-                uint256 distributedDiff = amountOut - distributedOutShare;
-                poolsAssetsReserves[pools[i]][tokenOutAddress] -= distributedDiff;
-                emit AssetsReservesUpdated(pools[i], tokenOutAddress, distributedDiff);
-                poolAmountInShare = amountIn - distributedInShare;
+            if (currentPoolsAssetsReserves != 0) {
+                if (i < (poolsLength - 1)) {
+                    distributedOutShare += updatePoolAssetsReserve(pools[i], tokenOutAddress, amountOut, assetReserve);
+                    poolAmountInShare = (amountIn * currentPoolsAssetsReserves) / assetReserve;
+                    distributedInShare += poolAmountInShare;
+                } else {
+                    uint256 distributedDiff = amountOut - distributedOutShare;
+                    poolsAssetsReserves[pools[i]][tokenOutAddress] -= distributedDiff;
+                    emit AssetsReservesUpdated(pools[i], tokenOutAddress, distributedDiff);
+                    poolAmountInShare = amountIn - distributedInShare;
+                }
+                emit AssetTransferredToDestination(pools[i], tokenInAddress, poolAmountInShare);
+                IRiskFund(destinationAddress).updatePoolState(pools[i], tokenInAddress, poolAmountInShare);
             }
-            emit AssetTransferredToDestination(pools[i], tokenInAddress, poolAmountInShare);
-            IRiskFund(destinationAddress).updatePoolState(pools[i], tokenInAddress, poolAmountInShare);
+            unchecked {
+                ++i;
+            }
         }
 
         assetsReserves[tokenOutAddress] -= amountOut;
@@ -279,14 +283,18 @@ contract RiskFundConverter is AbstractTokenConverter {
             uint256 poolsLength = pools.length;
             uint256 distributedShare;
 
-            for (uint256 i; i < poolsLength; ++i) {
-                if (poolsAssetsReserves[pools[i]][tokenAddress] == 0) continue;
-                if (i < (poolsLength - 1)) {
-                    distributedShare += updatePoolAssetsReserve(pools[i], tokenAddress, amountDiff, assetReserve);
-                } else {
-                    uint256 distributedDiff = amountDiff - distributedShare;
-                    poolsAssetsReserves[pools[i]][tokenAddress] -= distributedDiff;
-                    emit AssetsReservesUpdated(pools[i], tokenAddress, distributedDiff);
+            for (uint256 i; i < poolsLength; ) {
+                if (poolsAssetsReserves[pools[i]][tokenAddress] != 0) {
+                    if (i < (poolsLength - 1)) {
+                        distributedShare += updatePoolAssetsReserve(pools[i], tokenAddress, amountDiff, assetReserve);
+                    } else {
+                        uint256 distributedDiff = amountDiff - distributedShare;
+                        poolsAssetsReserves[pools[i]][tokenAddress] -= distributedDiff;
+                        emit AssetsReservesUpdated(pools[i], tokenAddress, distributedDiff);
+                    }
+                }
+                unchecked {
+                    ++i;
                 }
             }
             assetsReserves[tokenAddress] -= amountDiff;
