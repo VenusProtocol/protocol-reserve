@@ -11,7 +11,6 @@ import { IPoolRegistry } from "../Interfaces/IPoolRegistry.sol";
 import { IComptroller } from "../Interfaces/IComptroller.sol";
 import { IRiskFund, IRiskFundGetters } from "../Interfaces/IRiskFund.sol";
 import { IVToken } from "../Interfaces/IVToken.sol";
-import { EXP_SCALE } from "../Utils/Constants.sol";
 
 /// @title RiskFundConverter
 /// @author Venus
