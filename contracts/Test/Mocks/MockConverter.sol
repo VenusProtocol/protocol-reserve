@@ -11,6 +11,17 @@ import { IRiskFundGetters } from "../../Interfaces/IRiskFund.sol";
 contract MockConverter is AbstractTokenConverter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    /// @notice Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools)
+    mapping(address => uint256) public assetsReserves;
+
+    /// @notice Store the asset's reserve per pool in the ProtocolShareReserve
+    /// @dev Comptroller(pool) -> Asset -> amount
+    mapping(address => mapping(address => uint256)) public poolsAssetsReserves;
+
+    /// @notice Emitted after the updation of the assets reserves
+    /// amount -> reserve increased by amount
+    event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
+
     function mockPrivateConversion(
         address comptroller,
         address tokenAddressOut,
@@ -30,6 +41,25 @@ contract MockConverter is AbstractTokenConverter {
     function balanceOf(address tokenAddress) public view override returns (uint256 tokenBalance) {
         IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
         tokenBalance = token.balanceOf(address(this));
+    }
+
+    function _postPrivateConversion(
+        address comptroller,
+        address tokenAddressIn,
+        uint256 convertedTokenInBalance,
+        address tokenAddressOut,
+        uint256 convertedTokenOutBalance
+    ) internal override {
+        if (convertedTokenInBalance > 0) {
+            assetsReserves[tokenAddressIn] += convertedTokenInBalance;
+            poolsAssetsReserves[comptroller][tokenAddressIn] += convertedTokenInBalance;
+            emit AssetsReservesUpdated(comptroller, tokenAddressIn, convertedTokenInBalance);
+        }
+        if (convertedTokenOutBalance > 0) {
+            assetsReserves[tokenAddressOut] += convertedTokenOutBalance;
+            poolsAssetsReserves[comptroller][tokenAddressOut] += convertedTokenOutBalance;
+            emit AssetsReservesUpdated(comptroller, tokenAddressOut, convertedTokenOutBalance);
+        }
     }
 
     /// @notice Get base asset address
