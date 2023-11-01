@@ -49,7 +49,7 @@ contract SingleTokenConverter is AbstractTokenConverter {
     /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address.
     // solhint-disable-next-line
-    function updateAssetsState(address comptroller, address asset) public {
+    function updateAssetsState(address comptroller, address asset) public nonReentrant {
         uint256 balance;
         if (asset == BASE_ASSET) {
             IERC20Upgradeable token = IERC20Upgradeable(BASE_ASSET);
