@@ -199,34 +199,23 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
                 amountDiff = amount - balanceDiff;
             }
             uint256 distributedShare;
-            for (uint256 i; i < poolsLength; ++i) {
-                uint256 poolShare = (poolAssetsFunds[pools[i]][tokenAddress] * EXP_SCALE) / assetReserves;
-                if (poolShare == 0) continue;
-                if (i < (poolsLength - 1)) {
-                    distributedShare += updatePoolAssetsReserve(pools[i], tokenAddress, amountDiff, poolShare);
-                } else {
-                    uint256 distributedDiff = amountDiff - distributedShare;
-                    poolAssetsFunds[pools[i]][tokenAddress] -= distributedDiff;
-                    emit PoolAssetsDecreased(pools[i], tokenAddress, distributedDiff);
+            for (uint256 i; i < poolsLength; ) {
+                if (poolAssetsFunds[pools[i]][tokenAddress] != 0) {
+                    uint256 poolAmountShare;
+                    if (i < (poolsLength - 1)) {
+                        poolAmountShare = (poolAssetsFunds[pools[i]][tokenAddress] * amount) / assetReserves;
+                        poolAssetsFunds[pools[i]][tokenAddress] -= poolAmountShare;
+                        distributedShare += poolAmountShare;
+                    } else {
+                        poolAmountShare = amountDiff - distributedShare;
+                        poolAssetsFunds[pools[i]][tokenAddress] -= poolAmountShare;
+                    }
+                    emit PoolAssetsDecreased(pools[i], tokenAddress, poolAmountShare);
+                }
+                unchecked {
+                    ++i;
                 }
             }
         }
-    }
-
-    /// @notice Update the poolAssetsReserves upon transferring the tokens
-    /// @param pool Address of the pool
-    /// @param tokenAddress Address of the token
-    /// @param amount Amount of reserves that should be transferred to address(to)
-    /// @param poolShare share for corresponding pool
-    /// @custom:event PoolAssetsDecreased emits on success
-    function updatePoolAssetsReserve(
-        address pool,
-        address tokenAddress,
-        uint256 amount,
-        uint256 poolShare
-    ) internal returns (uint256 poolAmountShare) {
-        poolAmountShare = (poolShare * amount) / EXP_SCALE;
-        poolAssetsFunds[pool][tokenAddress] -= poolAmountShare;
-        emit PoolAssetsDecreased(pool, tokenAddress, poolAmountShare);
     }
 }
