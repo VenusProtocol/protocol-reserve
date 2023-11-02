@@ -65,9 +65,8 @@ contract SingleTokenConverter is AbstractTokenConverter {
         if (asset == BASE_ASSET) {
             balanceLeft = 0;
             token.safeTransfer(destinationAddress, balance);
+            emit AssetTransferredToDestination(balance);
         }
-
-        emit AssetTransferredToDestination(balance);
     }
 
     /// @notice Get base asset address

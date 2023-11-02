@@ -243,15 +243,12 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             revert IncentiveTooHigh(conversionConfig.incentive, MAX_INCENTIVE);
         }
 
-        if ((tokenAddressIn == tokenAddressOut) || (tokenAddressIn != _getDestinationBaseAsset())) {
-            revert InvalidTokenConfigAddresses();
-        }
-
         if (
-            tokenAddressIn == _getDestinationBaseAsset() ||
+            (tokenAddressIn == tokenAddressOut) ||
+            (tokenAddressIn != _getDestinationBaseAsset()) ||
             conversionConfigurations[tokenAddressOut][tokenAddressIn].enabled
         ) {
-            conversionConfigurations[tokenAddressOut][tokenAddressIn].enabled = false;
+            revert InvalidTokenConfigAddresses();
         }
 
         ConversionConfig storage configuration = conversionConfigurations[tokenAddressIn][tokenAddressOut];
