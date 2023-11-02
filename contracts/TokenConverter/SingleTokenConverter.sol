@@ -53,7 +53,6 @@ contract SingleTokenConverter is AbstractTokenConverter {
         tokenBalance = token.balanceOf(address(this));
     }
 
-    /// @dev This function is called by protocolShareReserve
     /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address.
     // solhint-disable-next-line

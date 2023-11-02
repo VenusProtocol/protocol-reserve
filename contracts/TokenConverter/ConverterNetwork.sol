@@ -3,6 +3,7 @@ pragma solidity 0.8.13;
 
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { MaxLoopsLimitHelper } from "@venusprotocol/isolated-pools/contracts/MaxLoopsLimitHelper.sol";
 
 import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 import { sort } from "../Utils/ArrayHelpers.sol";
@@ -13,7 +14,7 @@ import { IConverterNetwork } from "../Interfaces/IConverterNetwork.sol";
 /// @author Venus
 /// @notice ConverterNetwork keeps track of all the converters and is used to fetch valid converters which provide conversions according to token addresses provided
 /// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
-contract ConverterNetwork is IConverterNetwork, AccessControlledV8 {
+contract ConverterNetwork is IConverterNetwork, AccessControlledV8, MaxLoopsLimitHelper {
     /// @notice Array holding all the converters
     AbstractTokenConverter[] public allConverters;
 
@@ -29,19 +30,32 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8 {
     /// @notice Error thrown converter does not exist
     error ConverterDoesNotExist();
 
+    /// @notice Error thrown when converter address is invalid
+    error InvalidTokenConverterAddress();
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables.
+        _disableInitializers();
+    }
+
     /// @notice ConverterNetwork initializer
     /// @param _accessControlManager The address of ACM contract
     /// @param _converters Addresses of the converters
     /// @custom:event ConverterAdded is emitted for each converter added on success
-    function initialize(address _accessControlManager, AbstractTokenConverter[] calldata _converters)
-        external
-        initializer
-    {
+    function initialize(
+        address _accessControlManager,
+        AbstractTokenConverter[] calldata _converters,
+        uint256 _loopsLimit
+    ) external initializer {
         ensureNonzeroAddress(_accessControlManager);
         __AccessControlled_init(_accessControlManager);
+        _setMaxLoopsLimit(_loopsLimit);
 
-        uint128 convertsLength = uint128(_converters.length);
-        for (uint128 i; i < convertsLength; ) {
+        uint128 convertersLength = uint128(_converters.length);
+        _ensureMaxLoops(convertersLength);
+        for (uint128 i; i < convertersLength; ) {
             _addTokenConverter(_converters[i]);
             unchecked {
                 ++i;
@@ -54,7 +68,7 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8 {
     /// @custom:event ConverterAdded is emitted on success
     /// @custom:access Only Governance
     function addTokenConverter(AbstractTokenConverter _tokenConverter) external {
-        _checkAccessAllowed("addTokenConverter(AbstractTokenConverter)");
+        _checkAccessAllowed("addTokenConverter(address)");
         _addTokenConverter(_tokenConverter);
     }
 
@@ -104,7 +118,7 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8 {
 
             if (enabled && msg.sender != address(converter)) {
                 converters[count] = address(converter);
-                convertersBalance[count] = IERC20Upgradeable(_tokenAddressOut).balanceOf(address(converter));
+                convertersBalance[count] = converter.balanceOf(_tokenAddressOut);
                 ++count;
             }
             unchecked {
@@ -142,7 +156,11 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8 {
     /// @custom:error ConverterAlreadyExists is thrown when new tokenconverter to add already exists
     /// @custom:event ConverterAdded is emitted on success
     function _addTokenConverter(AbstractTokenConverter _tokenConverter) internal {
-        ensureNonzeroAddress(address(_tokenConverter));
+        if (
+            (address(_tokenConverter) == address(0)) || (address(_tokenConverter.converterNetwork()) != address(this))
+        ) {
+            revert InvalidTokenConverterAddress();
+        }
 
         uint128 index = _findConverterIndex(_tokenConverter);
         if (index != type(uint128).max) revert ConverterAlreadyExists();
@@ -155,8 +173,8 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8 {
     /// This will return the index if the converter exists in the array otherwise will return type(uint128).max
     /// @param _tokenConverter Address of the token converter
     function _findConverterIndex(AbstractTokenConverter _tokenConverter) internal view returns (uint128) {
-        uint128 convertLength = uint128(allConverters.length);
-        for (uint128 i; i < convertLength; ) {
+        uint128 convertersLength = uint128(allConverters.length);
+        for (uint128 i; i < convertersLength; ) {
             if (allConverters[i] == _tokenConverter) {
                 return i;
             }

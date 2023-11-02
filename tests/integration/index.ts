@@ -125,27 +125,23 @@ async function fixture(): Promise<void> {
   await riskFund.convertibleBaseAsset.returns(usdt.address);
 
   const converterNetworkFactory = await smock.mock<ConverterNetwork__factory>("ConverterNetwork");
-  converterNetwork = await upgrades.deployProxy(converterNetworkFactory, [
-    accessControl.address,
-    [
-      usdcConverter.address,
-      usdcConverter2.address,
-      usdcConverter3.address,
-      usdcConverter4.address,
-      usdtConverter.address,
-      usdtConverter2.address,
-      riskFundConverter.address,
-    ],
-  ]);
+  converterNetwork = await upgrades.deployProxy(converterNetworkFactory, [accessControl.address, [], 20]);
 
   await usdcConverter.setConverterNetwork(converterNetwork.address);
   await usdcConverter2.setConverterNetwork(converterNetwork.address);
   await usdcConverter3.setConverterNetwork(converterNetwork.address);
   await usdcConverter4.setConverterNetwork(converterNetwork.address);
-
   await riskFundConverter.setConverterNetwork(converterNetwork.address);
   await usdtConverter.setConverterNetwork(converterNetwork.address);
   await usdtConverter2.setConverterNetwork(converterNetwork.address);
+
+  await converterNetwork.addTokenConverter(usdcConverter.address);
+  await converterNetwork.addTokenConverter(usdcConverter2.address);
+  await converterNetwork.addTokenConverter(usdcConverter3.address);
+  await converterNetwork.addTokenConverter(usdcConverter4.address);
+  await converterNetwork.addTokenConverter(usdtConverter.address);
+  await converterNetwork.addTokenConverter(usdtConverter2.address);
+  await converterNetwork.addTokenConverter(riskFundConverter.address);
 
   ConversionConfig = {
     incentive: INCENTIVE,

@@ -5,7 +5,7 @@ pragma solidity 0.8.13;
 /// @param arr Array of token balances of different addresses
 /// @param addrs Array containing these addresses
 function sort(uint256[] memory arr, address[] memory addrs) pure {
-    if (arr.length > 0) {
+    if (arr.length > 1) {
         return quickSortDescending(arr, addrs, 0, arr.length - 1);
     }
 }

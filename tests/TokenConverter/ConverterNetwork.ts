@@ -78,15 +78,17 @@ async function fixture(): Promise<void> {
   ethConverter = await deployConverter(eth.address);
 
   const converterNetworkFactory = await smock.mock<ConverterNetwork__factory>("ConverterNetwork");
-  converterNetwork = await upgrades.deployProxy(converterNetworkFactory, [
-    accessControl.address,
-    [usdcConverter.address, usdtConverter.address, btcConverter.address],
-  ]);
+  converterNetwork = await upgrades.deployProxy(converterNetworkFactory, [accessControl.address, [], 20]);
 
   await usdcConverter.setConverterNetwork(converterNetwork.address);
   await usdtConverter.setConverterNetwork(converterNetwork.address);
   await btcConverter.setConverterNetwork(converterNetwork.address);
   await ethConverter.setConverterNetwork(converterNetwork.address);
+
+  await accessControl.isAllowedToCall.returns(true);
+  await converterNetwork.addTokenConverter(usdcConverter.address);
+  await converterNetwork.addTokenConverter(usdtConverter.address);
+  await converterNetwork.addTokenConverter(btcConverter.address);
 }
 
 describe("ConverterNetwork: tests", () => {
@@ -96,6 +98,8 @@ describe("ConverterNetwork: tests", () => {
 
   describe("addTokenConverter()", () => {
     it("should revert when executed by non owner", async () => {
+      await accessControl.isAllowedToCall.returns(false);
+
       const tx = converterNetwork.addTokenConverter(ethConverter.address);
 
       await expect(tx).to.be.revertedWithCustomError(converterNetwork, "Unauthorized");
@@ -106,7 +110,7 @@ describe("ConverterNetwork: tests", () => {
 
       const tx = converterNetwork.addTokenConverter(ethers.constants.AddressZero);
 
-      await expect(tx).to.be.revertedWithCustomError(converterNetwork, "ZeroAddressNotAllowed");
+      await expect(tx).to.be.revertedWithCustomError(converterNetwork, "InvalidTokenConverterAddress");
     });
 
     it("should revert when trying to add converter which already exists", async () => {
@@ -192,6 +196,15 @@ describe("ConverterNetwork: tests", () => {
       usdcConverter2 = await deployConverter(usdc.address);
       usdcConverter3 = await deployConverter(usdc.address);
 
+      await usdtConverter.setConverterNetwork(converterNetwork.address);
+      await usdtConverter2.setConverterNetwork(converterNetwork.address);
+      await usdtConverter3.setConverterNetwork(converterNetwork.address);
+      await usdtConverter4.setConverterNetwork(converterNetwork.address);
+      await usdcConverter.setConverterNetwork(converterNetwork.address);
+      await usdcConverter2.setConverterNetwork(converterNetwork.address);
+      await usdcConverter3.setConverterNetwork(converterNetwork.address);
+      await btcConverter.setConverterNetwork(converterNetwork.address);
+
       await usdtConverter.setConversionConfig(usdt.address, usdc.address, ConversionConfig);
       await usdtConverter2.setConversionConfig(usdt.address, usdc.address, ConversionConfig);
       await usdtConverter3.setConversionConfig(usdt.address, usdc.address, ConversionConfig);
@@ -214,6 +227,12 @@ describe("ConverterNetwork: tests", () => {
     });
 
     it("should return correct values with multiple when multiple same base asset converters exist", async () => {
+      await usdcConverter2.setConverterNetwork(converterNetwork.address);
+      await usdcConverter3.setConverterNetwork(converterNetwork.address);
+      await usdtConverter2.setConverterNetwork(converterNetwork.address);
+      await usdtConverter3.setConverterNetwork(converterNetwork.address);
+      await usdtConverter4.setConverterNetwork(converterNetwork.address);
+
       await converterNetwork.addTokenConverter(usdcConverter2.address);
       await converterNetwork.addTokenConverter(usdcConverter3.address);
       await converterNetwork.addTokenConverter(usdtConverter2.address);
@@ -275,6 +294,10 @@ describe("ConverterNetwork: tests", () => {
     it("should not return address of caller when called by another token converter", async () => {
       await impersonateAccount(usdtConverter.address);
       usdtConverterSigner = await ethers.getSigner(usdtConverter.address);
+
+      await usdtConverter2.setConverterNetwork(converterNetwork.address);
+      await usdtConverter3.setConverterNetwork(converterNetwork.address);
+      await usdtConverter4.setConverterNetwork(converterNetwork.address);
 
       await converterNetwork.addTokenConverter(usdtConverter2.address);
       await converterNetwork.addTokenConverter(usdtConverter3.address);

@@ -38,6 +38,7 @@ import { IConverterNetwork } from "../Interfaces/IConverterNetwork.sol";
  * In this scenario, functions with or without supporting fee can be utilized to convert tokens which are:
  * similar to Case III.
  *
+ * ------------------------------------------------------------------------------------------------------------------------------------
  * Example 1:-
  *    tokenInAddress - 0xaaaa.....
  *    tokenOutAddress - 0xbbbb.....
@@ -65,7 +66,30 @@ import { IConverterNetwork } from "../Interfaces/IConverterNetwork.sol";
  * new tokenOutAmount will be calculated, and tokenOutAddress tokens will be transferred to the user, but at last the
  * old tokenOutAmount and new tokenOutAmount will be compared and if they differ whole tx will revert, because user was
  * supposed to use `convertForExactTokensSupportingFeeOnTransferTokens` function for tokenIn as deflationary token.
+ * ------------------------------------------------------------------------------------------------------------------------------------
+ *
+ * This contract also supports private conversion between the converters:
+ * Private conversions:
+ * Private conversions is designed in order to convert the maximum amount of tokens received from PSR(to any converter) between
+ * existing converters to save incentive and lower the dependency of users for conversion. So Private Conversion will be executed
+ * by converters on it's own whenever funds are received from PSR. No incentive will be offered during private conversion.
+ *
+ * It will execute on UpdateAssetsState() function call in Converter Contracts. After this function call, converter will first
+ * check for the amount received. If base asset is received then it will be directly sent to the destination address and no private
+ * conversion will happen otherwise converter will interact with ConverterNetwork contract to find other valid converters who are providing the conversion for:
+ *
+ * tokenAddressIn: As asset received by that converter on updateAssetsState() function call.
+ * tokenAddressOut: As base asset of that converter.
+ *
+ * ConverterNetwork:
+ * This contract will contain all the converters, and will provide valid converters which can perform the execution according to tokenAddressIn
+ * and tokenAddressOut provided.
+ *
+ * findTokenConverter():
+ * It will return an array of converter addresses along with their corresponding balances, sorted in descending order based on the converter's balances
+ * relative to tokenAddressOut.
  */
+
 /// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenConverter, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -87,7 +111,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     bool public conversionPaused;
 
     /// @notice Address of the converterNetwork contract
-    address public converterNetwork;
+    IConverterNetwork public converterNetwork;
 
     /// @dev This empty reserved space is put in place to allow future versions to add new
     /// variables without shifting down storage in the inheritance chain.
@@ -112,7 +136,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     event DestinationAddressUpdated(address indexed oldDestinationAddress, address indexed destinationAddress);
 
     /// @notice Emitted when converterNetwork address is updated
-    event ConverterNetworkAddressUpdated(address indexed oldconverterNetwork, address indexed converterNetwork);
+    event ConverterNetworkAddressUpdated(address indexed oldConverterNetwork, address indexed converterNetwork);
 
     /// @notice Emitted when exact amount of tokens are converted for tokens
     event ConvertedExactTokens(uint256 amountIn, uint256 amountOut);
@@ -174,7 +198,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Thrown when tokenInAddress is same as tokeOutAdress OR tokeInAddress is not the base asset of the destination
     error InvalidTokenConfigAddresses();
 
+    ///  @notice Thrown when contract has less liquity for tokenAddressOut than amountOutMantissa
     error InsufficientPoolLiquidity();
+
+    /// @notice When address of the ConverterNetwork is not set or Zero address
+    error InvalidConverterNetwork();
 
     /// @notice Pause conversion of tokens
     /// @custom:event Emits ConversionPaused on success
@@ -218,7 +246,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Sets a converter network contract address
     /// @param converterNetwork_ The converterNetwork address to be set
     /// @custom:access Only Governance
-    function setConverterNetwork(address converterNetwork_) external onlyOwner {
+    function setConverterNetwork(IConverterNetwork converterNetwork_) external onlyOwner {
         _setConverterNetwork(converterNetwork_);
     }
 
@@ -238,6 +266,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         _checkAccessAllowed("setConversionConfig(address,address,ConversionConfig)");
         ensureNonzeroAddress(tokenAddressIn);
         ensureNonzeroAddress(tokenAddressOut);
+
+        if (address(converterNetwork) == address(0)) {
+            revert InvalidConverterNetwork();
+        }
 
         if (conversionConfig.incentive > MAX_INCENTIVE) {
             revert IncentiveTooHigh(conversionConfig.incentive, MAX_INCENTIVE);
@@ -276,6 +308,8 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
+    /// @return actualAmountIn Actual amount transferred to destination
+    /// @return actualAmountOut Actual amount transferred to user
     /// @custom:event Emits ConvertedExactTokens event on success
     /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
     /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
@@ -317,6 +351,8 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
+    /// @return actualAmountIn Actual amount transferred to destination
+    /// @return actualAmountOut Actual amount transferred to user
     /// @custom:event Emits ConvertedForExactTokens event on success
     /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
     /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
@@ -355,6 +391,8 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
+    /// @return actualAmountIn Actual amount transferred to destination
+    /// @return actualAmountOut Actual amount transferred to user
     /// @custom:event Emits ConvertedExactTokensSupportingFeeOnTransferTokens event on success
     /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
     /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
@@ -390,6 +428,8 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
+    /// @return actualAmountIn Actual amount transferred to destination
+    /// @return actualAmountOut Actual amount transferred to user
     /// @custom:event Emits ConvertedForExactTokensSupportingFeeOnTransferTokens event on success
     /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
     /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
@@ -450,6 +490,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after conversion
     /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
     /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
+    /// @custom:error ConversionEnabledOnlyForPrivateConversions is thrown when conversion is only enabled for private conversion
     function getAmountOut(
         uint256 amountInMantissa,
         address tokenAddressIn,
@@ -486,6 +527,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @return amountInMantissa Amount of the tokenAddressIn sender would send to contract before conversion
     /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
     /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
+    /// @custom:error ConversionEnabledOnlyForPrivateConversions is thrown when conversion is only enabled for private conversion
     function getAmountIn(
         uint256 amountOutMantissa,
         address tokenAddressIn,
@@ -558,11 +600,14 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         );
     }
 
+    /// @notice This method updated the states of this contract after getting funds from PSR
+    /// after settling the amount(if any) through privateConversion between converters
+    /// @dev This function is called by protocolShareReserve
     /// @dev call _updateAssetsState to update the states related to the comptroller and asset transfer to the specific converter then it
     /// it calls the _privateConversion which will convert the asset into destination's base asset and transfer it to destination address
     /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address
-    function updateAssetsState(address comptroller, address asset) public {
+    function updateAssetsState(address comptroller, address asset) public nonReentrant {
         uint256 balanceDiff = _updateAssetsState(comptroller, asset);
         if (balanceDiff > 0) {
             _privateConversion(comptroller, asset, balanceDiff);
@@ -642,6 +687,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param to Address of the tokenAddressOut receiver
     /// @param amountConvertedMantissa Amount of tokenAddressOut supposed to get transferred
     /// @return actualAmountOut Actual amount of tokenAddressOut transferred
+    /// @custom:error InsufficientPoolLiquidity If contract has less liquity for tokenAddressOut than amountOutMantissa
     function _doTransferOut(
         address tokenAddressOut,
         address to,
@@ -694,9 +740,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param converterNetwork_ The converterNetwork address to be set
     /// @custom:event Emits ConverterNetworkAddressUpdated event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when address is zero
-    function _setConverterNetwork(address converterNetwork_) internal {
-        ensureNonzeroAddress(converterNetwork_);
-        emit ConverterNetworkAddressUpdated(converterNetwork, converterNetwork_);
+    function _setConverterNetwork(IConverterNetwork converterNetwork_) internal {
+        ensureNonzeroAddress(address(converterNetwork_));
+        emit ConverterNetworkAddressUpdated(address(converterNetwork), address(converterNetwork_));
         converterNetwork = converterNetwork_;
     }
 
@@ -752,8 +798,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 balanceDiff
     ) internal {
         address tokenAddressIn = _getDestinationBaseAsset();
-        (address[] memory converterAddresses, uint256[] memory converterBalances) = IConverterNetwork(converterNetwork)
-        .findTokenConverter(tokenAddressOut, tokenAddressIn);
+        (address[] memory converterAddresses, uint256[] memory converterBalances) = converterNetwork.findTokenConverter(
+            tokenAddressOut,
+            tokenAddressIn
+        );
         uint256 convertedTokenOutBalance = balanceDiff;
         uint256 convertedTokenInBalance;
         uint256 convertersLength = converterAddresses.length;
@@ -845,7 +893,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 tokenOutUnderlyingPrice = priceOracle.getPrice(tokenAddressOut);
 
         uint256 incentive = configuration.incentive;
-        if (IConverterNetwork(converterNetwork).isTokenConverter(msg.sender)) {
+        if (converterNetwork.isTokenConverter(msg.sender)) {
             incentive = 0;
         }
 
@@ -897,7 +945,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 tokenOutUnderlyingPrice = priceOracle.getPrice(tokenAddressOut);
 
         uint256 incentive = configuration.incentive;
-        if (IConverterNetwork(converterNetwork).isTokenConverter(msg.sender)) {
+        if (converterNetwork.isTokenConverter(msg.sender)) {
             incentive = 0;
         }
 
@@ -913,8 +961,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Check if msg.sender is allowed to convert as per onlyForPrivateConversions flag
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after conversion
+    /// @custom:error ConversionEnabledOnlyForPrivateConversions is thrown when conversion is only enabled for private conversion
     function _checkPrivateConversion(address tokenAddressIn, address tokenAddressOut) internal view {
-        bool isConverter = IConverterNetwork(converterNetwork).isTokenConverter(msg.sender);
+        bool isConverter = converterNetwork.isTokenConverter(msg.sender);
         if ((!(isConverter) && (conversionConfigurations[tokenAddressIn][tokenAddressOut].onlyForPrivateConversions))) {
             revert ConversionEnabledOnlyForPrivateConversions();
         }
