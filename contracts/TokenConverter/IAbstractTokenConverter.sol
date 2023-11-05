@@ -2,18 +2,25 @@
 pragma solidity 0.8.13;
 
 import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
+import { IConverterNetwork } from "../Interfaces/IConverterNetwork.sol";
 
 /// @notice Interface for AbstractTokenConverter
 /// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 interface IAbstractTokenConverter {
+    /// @notice This enum define the all possible ways of conversion can happen
+    enum ConversionAccessibility {
+        NONE, // Conversion is disable for the pair
+        ALL, // Conversion is enable for private conversion and users
+        ONLY_FOR_CONVERTERS, // Conversion is enable only for private conversion
+        ONLY_FOR_USERS // Conversion is enable only for users
+    }
+
     /// @notice This struct represents the configuration for a token conversion.
     struct ConversionConfig {
         /// incentive on conversion of tokens in mantissa i.e 10% incentive would be 0.1 * 1e18
         uint256 incentive;
-        /// whether the conversion is enabled
-        bool enabled;
-        /// enable or disable conversion for users(true: disable for users, false: enable for users)
-        bool onlyForPrivateConversions;
+        /// enable or disable conversion for users or converters or both or none
+        ConversionAccessibility conversionAccess;
     }
 
     /// @notice Pause conversion of tokens
@@ -107,4 +114,19 @@ interface IAbstractTokenConverter {
         address tokenAddressIn,
         address tokenAddressOut
     ) external returns (uint256 amountConvertedMantissa, uint256 amountInMantissa);
+
+    /// @notice Get the configuration for the pair of the tokens
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @return incentives Percentage of incentives to be distributed for the pair of tokens
+    /// @return conversionAccess Accessibility for the pair of tokens
+    function conversionConfigurations(address tokenAddressIn, address tokenAddressOut)
+        external
+        returns (uint256 incentives, ConversionAccessibility conversionAccess);
+
+    /// @notice Get the address of the converterNetwork
+    function converterNetwork() external returns (IConverterNetwork converterNetwork);
+
+    /// @notice Get the balance of the token for converter
+    function balanceOf(address token) external view returns (uint256 tokenBalance);
 }

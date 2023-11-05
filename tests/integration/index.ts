@@ -49,8 +49,7 @@ let WBNB: FakeContract<MockToken>;
 let destinationAddress: Address;
 let ConversionConfig: {
   incentive: string;
-  enabled: boolean;
-  onlyForPrivateConversions: boolean;
+  conversionAccess: number;
 };
 
 const INCENTIVE = convertToUnit("1", 17);
@@ -125,7 +124,7 @@ async function fixture(): Promise<void> {
   await riskFund.convertibleBaseAsset.returns(usdt.address);
 
   const converterNetworkFactory = await smock.mock<ConverterNetwork__factory>("ConverterNetwork");
-  converterNetwork = await upgrades.deployProxy(converterNetworkFactory, [accessControl.address, [], 20]);
+  converterNetwork = await upgrades.deployProxy(converterNetworkFactory, [accessControl.address, 20]);
 
   await usdcConverter.setConverterNetwork(converterNetwork.address);
   await usdcConverter2.setConverterNetwork(converterNetwork.address);
@@ -145,8 +144,7 @@ async function fixture(): Promise<void> {
 
   ConversionConfig = {
     incentive: INCENTIVE,
-    enabled: true,
-    onlyForPrivateConversions: true,
+    conversionAccess: 1,
   };
 
   await usdcConverter.setConversionConfig(usdc.address, usdt.address, ConversionConfig);
@@ -241,7 +239,7 @@ describe("ConverterNetwork: tests", () => {
     await usdtConverter.updateAssetsState(poolA.address, usdc.address);
     await usdtConverter2.updateAssetsState(poolA.address, usdc.address);
 
-    const [, balances] = await converterNetwork.findTokenConverter(usdt.address, usdc.address);
+    const [, balances] = await converterNetwork.callStatic.findTokenConvertersForConverters(usdt.address, usdc.address);
 
     let totalBalanceOfAllConvertersForUsdc = BigNumber.from(0);
 

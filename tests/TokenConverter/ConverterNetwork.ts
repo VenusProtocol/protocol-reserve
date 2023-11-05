@@ -37,7 +37,7 @@ let destinationAddress: Address;
 let userAddress: Address;
 let ConversionConfig: {
   incentive: string;
-  enabled: boolean;
+  conversionAccess: number;
 };
 
 const INCENTIVE = convertToUnit("1", 17);
@@ -78,7 +78,7 @@ async function fixture(): Promise<void> {
   ethConverter = await deployConverter(eth.address);
 
   const converterNetworkFactory = await smock.mock<ConverterNetwork__factory>("ConverterNetwork");
-  converterNetwork = await upgrades.deployProxy(converterNetworkFactory, [accessControl.address, [], 20]);
+  converterNetwork = await upgrades.deployProxy(converterNetworkFactory, [accessControl.address, 20]);
 
   await usdcConverter.setConverterNetwork(converterNetwork.address);
   await usdtConverter.setConverterNetwork(converterNetwork.address);
@@ -155,10 +155,10 @@ describe("ConverterNetwork: tests", () => {
 
   describe("getAllConverters", () => {
     it("should return array containing all converters", async () => {
-      const convertersArray = await converterNetwork.getAllConverters();
-      expect(convertersArray.length).to.equal(3);
-      expect(convertersArray).to.includes(btcConverter.address, usdcConverter.address);
-      expect(convertersArray).to.include(usdtConverter.address);
+      const converters = await converterNetwork.getAllConverters();
+      expect(converters.length).to.equal(3);
+      expect(converters).to.includes(btcConverter.address, usdcConverter.address);
+      expect(converters).to.include(usdtConverter.address);
     });
   });
 
@@ -186,7 +186,7 @@ describe("ConverterNetwork: tests", () => {
     beforeEach(async () => {
       ConversionConfig = {
         incentive: INCENTIVE,
-        enabled: true,
+        conversionAccess: 1,
       };
       await accessControl.isAllowedToCall.returns(true);
 
@@ -216,14 +216,14 @@ describe("ConverterNetwork: tests", () => {
     });
 
     it("should return array containing converters when multiple same base asset converters exist", async () => {
-      let convertersArray;
-      [convertersArray] = await converterNetwork.findTokenConverter(usdc.address, usdt.address);
-      expect(convertersArray).have.length(1);
-      expect(convertersArray).to.include(usdcConverter.address);
+      let converters;
+      [converters] = await converterNetwork.callStatic.findTokenConvertersForConverters(usdc.address, usdt.address);
+      expect(converters).have.length(1);
+      expect(converters).to.include(usdcConverter.address);
 
-      [convertersArray] = await converterNetwork.findTokenConverter(usdt.address, usdc.address);
-      expect(convertersArray).have.length(1);
-      expect(convertersArray).to.include(usdtConverter.address);
+      [converters] = await converterNetwork.callStatic.findTokenConvertersForConverters(usdt.address, usdc.address);
+      expect(converters).have.length(1);
+      expect(converters).to.include(usdtConverter.address);
     });
 
     it("should return correct values with multiple when multiple same base asset converters exist", async () => {
@@ -239,21 +239,27 @@ describe("ConverterNetwork: tests", () => {
       await converterNetwork.addTokenConverter(usdtConverter3.address);
       await converterNetwork.addTokenConverter(usdtConverter4.address);
 
-      let convertersArray, convetersBalances;
+      let converters, convertersBalance;
 
-      [convertersArray, convetersBalances] = await converterNetwork.findTokenConverter(usdt.address, usdc.address);
-      expect(convertersArray).to.have.length(4);
-      expect(convertersArray).to.be.deep.equal([
+      [converters, convertersBalance] = await converterNetwork.callStatic.findTokenConvertersForConverters(
+        usdt.address,
+        usdc.address,
+      );
+      expect(converters).to.have.length(4);
+      expect(converters).to.be.deep.equal([
         usdtConverter.address,
         usdtConverter2.address,
         usdtConverter3.address,
         usdtConverter4.address,
       ]);
-      expect(convetersBalances).to.be.deep.equal([0, 0, 0, 0]);
+      expect(convertersBalance).to.be.deep.equal([0, 0, 0, 0]);
 
-      [convertersArray, convetersBalances] = await converterNetwork.findTokenConverter(usdc.address, usdt.address);
-      expect(convertersArray).to.have.length(3);
-      expect(convertersArray).to.be.deep.equal([usdcConverter.address, usdcConverter2.address, usdcConverter3.address]);
+      [converters, convertersBalance] = await converterNetwork.callStatic.findTokenConvertersForConverters(
+        usdc.address,
+        usdt.address,
+      );
+      expect(converters).to.have.length(3);
+      expect(converters).to.be.deep.equal([usdcConverter.address, usdcConverter2.address, usdcConverter3.address]);
 
       // sending some tokens with different amounts to converters
       await usdc.faucet(parseUnits("1000", 18));
@@ -263,32 +269,23 @@ describe("ConverterNetwork: tests", () => {
       await usdc.transfer(usdtConverter4.address, parseUnits("360", 18));
 
       // now ConverterNetwork should return array with descending token balances
-      [convertersArray, convetersBalances] = await converterNetwork.findTokenConverter(usdt.address, usdc.address);
-      expect(convertersArray).to.have.length(4);
-      expect(convertersArray).to.be.deep.equal([
+      [converters, convertersBalance] = await converterNetwork.callStatic.findTokenConvertersForConverters(
+        usdt.address,
+        usdc.address,
+      );
+      expect(converters).to.have.length(4);
+      expect(converters).to.be.deep.equal([
         usdtConverter4.address,
         usdtConverter.address,
         usdtConverter2.address,
         usdtConverter3.address,
       ]);
-      expect(convetersBalances).to.be.deep.equal([
+      expect(convertersBalance).to.be.deep.equal([
         parseUnits("360", 18),
         parseUnits("150", 18),
         parseUnits("100", 18),
         parseUnits("50", 18),
       ]);
-
-      ConversionConfig = {
-        incentive: INCENTIVE,
-        enabled: false,
-      };
-      // setting one of the conversion config in converter to false to verify that it returns correct values
-      await usdtConverter2.setConversionConfig(usdt.address, usdc.address, ConversionConfig);
-
-      [convertersArray, convetersBalances] = await converterNetwork.findTokenConverter(usdt.address, usdc.address);
-      expect(convertersArray).to.have.length(3);
-      expect(convertersArray).to.be.deep.equal([usdtConverter4.address, usdtConverter.address, usdtConverter3.address]);
-      expect(convetersBalances).to.be.deep.equal([parseUnits("360", 18), parseUnits("150", 18), parseUnits("50", 18)]);
     });
 
     it("should not return address of caller when called by another token converter", async () => {
@@ -303,10 +300,10 @@ describe("ConverterNetwork: tests", () => {
       await converterNetwork.addTokenConverter(usdtConverter3.address);
       await converterNetwork.addTokenConverter(usdtConverter4.address);
 
-      const [convertersArray] = await converterNetwork
+      const [converters] = await converterNetwork
         .connect(usdtConverterSigner)
-        .findTokenConverter(usdt.address, usdc.address);
-      expect(convertersArray).to.not.include(usdtConverter.address);
+        .callStatic.findTokenConvertersForConverters(usdt.address, usdc.address);
+      expect(converters).to.not.include(usdtConverter.address);
     });
   });
 });

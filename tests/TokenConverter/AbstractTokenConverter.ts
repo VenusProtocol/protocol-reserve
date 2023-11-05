@@ -37,7 +37,7 @@ let to: Signer;
 let owner: Signer;
 let ConversionConfig: {
   incentive: string;
-  enabled: boolean;
+  conversionAccess: number;
 };
 let comptroller: FakeContract<IComptroller>;
 let converterA: FakeContract<SingleTokenConverter>;
@@ -80,7 +80,7 @@ async function fixture(): Promise<void> {
 
   ConversionConfig = {
     incentive: INCENTIVE,
-    enabled: true,
+    conversionAccess: 1,
   };
 }
 
@@ -156,7 +156,7 @@ describe("MockConverter: tests", () => {
     it("Revert for user if onlyForPrivateConversion is enabled", async () => {
       const updatedConfig = {
         ...ConversionConfig,
-        onlyForPrivateConversions: true,
+        conversionAccess: 2,
       };
       await converter.setConversionConfig(tokenIn.address, tokenOut.address, updatedConfig);
 
@@ -238,7 +238,7 @@ describe("MockConverter: tests", () => {
     it("Revert for user if onlyForPrivateConversion is enabled", async () => {
       const updatedConfig = {
         ...ConversionConfig,
-        onlyForPrivateConversions: true,
+        conversionAccess: 2,
       };
       await converter.setConversionConfig(tokenIn.address, tokenOut.address, updatedConfig);
 
@@ -295,10 +295,8 @@ describe("MockConverter: tests", () => {
     it("Success on convert exact tokens with supporting fee", async () => {
       await destination.convertibleBaseAsset.returns(tokenInDeflationary.address);
       const ConversionConfig = {
-        tokenAddressIn: tokenInDeflationary.address,
-        tokenAddressOut: tokenOut.address,
         incentive: INCENTIVE,
-        enabled: true,
+        conversionAccess: 1,
       };
 
       await converter.setConversionConfig(tokenInDeflationary.address, tokenOut.address, ConversionConfig);
@@ -330,7 +328,7 @@ describe("MockConverter: tests", () => {
       await destination.convertibleBaseAsset.returns(tokenInDeflationary.address);
       const ConversionConfig = {
         incentive: INCENTIVE,
-        enabled: true,
+        conversionAccess: 1,
       };
 
       await converter.setConversionConfig(tokenInDeflationary.address, tokenOut.address, ConversionConfig);
@@ -349,7 +347,7 @@ describe("MockConverter: tests", () => {
     it("Revert for user if onlyForPrivateConversion is enabled", async () => {
       const updatedConfig = {
         ...ConversionConfig,
-        onlyForPrivateConversions: true,
+        conversionAccess: 2,
       };
       await converter.setConversionConfig(tokenInDeflationary.address, tokenOut.address, updatedConfig);
 
@@ -409,7 +407,7 @@ describe("MockConverter: tests", () => {
 
       const ConversionConfig = {
         incentive: INCENTIVE,
-        enabled: true,
+        conversionAccess: 1,
       };
 
       await converter.setConversionConfig(tokenInDeflationary.address, tokenOut.address, ConversionConfig);
@@ -428,8 +426,7 @@ describe("MockConverter: tests", () => {
     it("Revert for user if onlyForPrivateConversion is enabled", async () => {
       const updatedConfig = {
         incentive: INCENTIVE,
-        enabled: true,
-        onlyForPrivateConversions: true,
+        conversionAccess: 2,
       };
       await converter.setConversionConfig(tokenIn.address, tokenOut.address, updatedConfig);
 
@@ -494,16 +491,16 @@ describe("MockConverter: tests", () => {
       let isExist = await converter.conversionConfigurations(tokenIn.address, tokenOut.address);
 
       expect(isExist[0]).to.equal(0);
-      expect(isExist[1]).to.equal(false);
+      expect(isExist[1]).to.equal(0);
 
       await expect(converter.setConversionConfig(tokenIn.address, tokenOut.address, ConversionConfig))
         .to.emit(converter, "ConversionConfigUpdated")
-        .withArgs(tokenIn.address, tokenOut.address, 0, INCENTIVE, false, true, false, false);
+        .withArgs(tokenIn.address, tokenOut.address, 0, INCENTIVE, 0, 1);
 
       isExist = await converter.conversionConfigurations(tokenIn.address, tokenOut.address);
 
       expect(isExist[0]).to.equal(INCENTIVE);
-      expect(isExist[1]).to.equal(true);
+      expect(isExist[1]).to.equal(1);
     });
 
     it("Update the incentive", async () => {
@@ -518,7 +515,7 @@ describe("MockConverter: tests", () => {
 
       await expect(converter.setConversionConfig(tokenIn.address, tokenOut.address, ConverterConfig))
         .to.emit(converter, "ConversionConfigUpdated")
-        .withArgs(tokenIn.address, tokenOut.address, INCENTIVE, NEW_INCENTIVE, true, true, false, false);
+        .withArgs(tokenIn.address, tokenOut.address, INCENTIVE, NEW_INCENTIVE, 1, 1);
 
       const isExist = await converter.conversionConfigurations(tokenIn.address, tokenOut.address);
       expect(isExist[0]).to.equal(NEW_INCENTIVE);
@@ -528,19 +525,19 @@ describe("MockConverter: tests", () => {
       await converter.setConversionConfig(tokenIn.address, tokenOut.address, ConversionConfig);
 
       let value = await converter.conversionConfigurations(tokenIn.address, tokenOut.address);
-      expect(value[2]).to.equal(false);
+      expect(value[1]).to.equal(1);
 
       const ConverterConfig = {
         ...ConversionConfig,
-        onlyForPrivateConversions: true,
+        conversionAccess: 2,
       };
 
       await expect(converter.setConversionConfig(tokenIn.address, tokenOut.address, ConverterConfig))
         .to.emit(converter, "ConversionConfigUpdated")
-        .withArgs(tokenIn.address, tokenOut.address, INCENTIVE, INCENTIVE, true, true, false, true);
+        .withArgs(tokenIn.address, tokenOut.address, INCENTIVE, INCENTIVE, 1, 2);
 
       value = await converter.conversionConfigurations(tokenIn.address, tokenOut.address);
-      expect(value[2]).to.equal(true);
+      expect(value[1]).to.equal(2);
     });
   });
 
@@ -609,7 +606,7 @@ describe("MockConverter: tests", () => {
     it("Revert on onlyForPrivateConversions enabled", async () => {
       const updatedConfig = {
         ...ConversionConfig,
-        onlyForPrivateConversions: true,
+        conversionAccess: 2,
       };
       await converter.setConversionConfig(tokenIn.address, tokenOut.address, updatedConfig);
 
@@ -678,7 +675,7 @@ describe("MockConverter: tests", () => {
     it("Revert on onlyForPrivateConversions enabled", async () => {
       const updatedConfig = {
         ...ConversionConfig,
-        onlyForPrivateConversions: true,
+        conversionAccess: 2,
       };
       await converter.setConversionConfig(tokenIn.address, tokenOut.address, updatedConfig);
 
@@ -848,7 +845,7 @@ describe("MockConverter: tests", () => {
 
     it("Success on transferring assets to other converters through private conversion", async () => {
       const TOKEN_OUT_AMOUNT = convertToUnit("10", 18);
-      converterNetwork.findTokenConverter.returns([
+      converterNetwork.findTokenConvertersForConverters.returns([
         [converterA.address, converterB.address],
         [convertToUnit("5", 18), convertToUnit("5", 18)],
       ]);

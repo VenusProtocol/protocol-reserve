@@ -82,7 +82,7 @@ contract ProtocolShareReserve is
     /// @notice Emitted when an asset is added to prime program
     event PrimeAssetUpdated(address indexed asset, bool isPrimeAsset);
 
-    /// @notice Event emitted after the updation of the assets reserves.
+    /// @notice Event emitted after updating of the assets reserves.
     event AssetsReservesUpdated(
         address indexed comptroller,
         address indexed asset,

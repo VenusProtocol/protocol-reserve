@@ -18,7 +18,7 @@ contract MockConverter is AbstractTokenConverter {
     /// @dev Comptroller(pool) -> Asset -> amount
     mapping(address => mapping(address => uint256)) public poolsAssetsReserves;
 
-    /// @notice Emitted after the updation of the assets reserves
+    /// @notice Emitted after updating of the assets reserves
     /// amount -> reserve increased by amount
     event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
 

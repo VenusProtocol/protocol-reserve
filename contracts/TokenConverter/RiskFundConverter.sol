@@ -49,7 +49,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
 
-    /// @notice Emitted after the updation of the assets reserves
+    /// @notice Emitted after updating of the assets reserves
     /// amount -> reserve increased by amount
     event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
 
@@ -363,9 +363,8 @@ contract RiskFundConverter is AbstractTokenConverter {
         uint256 convertedTokenOutBalance
     ) internal override {
         if (convertedTokenInBalance > 0) {
-            assetsReserves[tokenAddressIn] += convertedTokenInBalance;
-            poolsAssetsReserves[comptroller][tokenAddressIn] += convertedTokenInBalance;
-            emit AssetsReservesUpdated(comptroller, tokenAddressIn, convertedTokenInBalance);
+            emit AssetTransferredToDestination(comptroller, tokenAddressIn, convertedTokenInBalance);
+            IRiskFund(destinationAddress).updatePoolState(comptroller, tokenAddressIn, convertedTokenInBalance);
         }
         if (convertedTokenOutBalance > 0) {
             assetsReserves[tokenAddressOut] += convertedTokenOutBalance;

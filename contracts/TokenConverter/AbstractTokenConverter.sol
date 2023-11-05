@@ -116,7 +116,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @dev This empty reserved space is put in place to allow future versions to add new
     /// variables without shifting down storage in the inheritance chain.
     /// See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-    uint256[46] private __gap;
+    uint256[45] private __gap;
 
     /// @notice Emitted when config is updated for tokens pair
     event ConversionConfigUpdated(
@@ -124,10 +124,8 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address indexed tokenAddressOut,
         uint256 oldIncentive,
         uint256 newIncentive,
-        bool oldEnabled,
-        bool newEnabled,
-        bool oldOnlyForPrivateConversion,
-        bool newOnlyForPrivateConversion
+        ConversionAccessibility oldAccess,
+        ConversionAccessibility newAccess
     );
     /// @notice Emitted when price oracle address is updated
     event PriceOracleUpdated(ResilientOracle indexed oldPriceOracle, ResilientOracle indexed priceOracle);
@@ -278,7 +276,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         if (
             (tokenAddressIn == tokenAddressOut) ||
             (tokenAddressIn != _getDestinationBaseAsset()) ||
-            conversionConfigurations[tokenAddressOut][tokenAddressIn].enabled
+            conversionConfigurations[tokenAddressOut][tokenAddressIn].conversionAccess != ConversionAccessibility.NONE
         ) {
             revert InvalidTokenConfigAddresses();
         }
@@ -290,15 +288,12 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             tokenAddressOut,
             configuration.incentive,
             conversionConfig.incentive,
-            configuration.enabled,
-            conversionConfig.enabled,
-            configuration.onlyForPrivateConversions,
-            conversionConfig.onlyForPrivateConversions
+            configuration.conversionAccess,
+            conversionConfig.conversionAccess
         );
 
         configuration.incentive = conversionConfig.incentive;
-        configuration.enabled = conversionConfig.enabled;
-        configuration.onlyForPrivateConversions = conversionConfig.onlyForPrivateConversions;
+        configuration.conversionAccess = conversionConfig.conversionAccess;
     }
 
     /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut if there is enough tokens held by the contract
@@ -496,7 +491,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut
     ) external view returns (uint256 amountConvertedMantissa, uint256 amountOutMantissa) {
-        if (conversionConfigurations[tokenAddressIn][tokenAddressOut].onlyForPrivateConversions) {
+        if (
+            conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==
+            ConversionAccessibility.ONLY_FOR_CONVERTERS
+        ) {
             revert ConversionEnabledOnlyForPrivateConversions();
         }
 
@@ -533,7 +531,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut
     ) external view returns (uint256 amountConvertedMantissa, uint256 amountInMantissa) {
-        if (conversionConfigurations[tokenAddressIn][tokenAddressOut].onlyForPrivateConversions) {
+        if (
+            conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==
+            ConversionAccessibility.ONLY_FOR_CONVERTERS
+        ) {
             revert ConversionEnabledOnlyForPrivateConversions();
         }
 
@@ -798,10 +799,8 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 balanceDiff
     ) internal {
         address tokenAddressIn = _getDestinationBaseAsset();
-        (address[] memory converterAddresses, uint256[] memory converterBalances) = converterNetwork.findTokenConverter(
-            tokenAddressOut,
-            tokenAddressIn
-        );
+        (address[] memory converterAddresses, uint256[] memory converterBalances) = converterNetwork
+        .findTokenConvertersForConverters(tokenAddressOut, tokenAddressIn);
         uint256 convertedTokenOutBalance = balanceDiff;
         uint256 convertedTokenInBalance;
         uint256 convertersLength = converterAddresses.length;
@@ -885,7 +884,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         ConversionConfig memory configuration = conversionConfigurations[tokenAddressIn][tokenAddressOut];
 
-        if (!configuration.enabled) {
+        if (configuration.conversionAccess == ConversionAccessibility.NONE) {
             revert ConversionConfigNotEnabled();
         }
 
@@ -937,7 +936,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         ConversionConfig memory configuration = conversionConfigurations[tokenAddressIn][tokenAddressOut];
 
-        if (!configuration.enabled) {
+        if (configuration.conversionAccess == ConversionAccessibility.NONE) {
             revert ConversionConfigNotEnabled();
         }
 
@@ -964,7 +963,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @custom:error ConversionEnabledOnlyForPrivateConversions is thrown when conversion is only enabled for private conversion
     function _checkPrivateConversion(address tokenAddressIn, address tokenAddressOut) internal view {
         bool isConverter = converterNetwork.isTokenConverter(msg.sender);
-        if ((!(isConverter) && (conversionConfigurations[tokenAddressIn][tokenAddressOut].onlyForPrivateConversions))) {
+        if (
+            (!(isConverter) &&
+                (conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==
+                    ConversionAccessibility.ONLY_FOR_CONVERTERS))
+        ) {
             revert ConversionEnabledOnlyForPrivateConversions();
         }
     }
