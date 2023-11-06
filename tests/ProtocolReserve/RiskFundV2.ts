@@ -22,11 +22,10 @@ let riskFund: MockContract<RiskFundV2>;
 let tokenA: MockContract<MockToken>;
 let admin: Signer;
 let nonAdmin: Signer;
-let bidder: Signer;
 let comptrollerA: FakeContract<IComptroller>;
 
 const riskFundFixture = async (): Promise<void> => {
-  [admin, nonAdmin, bidder] = await ethers.getSigners();
+  [admin, nonAdmin] = await ethers.getSigners();
 
   const RiskFund = await smock.mock<RiskFundV2__factory>("RiskFundV2");
   riskFund = await RiskFund.deploy();
@@ -126,33 +125,36 @@ describe("Risk Fund: Tests", function () {
 
     it("Revert while transfering funds to Auction contract", async function () {
       await expect(
-        riskFund
-          .connect(nonAdmin)
-          .transferReserveForAuction(comptrollerA.address, await bidder.getAddress(), convertToUnit(30, 18)),
+        riskFund.connect(nonAdmin).transferReserveForAuction(comptrollerA.address, convertToUnit(30, 18)),
       ).to.be.revertedWithCustomError(riskFund, "InvalidShortfallAddress");
 
       await expect(
-        riskFund
-          .connect(admin)
-          .transferReserveForAuction(comptrollerA.address, await bidder.getAddress(), convertToUnit(100, 18)),
+        riskFund.connect(admin).transferReserveForAuction(comptrollerA.address, convertToUnit(100, 18)),
       ).to.be.revertedWithCustomError(riskFund, "InsufficientPoolReserve");
     });
 
     it("Transfer funds to auction contact", async function () {
+      const shortfallSinger = await ethers.getSigner(shortfall.address);
+      await admin.sendTransaction({
+        to: shortfall.address,
+        value: ethers.utils.parseEther("1.0"), // Sends exactly 1.0 ether
+      });
+
       const COMPTROLLER_A_AMOUNT = convertToUnit(30, 18);
 
+      await riskFund.setShortfallContractAddress(shortfall.address);
       await tokenA.transfer(riskFund.address, COMPTROLLER_A_AMOUNT);
       await riskFund.setVariable("poolAssetsFunds", {
         [comptrollerA.address]: { [tokenA.address]: COMPTROLLER_A_AMOUNT },
       });
 
       const tx = riskFund
-        .connect(admin)
-        .transferReserveForAuction(comptrollerA.address, await bidder.getAddress(), convertToUnit(20, 18));
+        .connect(shortfallSinger)
+        .transferReserveForAuction(comptrollerA.address, convertToUnit(20, 18));
 
       await expect(tx).to.changeTokenBalances(
         tokenA,
-        [riskFund.address, await bidder.getAddress()],
+        [riskFund.address, shortfall.address],
         ["-20000000000000000000", "20000000000000000000"],
       );
     });

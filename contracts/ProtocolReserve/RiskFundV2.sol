@@ -8,7 +8,7 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
 import { IRiskFundConverter } from "../Interfaces/IRiskFundConverter.sol";
 
-import { ensureNonzeroAddress } from "../Utils/Validators.sol";
+import { ensureNonzeroAddress, ensureNonzeroValue } from "../Utils/Validators.sol";
 import { EXP_SCALE } from "../Utils/Constants.sol";
 
 import { RiskFundV2Storage } from "./RiskFundStorage.sol";
@@ -33,8 +33,11 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @notice Emitted when reserves are transferred for auction
     event TransferredReserveForAuction(address indexed comptroller, uint256 amount);
 
-    /// @notice Emitted when pool states is updated with amount transferred to this contract
-    event PoolStateUpdated(address indexed comptroller, address indexed asset, uint256 amount);
+    /// @notice Emitted when pool asset states is updated with amount transferred to this contract
+    event PoolAssetsIncreased(address indexed comptroller, address indexed asset, uint256 amount);
+
+    /// @notice Emitted when pool asset states is updated with amount transferred from this contract on sweeping tokens
+    event PoolAssetsDecreased(address indexed comptroller, address indexed asset, uint256 amount);
 
     /// @notice Event emitted when tokens are swept
     event SweepToken(address indexed token, address indexed to, uint256 amount);
@@ -54,7 +57,8 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @dev Convertible base asset setter
     /// @param convertibleBaseAsset_ Address of the convertible base asset
     /// @custom:event ConvertibleBaseAssetUpdated emit on success
-    /// @custom:error ZeroAddressNotAllowed is thrown when risk fund converter address is zero
+    /// @custom:error ZeroAddressNotAllowed is thrown when convertible base asset address is zero
+    /// @custom:access Only Governance
     function setConvertibleBaseAsset(address convertibleBaseAsset_) external onlyOwner {
         ensureNonzeroAddress(convertibleBaseAsset_);
         emit ConvertibleBaseAssetUpdated(convertibleBaseAsset, convertibleBaseAsset_);
@@ -65,6 +69,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @param riskFundConverter_ Address of the risk fund converter
     /// @custom:event RiskFundConverterUpdated emit on success
     /// @custom:error ZeroAddressNotAllowed is thrown when risk fund converter address is zero
+    /// @custom:access Only Governance
     function setRiskFundConverter(address riskFundConverter_) external onlyOwner {
         ensureNonzeroAddress(riskFundConverter_);
         emit RiskFundConverterUpdated(riskFundConverter, riskFundConverter_);
@@ -75,25 +80,27 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @param shortfallContractAddress_ Address of the auction contract
     /// @custom:event ShortfallContractUpdated emit on success
     /// @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
+    /// @custom:access Only Governance
     function setShortfallContractAddress(address shortfallContractAddress_) external onlyOwner {
         ensureNonzeroAddress(shortfallContractAddress_);
         emit ShortfallContractUpdated(shortfall, shortfallContractAddress_);
         shortfall = shortfallContractAddress_;
     }
 
-    /// @dev Transfer tokens for auction
+    /// @dev Transfer tokens for auction to shortfall contract
     /// @param comptroller Comptroller of the pool
-    /// @param bidder Amount transferred to bidder address
-    /// @param amount Amount to be transferred to auction contract
-    /// @return Number reserved tokens.
+    /// @param amount Amount to be transferred to the shortfall
+    /// @return Amount of tokens transferred to the shortfall
     /// @custom:event TransferredReserveForAuction emit on success
-    /// @custom:error InvalidShortfallAddress is thrown on invalid shortfall address
+    /// @custom:error InvalidShortfallAddress is thrown when caller is not shortfall contract
     /// @custom:error InsufficientPoolReserve is thrown when pool reserve is less than the amount needed
-    function transferReserveForAuction(
-        address comptroller,
-        address bidder,
-        uint256 amount
-    ) external override returns (uint256) {
+    /// @custom:access Only Shortfall contract
+    function transferReserveForAuction(address comptroller, uint256 amount)
+        external
+        override
+        nonReentrant
+        returns (uint256)
+    {
         uint256 poolReserve = poolAssetsFunds[comptroller][convertibleBaseAsset];
 
         if (msg.sender != shortfall) {
@@ -107,13 +114,13 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
             poolAssetsFunds[comptroller][convertibleBaseAsset] = poolReserve - amount;
         }
 
-        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(bidder, amount);
+        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(shortfall, amount);
         emit TransferredReserveForAuction(comptroller, amount);
 
         return amount;
     }
 
-    /// @notice Function to sweep baseAsset for pool, Tokens are sent to admin (timelock)
+    /// @notice Function to sweep baseAsset for pool, Tokens are sent to address(to)
     /// @param tokenAddress Address of the asset(token)
     /// @param to Address to which assets will be transferred
     /// @param amount Amount need to sweep for the pool
@@ -127,20 +134,31 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     ) external onlyOwner nonReentrant {
         ensureNonzeroAddress(tokenAddress);
         ensureNonzeroAddress(to);
+        ensureNonzeroValue(amount);
 
         IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
-        postSweepToken(tokenAddress, amount);
+        preSweepToken(tokenAddress, amount);
         token.safeTransfer(to, amount);
 
         emit SweepToken(tokenAddress, to, amount);
+    }
+
+    /**
+     * @notice Get the Amount of the Base asset in the risk fund for the specific pool.
+     * @param comptroller  Comptroller address(pool).
+     * @return Base Asset's reserve in risk fund.
+     */
+    function getPoolsBaseAssetReserves(address comptroller) external view returns (uint256) {
+        return poolAssetsFunds[comptroller][convertibleBaseAsset];
     }
 
     /// @dev Update the reserve of the asset for the specific pool after transferring to risk fund
     /// @param comptroller Comptroller address (pool)
     /// @param asset Address of the asset(token)
     /// @param amount Amount transferred for the pool
-    /// @custom:event PoolStateUpdated emits on success
+    /// @custom:event PoolAssetsIncreased emits on success
     /// @custom:error InvalidRiskFundConverter is thrown if caller is not riskFundConverter contract
+    /// @custom:access Only RiskFundConverter contract
     function updatePoolState(
         address comptroller,
         address asset,
@@ -151,14 +169,14 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
         }
 
         poolAssetsFunds[comptroller][asset] += amount;
-        emit PoolStateUpdated(comptroller, asset, amount);
+        emit PoolAssetsIncreased(comptroller, asset, amount);
     }
 
-    /// @notice Operations to perform after sweepToken
+    /// @notice Operations to perform before sweeping tokens
     /// @param tokenAddress Address of the token
     /// @param amount Amount transferred to address(to)
     /// @custom:error InsufficientBalance is thrown when amount entered is greater than balance
-    function postSweepToken(address tokenAddress, uint256 amount) internal {
+    function preSweepToken(address tokenAddress, uint256 amount) internal {
         uint256 balance = IERC20Upgradeable(tokenAddress).balanceOf(address(this));
         if (amount > balance) revert InsufficientBalance();
 
@@ -166,8 +184,11 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
 
         uint256 assetReserves;
         uint256 poolsLength = pools.length;
-        for (uint256 i; i < poolsLength; ++i) {
+        for (uint256 i; i < poolsLength; ) {
             assetReserves += poolAssetsFunds[pools[i]][tokenAddress];
+            unchecked {
+                ++i;
+            }
         }
 
         uint256 balanceDiff = balance - assetReserves;
@@ -177,29 +198,23 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
             unchecked {
                 amountDiff = amount - balanceDiff;
             }
-
-            for (uint256 i; i < poolsLength; ++i) {
-                uint256 poolShare = (poolAssetsFunds[pools[i]][tokenAddress] * EXP_SCALE) / assetReserves;
-                if (poolShare == 0) continue;
-                updatePoolAssetsReserve(pools[i], tokenAddress, amountDiff, poolShare);
+            uint256 distributedShare;
+            for (uint256 i; i < poolsLength; ) {
+                if (poolAssetsFunds[pools[i]][tokenAddress] != 0) {
+                    uint256 poolAmountShare;
+                    if (i < (poolsLength - 1)) {
+                        poolAmountShare = (poolAssetsFunds[pools[i]][tokenAddress] * amount) / assetReserves;
+                        distributedShare += poolAmountShare;
+                    } else {
+                        poolAmountShare = amountDiff - distributedShare;
+                    }
+                    poolAssetsFunds[pools[i]][tokenAddress] -= poolAmountShare;
+                    emit PoolAssetsDecreased(pools[i], tokenAddress, poolAmountShare);
+                }
+                unchecked {
+                    ++i;
+                }
             }
         }
-    }
-
-    /// @notice Update the poolAssetsReserves upon transferring the tokens
-    /// @param pool Address of the pool
-    /// @param tokenAddress Address of the token
-    /// @param amount Amount transferred to address(to)
-    /// @param poolShare share for corresponding pool
-    /// @custom:event PoolStateUpdated emits on success
-    function updatePoolAssetsReserve(
-        address pool,
-        address tokenAddress,
-        uint256 amount,
-        uint256 poolShare
-    ) internal {
-        uint256 poolAmountShare = (poolShare * amount) / EXP_SCALE;
-        poolAssetsFunds[pool][tokenAddress] -= poolAmountShare;
-        emit PoolStateUpdated(pool, tokenAddress, poolAmountShare);
     }
 }

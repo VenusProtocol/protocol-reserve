@@ -73,7 +73,15 @@ async function fixture(): Promise<void> {
 
   converter = await upgrades.deployProxy(
     converterFactory,
-    [accessControl.address, oracle.address, riskFund.address, poolRegistry.address],
+    [
+      accessControl.address,
+      oracle.address,
+      riskFund.address,
+      poolRegistry.address,
+      [poolA.address],
+      [[tokenIn.address]],
+      [[true]],
+    ],
     {
       Contract: converterFactory,
       initializer: "initialize",
@@ -176,6 +184,30 @@ describe("Risk fund Converter: tests", () => {
     await expect(
       converter.sweepToken(tokenIn.address, await unKnown.getAddress(), parseUnits("1000", 18)),
     ).to.be.revertedWithCustomError(converter, "InsufficientBalance");
+  });
+
+  it("Revert for non existing asset for the pool", async () => {
+    const [, fakeComptroller, fakeAsset] = await ethers.getSigners();
+
+    await expect(converter.getPoolAssetReserve(corePool.address, fakeAsset.address)).to.be.revertedWithCustomError(
+      converter,
+      "MarketNotExistInPool",
+    );
+
+    await expect(converter.getPoolAssetReserve(fakeComptroller.address, tokenIn.address)).to.be.revertedWithCustomError(
+      converter,
+      "MarketNotExistInPool",
+    );
+
+    await expect(converter.updateAssetsState(fakeComptroller.address, tokenIn.address)).to.be.revertedWithCustomError(
+      converter,
+      "MarketNotExistInPool",
+    );
+
+    await expect(converter.updateAssetsState(corePool.address, fakeAsset.address)).to.be.revertedWithCustomError(
+      converter,
+      "MarketNotExistInPool",
+    );
   });
 
   describe("Pools direct transfer", () => {
