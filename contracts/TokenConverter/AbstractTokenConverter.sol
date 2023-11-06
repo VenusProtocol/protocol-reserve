@@ -265,7 +265,12 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         ensureNonzeroAddress(tokenAddressIn);
         ensureNonzeroAddress(tokenAddressOut);
 
-        if (address(converterNetwork) == address(0)) {
+        if (
+            ((conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==
+                ConversionAccessibility.ONLY_FOR_CONVERTERS) ||
+                (conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==
+                    ConversionAccessibility.ALL)) && (address(converterNetwork) == address(0))
+        ) {
             revert InvalidConverterNetwork();
         }
 
@@ -799,37 +804,39 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 balanceDiff
     ) internal {
         address tokenAddressIn = _getDestinationBaseAsset();
-        (address[] memory converterAddresses, uint256[] memory converterBalances) = converterNetwork
-        .findTokenConvertersForConverters(tokenAddressOut, tokenAddressIn);
         uint256 convertedTokenOutBalance = balanceDiff;
         uint256 convertedTokenInBalance;
-        uint256 convertersLength = converterAddresses.length;
-        for (uint256 i; i < convertersLength; ) {
-            uint256 amountOutMantissa = converterBalances[i];
-            if (amountOutMantissa == 0) break;
-            (, uint256 amountIn) = IAbstractTokenConverter(converterAddresses[i]).getUpdatedAmountIn(
-                amountOutMantissa,
-                tokenAddressOut,
-                tokenAddressIn
-            );
-            if (amountIn > convertedTokenOutBalance) {
-                amountIn = convertedTokenOutBalance;
-            }
-            IERC20Upgradeable(tokenAddressOut).approve(converterAddresses[i], amountIn);
-            (, uint256 actualAmountOut) = IAbstractTokenConverter(converterAddresses[i]).convertExactTokens(
-                amountIn,
-                0,
-                tokenAddressOut,
-                tokenAddressIn,
-                destinationAddress
-            );
-            convertedTokenOutBalance -= amountIn;
-            convertedTokenInBalance += actualAmountOut;
+        if (address(converterNetwork) != address(0)) {
+            (address[] memory converterAddresses, uint256[] memory converterBalances) = converterNetwork
+            .findTokenConvertersForConverters(tokenAddressOut, tokenAddressIn);
+            uint256 convertersLength = converterAddresses.length;
+            for (uint256 i; i < convertersLength; ) {
+                uint256 amountOutMantissa = converterBalances[i];
+                if (amountOutMantissa == 0) break;
+                (, uint256 amountIn) = IAbstractTokenConverter(converterAddresses[i]).getUpdatedAmountIn(
+                    amountOutMantissa,
+                    tokenAddressOut,
+                    tokenAddressIn
+                );
+                if (amountIn > convertedTokenOutBalance) {
+                    amountIn = convertedTokenOutBalance;
+                }
+                IERC20Upgradeable(tokenAddressOut).approve(converterAddresses[i], amountIn);
+                (, uint256 actualAmountOut) = IAbstractTokenConverter(converterAddresses[i]).convertExactTokens(
+                    amountIn,
+                    0,
+                    tokenAddressOut,
+                    tokenAddressIn,
+                    destinationAddress
+                );
+                convertedTokenOutBalance -= amountIn;
+                convertedTokenInBalance += actualAmountOut;
 
-            if (convertedTokenOutBalance == 0) break;
+                if (convertedTokenOutBalance == 0) break;
 
-            unchecked {
-                ++i;
+                unchecked {
+                    ++i;
+                }
             }
         }
 
@@ -892,7 +899,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 tokenOutUnderlyingPrice = priceOracle.getPrice(tokenAddressOut);
 
         uint256 incentive = configuration.incentive;
-        if (converterNetwork.isTokenConverter(msg.sender)) {
+        if (address(converterNetwork) != address(0) && (converterNetwork.isTokenConverter(msg.sender))) {
             incentive = 0;
         }
 
@@ -944,7 +951,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 tokenOutUnderlyingPrice = priceOracle.getPrice(tokenAddressOut);
 
         uint256 incentive = configuration.incentive;
-        if (converterNetwork.isTokenConverter(msg.sender)) {
+        if ((address(converterNetwork) != address(0)) && (converterNetwork.isTokenConverter(msg.sender))) {
             incentive = 0;
         }
 
@@ -962,7 +969,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @custom:error ConversionEnabledOnlyForPrivateConversions is thrown when conversion is only enabled for private conversion
     function _checkPrivateConversion(address tokenAddressIn, address tokenAddressOut) internal view {
-        bool isConverter = converterNetwork.isTokenConverter(msg.sender);
+        bool isConverter = (address(converterNetwork) != address(0)) && converterNetwork.isTokenConverter(msg.sender);
         if (
             (!(isConverter) &&
                 (conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==

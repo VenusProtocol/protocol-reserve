@@ -2,7 +2,7 @@
 pragma solidity 0.8.13;
 
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
-import { MaxLoopsLimitHelper } from "@venusprotocol/isolated-pools/contracts/MaxLoopsLimitHelper.sol";
+import { MaxLoopsLimitHelper } from "@venusprotocol/solidity-utilities/contracts/MaxLoopsLimitHelper.sol";
 
 import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 import { sort } from "../Utils/ArrayHelpers.sol";
@@ -63,7 +63,7 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8, MaxLoopsLimi
     /// @custom:event ConverterRemoved is emitted on success
     /// @custom:access Only Governance
     function removeTokenConverter(IAbstractTokenConverter _tokenConverter) external {
-        _checkAccessAllowed("removeTokenConverter(IAbstractTokenConverter)");
+        _checkAccessAllowed("removeTokenConverter(address)");
         ensureNonzeroAddress(address(_tokenConverter));
 
         // Find the index of the converter in the array
