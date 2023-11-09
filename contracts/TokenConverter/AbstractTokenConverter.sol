@@ -88,7 +88,7 @@ import { IConverterNetwork } from "../Interfaces/IConverterNetwork.sol";
  * findTokenConverters():
  * It will return an array of converter addresses along with their corresponding balances, sorted in descending order based on the converter's balances
  * relative to tokenAddressOut. This function filter the converter addresses on the basis of the conversionAccess(for users).
- * 
+ *
  * findTokenConvertersForConverters():
  * It will return an array of converter addresses along with their corresponding balances, sorted in descending order based on the converter's balances
  * relative to tokenAddressOut. This function filter the converter addresses on the basis of the conversionAccess(for converters).
@@ -269,15 +269,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         ensureNonzeroAddress(tokenAddressIn);
         ensureNonzeroAddress(tokenAddressOut);
 
-        if (
-            ((conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==
-                ConversionAccessibility.ONLY_FOR_CONVERTERS) ||
-                (conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==
-                    ConversionAccessibility.ALL)) && (address(converterNetwork) == address(0))
-        ) {
-            revert InvalidConverterNetwork();
-        }
-
         if (conversionConfig.incentive > MAX_INCENTIVE) {
             revert IncentiveTooHigh(conversionConfig.incentive, MAX_INCENTIVE);
         }
@@ -288,6 +279,15 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             conversionConfigurations[tokenAddressOut][tokenAddressIn].conversionAccess != ConversionAccessibility.NONE
         ) {
             revert InvalidTokenConfigAddresses();
+        }
+
+        if (
+            ((conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==
+                ConversionAccessibility.ONLY_FOR_CONVERTERS) ||
+                (conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==
+                    ConversionAccessibility.ALL)) && (address(converterNetwork) == address(0))
+        ) {
+            revert InvalidConverterNetwork();
         }
 
         ConversionConfig storage configuration = conversionConfigurations[tokenAddressIn][tokenAddressOut];
@@ -301,8 +301,12 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             conversionConfig.conversionAccess
         );
 
-        configuration.incentive = conversionConfig.incentive;
-        configuration.conversionAccess = conversionConfig.conversionAccess;
+        if (conversionConfig.conversionAccess == ConversionAccessibility.NONE) {
+            delete conversionConfigurations[tokenAddressIn][tokenAddressOut];
+        } else {
+            configuration.incentive = conversionConfig.incentive;
+            configuration.conversionAccess = conversionConfig.conversionAccess;
+        }
     }
 
     /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut if there is enough tokens held by the contract
@@ -718,7 +722,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         actualAmountOut = balanceBefore - balanceAfter;
     }
 
-    /// @notice Transfer tokenAddressIn from user to destination 
+    /// @notice Transfer tokenAddressIn from user to destination
     /// @param tokenAddressIn Address of the token to convert
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @return actualAmountIn Actual amount transferred to destination
