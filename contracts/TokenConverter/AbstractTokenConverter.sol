@@ -282,10 +282,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         }
 
         if (
-            ((conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==
-                ConversionAccessibility.ONLY_FOR_CONVERTERS) ||
-                (conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==
-                    ConversionAccessibility.ALL)) && (address(converterNetwork) == address(0))
+            ((conversionConfig.conversionAccess == ConversionAccessibility.ONLY_FOR_CONVERTERS) ||
+                (conversionConfig.conversionAccess == ConversionAccessibility.ALL)) &&
+            (address(converterNetwork) == address(0))
         ) {
             revert InvalidConverterNetwork();
         }
