@@ -65,7 +65,6 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8, MaxLoopsLimi
     /// @custom:access Only Governance
     function removeTokenConverter(IAbstractTokenConverter _tokenConverter) external {
         _checkAccessAllowed("removeTokenConverter(address)");
-        ensureNonzeroAddress(address(_tokenConverter));
 
         // Find the index of the converter in the array
         uint128 indexToRemove = _findConverterIndex(_tokenConverter);
