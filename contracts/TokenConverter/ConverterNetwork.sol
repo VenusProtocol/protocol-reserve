@@ -111,7 +111,7 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8, MaxLoopsLimi
         return allConverters;
     }
 
-    /// @notice This function checks for given address is converter or not
+    /// @notice This function checks if the given address is a converter or not
     /// @param _tokenConverter Address of the token converter
     /// @return boolean true if given address is converter otherwise false
     function isTokenConverter(address _tokenConverter) external view returns (bool) {

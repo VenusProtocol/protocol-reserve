@@ -85,9 +85,13 @@ import { IConverterNetwork } from "../Interfaces/IConverterNetwork.sol";
  * This contract will contain all the converters, and will provide valid converters which can perform the execution according to tokenAddressIn
  * and tokenAddressOut provided.
  *
- * findTokenConverter():
+ * findTokenConverters():
  * It will return an array of converter addresses along with their corresponding balances, sorted in descending order based on the converter's balances
- * relative to tokenAddressOut.
+ * relative to tokenAddressOut. This function filter the converter addresses on the basis of the conversionAccess.
+ *
+ * findTokenConvertersForConverters():
+ * It will return an array of converter addresses along with their corresponding balances, sorted in descending order based on the converter's balances
+ * relative to tokenAddressOut. This function filter the converter addresses on the basis of the conversionAccess.
  */
 
 /// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
@@ -196,7 +200,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Thrown when tokenInAddress is same as tokeOutAdress OR tokeInAddress is not the base asset of the destination
     error InvalidTokenConfigAddresses();
 
-    ///  @notice Thrown when contract has less liquity for tokenAddressOut than amountOutMantissa
+    ///  @notice Thrown when contract has less liquidity for tokenAddressOut than amountOutMantissa
     error InsufficientPoolLiquidity();
 
     /// @notice When address of the ConverterNetwork is not set or Zero address
@@ -512,7 +516,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         uint256 maxTokenOutReserve = balanceOf(tokenAddressOut);
 
-        /// If contract has less liquity for tokenAddressOut than amountOutMantissa
+        /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountOutMantissa) {
             amountConvertedMantissa =
                 ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) /
@@ -693,7 +697,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param to Address of the tokenAddressOut receiver
     /// @param amountConvertedMantissa Amount of tokenAddressOut supposed to get transferred
     /// @return actualAmountOut Actual amount of tokenAddressOut transferred
-    /// @custom:error InsufficientPoolLiquidity If contract has less liquity for tokenAddressOut than amountOutMantissa
+    /// @custom:error InsufficientPoolLiquidity If contract has less liquidity for tokenAddressOut than amountOutMantissa
     function _doTransferOut(
         address tokenAddressOut,
         address to,
@@ -701,7 +705,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     ) internal returns (uint256 actualAmountOut) {
         uint256 maxTokenOutReserve = balanceOf(tokenAddressOut);
 
-        /// If contract has less liquity for tokenAddressOut than amountOutMantissa
+        /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountConvertedMantissa) {
             revert InsufficientPoolLiquidity();
         }
