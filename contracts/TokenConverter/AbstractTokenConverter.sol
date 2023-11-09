@@ -87,11 +87,11 @@ import { IConverterNetwork } from "../Interfaces/IConverterNetwork.sol";
  *
  * findTokenConverters():
  * It will return an array of converter addresses along with their corresponding balances, sorted in descending order based on the converter's balances
- * relative to tokenAddressOut. This function filter the converter addresses on the basis of the conversionAccess.
- *
+ * relative to tokenAddressOut. This function filter the converter addresses on the basis of the conversionAccess(for users).
+ * 
  * findTokenConvertersForConverters():
  * It will return an array of converter addresses along with their corresponding balances, sorted in descending order based on the converter's balances
- * relative to tokenAddressOut. This function filter the converter addresses on the basis of the conversionAccess.
+ * relative to tokenAddressOut. This function filter the converter addresses on the basis of the conversionAccess(for converters).
  */
 
 /// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
@@ -718,6 +718,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         actualAmountOut = balanceBefore - balanceAfter;
     }
 
+    /// @notice Transfer tokenAddressIn from user to destination 
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param amountInMantissa Amount of tokenAddressIn
+    /// @return actualAmountIn Actual amount transferred to destination
     function _doTransferIn(address tokenAddressIn, uint256 amountInMantissa) internal returns (uint256 actualAmountIn) {
         IERC20Upgradeable tokenIn = IERC20Upgradeable(tokenAddressIn);
         uint256 balanceBeforeDestination = tokenIn.balanceOf(destinationAddress);
@@ -795,6 +799,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @dev _updateAssetsState hook to update the states of reserves transferred for the specific comptroller
     /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address
+    /// @return Amount of asset, for _privateConversion
     function _updateAssetsState(address comptroller, address asset) internal virtual returns (uint256) {}
 
     /// @dev This method is used to convert asset into base asset by converting them with other converters which supports the pair and transfer the funds to
@@ -874,6 +879,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @return amountConvertedMantissa Amount of tokenAddressIn should be transferred after conversion
     /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after conversion
+    /// @return tokenInToOutConversion Ratio of tokenIn price and incentive for conversion with tokenOut price
     /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
     /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
     function _getAmountOut(
@@ -992,5 +998,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     }
 
     /// @notice Get base asset address of the destination contract
+    /// @return Address of the base asset
     function _getDestinationBaseAsset() internal view virtual returns (address) {}
 }
