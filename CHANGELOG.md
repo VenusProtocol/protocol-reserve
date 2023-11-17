@@ -1,3 +1,11 @@
+## [1.2.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v1.1.0...v1.2.0-dev.1) (2023-11-17)
+
+
+### Features
+
+* add github job to export and commit deployment by network ([475fe58](https://github.com/VenusProtocol/protocol-reserve/commit/475fe5845aca75b9f47a11ada68f2090d4a45bb6))
+* updating deployment files ([94151cd](https://github.com/VenusProtocol/protocol-reserve/commit/94151cd6d0ea37b6765833c767392bcbbd687e43))
+
 ## [1.1.0](https://github.com/VenusProtocol/protocol-reserve/compare/v1.0.0...v1.1.0) (2023-11-01)
 
 
