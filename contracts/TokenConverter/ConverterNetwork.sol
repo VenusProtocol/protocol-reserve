@@ -32,6 +32,9 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8, MaxLoopsLimi
     /// @notice Error thrown when converter address is invalid
     error InvalidTokenConverterAddress();
 
+    /// @notice Error thrown when loops limit is invalid
+    error InvalidMaxLoopsLimit(uint256 loopsLimit);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -43,10 +46,24 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8, MaxLoopsLimi
     /// @param _accessControlManager The address of ACM contract
     /// @param _loopsLimit Limit for the loops in the contract to avoid DOS
     /// @custom:event ConverterAdded is emitted for each converter added on success
+    /// @custom:error InvalidMaxLoopsLimit is thrown when when loops limit is invalid
     function initialize(address _accessControlManager, uint256 _loopsLimit) external initializer {
         ensureNonzeroAddress(_accessControlManager);
         __AccessControlled_init(_accessControlManager);
+        
+        if (_loopsLimit >= type(uint128).max) revert InvalidMaxLoopsLimit(_loopsLimit);
         _setMaxLoopsLimit(_loopsLimit);
+    }
+
+    /**
+     * @notice Set the limit for the loops can iterate to avoid the DOS
+     * @param limit Limit for the max loops can execute at a time
+     * @custom:error InvalidMaxLoopsLimit is thrown when when loops limit is invalid
+     * @custom:access Only owner
+     */
+    function setMaxLoopsLimit(uint256 limit) external onlyOwner {
+        if (limit >= type(uint128).max) revert InvalidMaxLoopsLimit(limit);
+        _setMaxLoopsLimit(limit);
     }
 
     /// @notice Adds new converter to the array
