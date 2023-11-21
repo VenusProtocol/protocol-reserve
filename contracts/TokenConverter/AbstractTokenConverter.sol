@@ -802,60 +802,57 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @return Amount of asset, for _privateConversion
     function _updateAssetsState(address comptroller, address asset) internal virtual returns (uint256) {}
 
-    /// @dev This method is used to convert asset into base asset by converting them with other converters which supports the pair and transfer the funds to
+    // @dev This method is used to convert asset into base asset by converting them with other converters which supports the pair and transfer the funds to
     /// destination contract as destination's base asset
     /// @param comptroller Comptroller address (pool)
     /// @param tokenAddressOut Address of the token transferred to converter, and through _privateConversion it will be converted into base asset
-    /// @param balanceDiff Amount of the tokenAddressOut transferred to converter
+    /// @param amountToConvert Amount of the tokenAddressOut transferred to converter
     function _privateConversion(
         address comptroller,
         address tokenAddressOut,
-        uint256 balanceDiff
+        uint256 amountToConvert
     ) internal {
         address tokenAddressIn = _getDestinationBaseAsset();
-        uint256 convertedTokenOutBalance = balanceDiff;
+        address _destinationAddress = destinationAddress;
         uint256 convertedTokenInBalance;
         if (address(converterNetwork) != address(0)) {
             (address[] memory converterAddresses, uint256[] memory converterBalances) = converterNetwork
             .findTokenConvertersForConverters(tokenAddressOut, tokenAddressIn);
             uint256 convertersLength = converterAddresses.length;
             for (uint256 i; i < convertersLength; ) {
-                uint256 amountOutMantissa = converterBalances[i];
-                if (amountOutMantissa == 0) break;
+                if (converterBalances[i] == 0) break;
                 (, uint256 amountIn) = IAbstractTokenConverter(converterAddresses[i]).getUpdatedAmountIn(
-                    amountOutMantissa,
+                    converterBalances[i],
                     tokenAddressOut,
                     tokenAddressIn
                 );
-                if (amountIn > convertedTokenOutBalance) {
-                    amountIn = convertedTokenOutBalance;
+                if (amountIn > amountToConvert) {
+                    amountIn = amountToConvert;
                 }
+
+                uint256 balanceBefore = IERC20Upgradeable(tokenAddressIn).balanceOf(_destinationAddress);
+
                 IERC20Upgradeable(tokenAddressOut).approve(converterAddresses[i], amountIn);
-                (, uint256 actualAmountOut) = IAbstractTokenConverter(converterAddresses[i]).convertExactTokens(
+                IAbstractTokenConverter(converterAddresses[i]).convertExactTokens(
                     amountIn,
                     0,
                     tokenAddressOut,
                     tokenAddressIn,
-                    destinationAddress
+                    _destinationAddress
                 );
-                convertedTokenOutBalance -= amountIn;
-                convertedTokenInBalance += actualAmountOut;
 
-                if (convertedTokenOutBalance == 0) break;
+                uint256 balanceAfter = IERC20Upgradeable(tokenAddressIn).balanceOf(_destinationAddress);
+                amountToConvert -= amountIn;
+                convertedTokenInBalance += (balanceAfter - balanceBefore);
 
+                if (amountToConvert == 0) break;
                 unchecked {
                     ++i;
                 }
             }
         }
 
-        _postPrivateConversion(
-            comptroller,
-            tokenAddressIn,
-            convertedTokenInBalance,
-            tokenAddressOut,
-            convertedTokenOutBalance
-        );
+        _postPrivateConversion(comptroller, tokenAddressIn, convertedTokenInBalance, tokenAddressOut, amountToConvert);
     }
 
     /// @dev This hook is used to update states for the converter after the privateConversion
