@@ -50,7 +50,7 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8, MaxLoopsLimi
     function initialize(address _accessControlManager, uint256 _loopsLimit) external initializer {
         ensureNonzeroAddress(_accessControlManager);
         __AccessControlled_init(_accessControlManager);
-        
+
         if (_loopsLimit >= type(uint128).max) revert InvalidMaxLoopsLimit(_loopsLimit);
         _setMaxLoopsLimit(_loopsLimit);
     }

@@ -644,7 +644,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
     /// @return actualAmountIn Actual amount of tokenAddressIn transferred
-    /// @return actualAmountOut Actual amount of tokenAddressOut transferred
+    /// @return amountOutMantissa Actual amount of tokenAddressOut transferred
     /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
     function _convertExactTokens(
         uint256 amountInMantissa,
@@ -652,17 +652,17 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) internal returns (uint256 actualAmountIn, uint256 actualAmountOut) {
+    ) internal returns (uint256 actualAmountIn, uint256 amountOutMantissa) {
         _checkPrivateConversion(tokenAddressIn, tokenAddressOut);
         actualAmountIn = _doTransferIn(tokenAddressIn, amountInMantissa);
 
-        (, uint256 amountOutMantissa) = getUpdatedAmountOut(actualAmountIn, tokenAddressIn, tokenAddressOut);
+        (, amountOutMantissa) = getUpdatedAmountOut(actualAmountIn, tokenAddressIn, tokenAddressOut);
 
-        actualAmountOut = _doTransferOut(tokenAddressOut, to, amountOutMantissa);
-
-        if (actualAmountOut < amountOutMinMantissa) {
+        if (amountOutMantissa < amountOutMinMantissa) {
             revert AmountOutLowerThanMinRequired(amountOutMantissa, amountOutMinMantissa);
         }
+
+        _doTransferOut(tokenAddressOut, to, amountOutMantissa);
     }
 
     /// @notice Converts tokens for tokenAddressIn for exact amount of tokenAddressOut
@@ -690,22 +690,21 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             revert AmountInHigherThanMax(amountInMantissa, amountInMaxMantissa);
         }
 
-        (, amountOutMantissa) = getUpdatedAmountOut(actualAmountIn, tokenAddressIn, tokenAddressOut);
+        (, actualAmountOut) = getUpdatedAmountOut(actualAmountIn, tokenAddressIn, tokenAddressOut);
 
-        actualAmountOut = _doTransferOut(tokenAddressOut, to, amountOutMantissa);
+        _doTransferOut(tokenAddressOut, to, actualAmountOut);
     }
 
     /// @notice return actualAmountOut from reserves for tokenAddressOut
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
     /// @param amountConvertedMantissa Amount of tokenAddressOut supposed to get transferred
-    /// @return actualAmountOut Actual amount of tokenAddressOut transferred
     /// @custom:error InsufficientPoolLiquidity If contract has less liquidity for tokenAddressOut than amountOutMantissa
     function _doTransferOut(
         address tokenAddressOut,
         address to,
         uint256 amountConvertedMantissa
-    ) internal returns (uint256 actualAmountOut) {
+    ) internal {
         uint256 maxTokenOutReserve = balanceOf(tokenAddressOut);
 
         /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
@@ -713,12 +712,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             revert InsufficientPoolLiquidity();
         }
 
-        IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
-        uint256 balanceBefore = tokenOut.balanceOf(address(this));
-        tokenOut.safeTransfer(to, amountConvertedMantissa);
-        uint256 balanceAfter = tokenOut.balanceOf(address(this));
+        preTransferHook(tokenAddressOut, amountConvertedMantissa);
 
-        actualAmountOut = balanceBefore - balanceAfter;
+        IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
+        tokenOut.safeTransfer(to, amountConvertedMantissa);
     }
 
     /// @notice Transfer tokenAddressIn from user to destination
@@ -874,6 +871,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressOut,
         uint256 convertedTokenOutBalance
     ) internal virtual {}
+
+    /// @notice This hook is used to update the state for asset reserves before transferring tokenOut to user
+    /// @param tokenOutAddress Address of the asset to be transferred to the user
+    /// @param amountOut Amount of tokenAddressOut transferred from this converter
+    function preTransferHook(address tokenOutAddress, uint256 amountOut) internal virtual {}
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @dev This function retrieves values without altering token prices.

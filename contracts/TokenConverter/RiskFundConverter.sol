@@ -181,6 +181,13 @@ contract RiskFundConverter is AbstractTokenConverter {
         return pools;
     }
 
+    /// @notice This hook is used to update the state for asset reserves before transferring tokenOut to user
+    /// @param tokenOutAddress Address of the asset to be transferred to the user
+    /// @param amountOut Amount of tokenAddressOut transferred from this converter
+    function preTransferHook(address tokenOutAddress, uint256 amountOut) internal override {
+        assetsReserves[tokenOutAddress] -= amountOut;
+    }
+
     /// @notice Hook to perform after converting tokens
     /// @dev After transformation poolsAssetsReserves are settled by pool's reserves fraction
     /// @param tokenInAddress Address of the tokenIn
@@ -195,7 +202,7 @@ contract RiskFundConverter is AbstractTokenConverter {
         uint256 amountOut
     ) internal override {
         address[] memory pools = getPools(tokenOutAddress);
-        uint256 assetReserve = assetsReserves[tokenOutAddress];
+        uint256 assetReserve = assetsReserves[tokenOutAddress] + amountOut;
         ensureNonzeroValue(assetReserve);
 
         uint256 poolsLength = pools.length;
@@ -223,8 +230,6 @@ contract RiskFundConverter is AbstractTokenConverter {
                 ++i;
             }
         }
-
-        assetsReserves[tokenOutAddress] -= amountOut;
     }
 
     /// @notice Operations to perform before sweeping tokens

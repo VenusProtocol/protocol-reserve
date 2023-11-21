@@ -124,6 +124,7 @@ describe("Risk fund Converter: tests", () => {
 
     poolRegistry.getPoolsSupportedByAsset.returns([poolA.address, poolB.address, poolC.address]);
     await converter.setAssetsReserves(tokenOut.address, TOTAL_ASSESTS_RESERVES);
+    await converter.preTransferHookMock(tokenOut.address, AMOUNT_OUT);
     await converter.postConversionHookMock(tokenIn.address, tokenOut.address, AMOUNT_IN, AMOUNT_OUT);
 
     const poolAShare = new BigNumber(POOL_A_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_OUT);
