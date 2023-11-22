@@ -802,7 +802,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @return Amount of asset, for _privateConversion
     function _updateAssetsState(address comptroller, address asset) internal virtual returns (uint256) {}
 
-    // @dev This method is used to convert asset into base asset by converting them with other converters which supports the pair and transfer the funds to
+    /// @dev This method is used to convert asset into base asset by converting them with other converters which supports the pair and transfer the funds to
     /// destination contract as destination's base asset
     /// @param comptroller Comptroller address (pool)
     /// @param tokenAddressOut Address of the token transferred to converter, and through _privateConversion it will be converted into base asset

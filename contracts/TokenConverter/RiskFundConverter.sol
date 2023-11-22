@@ -68,6 +68,11 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @notice thrown when asset does not exist in the pool
     error MarketNotExistInPool(address comptroller, address asset);
 
+    /// @notice thrown to prevent reentrancy
+    /// @dev This error is used to safeguard against reentrancy attacks, ensuring that a certain operation
+    /// cannot be called recursively within the same transaction.
+    error ReentrancyGuardError();
+
     /// @param corePoolComptroller_ Address of the Comptroller pool
     /// @param vBNB_ Address of the vBNB
     /// @param nativeWrapped_ Address of the wrapped native currency
@@ -145,7 +150,9 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param asset Asset address
     /// @return Asset's reserve in risk fund
     /// @custom:error MarketNotExistInPool When asset does not exist in the pool(comptroller)
+    /// @custom:error ReentrancyGuardError thrown to prevent reentrancy during the function execution
     function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256) {
+        if (_reentrancyGuardEntered()) revert ReentrancyGuardError();
         if (!ensureAssetListed(comptroller, asset)) revert MarketNotExistInPool(comptroller, asset);
 
         return poolsAssetsReserves[comptroller][asset];
