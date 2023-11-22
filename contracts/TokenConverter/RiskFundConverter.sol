@@ -68,6 +68,11 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @notice thrown when asset does not exist in the pool
     error MarketNotExistInPool(address comptroller, address asset);
 
+    /// @notice thrown to prevent reentrancy
+    /// @dev This error is used to safeguard against reentrancy attacks, ensuring that a certain operation
+    /// cannot be called recursively within the same transaction.
+    error ReentrancyGuardError();
+
     /// @param corePoolComptroller_ Address of the Comptroller pool
     /// @param vBNB_ Address of the vBNB
     /// @param nativeWrapped_ Address of the wrapped native currency
@@ -144,7 +149,10 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address
     /// @return Asset's reserve in risk fund
+    /// @custom:error MarketNotExistInPool When asset does not exist in the pool(comptroller)
+    /// @custom:error ReentrancyGuardError thrown to prevent reentrancy during the function execution
     function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256) {
+        if (_reentrancyGuardEntered()) revert ReentrancyGuardError();
         if (!ensureAssetListed(comptroller, asset)) revert MarketNotExistInPool(comptroller, asset);
 
         return poolsAssetsReserves[comptroller][asset];
@@ -180,6 +188,13 @@ contract RiskFundConverter is AbstractTokenConverter {
         return pools;
     }
 
+    /// @notice This hook is used to update the state for asset reserves before transferring tokenOut to user
+    /// @param tokenOutAddress Address of the asset to be transferred to the user
+    /// @param amountOut Amount of tokenAddressOut transferred from this converter
+    function preTransferHook(address tokenOutAddress, uint256 amountOut) internal override {
+        assetsReserves[tokenOutAddress] -= amountOut;
+    }
+
     /// @notice Hook to perform after converting tokens
     /// @dev After transformation poolsAssetsReserves are settled by pool's reserves fraction
     /// @param tokenInAddress Address of the tokenIn
@@ -194,7 +209,7 @@ contract RiskFundConverter is AbstractTokenConverter {
         uint256 amountOut
     ) internal override {
         address[] memory pools = getPools(tokenOutAddress);
-        uint256 assetReserve = assetsReserves[tokenOutAddress];
+        uint256 assetReserve = assetsReserves[tokenOutAddress] + amountOut;
         ensureNonzeroValue(assetReserve);
 
         uint256 poolsLength = pools.length;
@@ -222,8 +237,6 @@ contract RiskFundConverter is AbstractTokenConverter {
                 ++i;
             }
         }
-
-        assetsReserves[tokenOutAddress] -= amountOut;
     }
 
     /// @notice Operations to perform before sweeping tokens
@@ -269,6 +282,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param tokenAddress Address of the token
     /// @param amount Amount transferred to address(to)
     /// @param assetReserve Asset's reserve for the pool
+    /// @return poolAmountShare Share of the pool as per it's reserve in compare to total reserves for the asset
     /// @custom:event AssetsReservesUpdated emits on success
     function updatePoolAssetsReserve(
         address pool,
@@ -325,8 +339,9 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// and transferring funds to the protocol share reserve
     /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address
+    /// @return Amount of asset, for _privateConversion
     /// @custom:event AssetTransferredToDestination emits when poolsAssetsDirectTransfer is enabled for entered comptroller and asset
-    /// @custom:event AssetsReservesUpdated emits when poolsAssetsDirectTransfer is not enabled for entered comptroller and asset
+    /// @custom:error MarketNotExistInPool When asset does not exist in the pool(comptroller)
     function _updateAssetsState(address comptroller, address asset) internal override returns (uint256) {
         if (!ensureAssetListed(comptroller, asset)) revert MarketNotExistInPool(comptroller, asset);
 
@@ -355,6 +370,12 @@ contract RiskFundConverter is AbstractTokenConverter {
         }
     }
 
+    /// @dev This hook is used to update states for the converter after the privateConversion
+    /// @param comptroller Comptroller address (pool)
+    /// @param tokenAddressIn Address of the destination's base asset
+    /// @param convertedTokenInBalance Amount of the base asset received after the conversion
+    /// @param tokenAddressOut Address of the asset transferred to other converter in exchange of base asset
+    /// @param convertedTokenOutBalance Amount of tokenAddressOut transferred from this converter
     function _postPrivateConversion(
         address comptroller,
         address tokenAddressIn,
@@ -408,6 +429,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     }
 
     /// @notice Get base asset address of the RiskFund
+    /// @return Address of the base asset(RiskFund)
     function _getDestinationBaseAsset() internal view override returns (address) {
         return IRiskFundGetters(destinationAddress).convertibleBaseAsset();
     }

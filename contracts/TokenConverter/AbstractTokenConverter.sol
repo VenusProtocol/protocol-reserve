@@ -85,9 +85,13 @@ import { IConverterNetwork } from "../Interfaces/IConverterNetwork.sol";
  * This contract will contain all the converters, and will provide valid converters which can perform the execution according to tokenAddressIn
  * and tokenAddressOut provided.
  *
- * findTokenConverter():
+ * findTokenConverters():
  * It will return an array of converter addresses along with their corresponding balances, sorted in descending order based on the converter's balances
- * relative to tokenAddressOut.
+ * relative to tokenAddressOut. This function filter the converter addresses on the basis of the conversionAccess(for users).
+ *
+ * findTokenConvertersForConverters():
+ * It will return an array of converter addresses along with their corresponding balances, sorted in descending order based on the converter's balances
+ * relative to tokenAddressOut. This function filter the converter addresses on the basis of the conversionAccess(for converters).
  */
 
 /// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
@@ -196,7 +200,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Thrown when tokenInAddress is same as tokeOutAdress OR tokeInAddress is not the base asset of the destination
     error InvalidTokenConfigAddresses();
 
-    ///  @notice Thrown when contract has less liquity for tokenAddressOut than amountOutMantissa
+    ///  @notice Thrown when contract has less liquidity for tokenAddressOut than amountOutMantissa
     error InsufficientPoolLiquidity();
 
     /// @notice When address of the ConverterNetwork is not set or Zero address
@@ -265,15 +269,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         ensureNonzeroAddress(tokenAddressIn);
         ensureNonzeroAddress(tokenAddressOut);
 
-        if (
-            ((conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==
-                ConversionAccessibility.ONLY_FOR_CONVERTERS) ||
-                (conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==
-                    ConversionAccessibility.ALL)) && (address(converterNetwork) == address(0))
-        ) {
-            revert InvalidConverterNetwork();
-        }
-
         if (conversionConfig.incentive > MAX_INCENTIVE) {
             revert IncentiveTooHigh(conversionConfig.incentive, MAX_INCENTIVE);
         }
@@ -284,6 +279,14 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             conversionConfigurations[tokenAddressOut][tokenAddressIn].conversionAccess != ConversionAccessibility.NONE
         ) {
             revert InvalidTokenConfigAddresses();
+        }
+
+        if (
+            ((conversionConfig.conversionAccess == ConversionAccessibility.ONLY_FOR_CONVERTERS) ||
+                (conversionConfig.conversionAccess == ConversionAccessibility.ALL)) &&
+            (address(converterNetwork) == address(0))
+        ) {
+            revert InvalidConverterNetwork();
         }
 
         ConversionConfig storage configuration = conversionConfigurations[tokenAddressIn][tokenAddressOut];
@@ -297,8 +300,12 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             conversionConfig.conversionAccess
         );
 
-        configuration.incentive = conversionConfig.incentive;
-        configuration.conversionAccess = conversionConfig.conversionAccess;
+        if (conversionConfig.conversionAccess == ConversionAccessibility.NONE) {
+            delete conversionConfigurations[tokenAddressIn][tokenAddressOut];
+        } else {
+            configuration.incentive = conversionConfig.incentive;
+            configuration.conversionAccess = conversionConfig.conversionAccess;
+        }
     }
 
     /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut if there is enough tokens held by the contract
@@ -512,7 +519,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         uint256 maxTokenOutReserve = balanceOf(tokenAddressOut);
 
-        /// If contract has less liquity for tokenAddressOut than amountOutMantissa
+        /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountOutMantissa) {
             amountConvertedMantissa =
                 ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) /
@@ -637,7 +644,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
     /// @return actualAmountIn Actual amount of tokenAddressIn transferred
-    /// @return actualAmountOut Actual amount of tokenAddressOut transferred
+    /// @return amountOutMantissa Actual amount of tokenAddressOut transferred
     /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
     function _convertExactTokens(
         uint256 amountInMantissa,
@@ -645,17 +652,17 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) internal returns (uint256 actualAmountIn, uint256 actualAmountOut) {
+    ) internal returns (uint256 actualAmountIn, uint256 amountOutMantissa) {
         _checkPrivateConversion(tokenAddressIn, tokenAddressOut);
         actualAmountIn = _doTransferIn(tokenAddressIn, amountInMantissa);
 
-        (, uint256 amountOutMantissa) = getUpdatedAmountOut(actualAmountIn, tokenAddressIn, tokenAddressOut);
+        (, amountOutMantissa) = getUpdatedAmountOut(actualAmountIn, tokenAddressIn, tokenAddressOut);
 
-        actualAmountOut = _doTransferOut(tokenAddressOut, to, amountOutMantissa);
-
-        if (actualAmountOut < amountOutMinMantissa) {
+        if (amountOutMantissa < amountOutMinMantissa) {
             revert AmountOutLowerThanMinRequired(amountOutMantissa, amountOutMinMantissa);
         }
+
+        _doTransferOut(tokenAddressOut, to, amountOutMantissa);
     }
 
     /// @notice Converts tokens for tokenAddressIn for exact amount of tokenAddressOut
@@ -683,37 +690,38 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             revert AmountInHigherThanMax(amountInMantissa, amountInMaxMantissa);
         }
 
-        (, amountOutMantissa) = getUpdatedAmountOut(actualAmountIn, tokenAddressIn, tokenAddressOut);
+        (, actualAmountOut) = getUpdatedAmountOut(actualAmountIn, tokenAddressIn, tokenAddressOut);
 
-        actualAmountOut = _doTransferOut(tokenAddressOut, to, amountOutMantissa);
+        _doTransferOut(tokenAddressOut, to, actualAmountOut);
     }
 
     /// @notice return actualAmountOut from reserves for tokenAddressOut
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
     /// @param amountConvertedMantissa Amount of tokenAddressOut supposed to get transferred
-    /// @return actualAmountOut Actual amount of tokenAddressOut transferred
-    /// @custom:error InsufficientPoolLiquidity If contract has less liquity for tokenAddressOut than amountOutMantissa
+    /// @custom:error InsufficientPoolLiquidity If contract has less liquidity for tokenAddressOut than amountOutMantissa
     function _doTransferOut(
         address tokenAddressOut,
         address to,
         uint256 amountConvertedMantissa
-    ) internal returns (uint256 actualAmountOut) {
+    ) internal {
         uint256 maxTokenOutReserve = balanceOf(tokenAddressOut);
 
-        /// If contract has less liquity for tokenAddressOut than amountOutMantissa
+        /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountConvertedMantissa) {
             revert InsufficientPoolLiquidity();
         }
 
-        IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
-        uint256 balanceBefore = tokenOut.balanceOf(address(this));
-        tokenOut.safeTransfer(to, amountConvertedMantissa);
-        uint256 balanceAfter = tokenOut.balanceOf(address(this));
+        preTransferHook(tokenAddressOut, amountConvertedMantissa);
 
-        actualAmountOut = balanceBefore - balanceAfter;
+        IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
+        tokenOut.safeTransfer(to, amountConvertedMantissa);
     }
 
+    /// @notice Transfer tokenAddressIn from user to destination
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param amountInMantissa Amount of tokenAddressIn
+    /// @return actualAmountIn Actual amount transferred to destination
     function _doTransferIn(address tokenAddressIn, uint256 amountInMantissa) internal returns (uint256 actualAmountIn) {
         IERC20Upgradeable tokenIn = IERC20Upgradeable(tokenAddressIn);
         uint256 balanceBeforeDestination = tokenIn.balanceOf(destinationAddress);
@@ -791,62 +799,60 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @dev _updateAssetsState hook to update the states of reserves transferred for the specific comptroller
     /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address
+    /// @return Amount of asset, for _privateConversion
     function _updateAssetsState(address comptroller, address asset) internal virtual returns (uint256) {}
 
     /// @dev This method is used to convert asset into base asset by converting them with other converters which supports the pair and transfer the funds to
     /// destination contract as destination's base asset
     /// @param comptroller Comptroller address (pool)
     /// @param tokenAddressOut Address of the token transferred to converter, and through _privateConversion it will be converted into base asset
-    /// @param balanceDiff Amount of the tokenAddressOut transferred to converter
+    /// @param amountToConvert Amount of the tokenAddressOut transferred to converter
     function _privateConversion(
         address comptroller,
         address tokenAddressOut,
-        uint256 balanceDiff
+        uint256 amountToConvert
     ) internal {
         address tokenAddressIn = _getDestinationBaseAsset();
-        uint256 convertedTokenOutBalance = balanceDiff;
+        address _destinationAddress = destinationAddress;
         uint256 convertedTokenInBalance;
         if (address(converterNetwork) != address(0)) {
             (address[] memory converterAddresses, uint256[] memory converterBalances) = converterNetwork
             .findTokenConvertersForConverters(tokenAddressOut, tokenAddressIn);
             uint256 convertersLength = converterAddresses.length;
             for (uint256 i; i < convertersLength; ) {
-                uint256 amountOutMantissa = converterBalances[i];
-                if (amountOutMantissa == 0) break;
+                if (converterBalances[i] == 0) break;
                 (, uint256 amountIn) = IAbstractTokenConverter(converterAddresses[i]).getUpdatedAmountIn(
-                    amountOutMantissa,
+                    converterBalances[i],
                     tokenAddressOut,
                     tokenAddressIn
                 );
-                if (amountIn > convertedTokenOutBalance) {
-                    amountIn = convertedTokenOutBalance;
+                if (amountIn > amountToConvert) {
+                    amountIn = amountToConvert;
                 }
+
+                uint256 balanceBefore = IERC20Upgradeable(tokenAddressIn).balanceOf(_destinationAddress);
+
                 IERC20Upgradeable(tokenAddressOut).approve(converterAddresses[i], amountIn);
-                (, uint256 actualAmountOut) = IAbstractTokenConverter(converterAddresses[i]).convertExactTokens(
+                IAbstractTokenConverter(converterAddresses[i]).convertExactTokens(
                     amountIn,
                     0,
                     tokenAddressOut,
                     tokenAddressIn,
-                    destinationAddress
+                    _destinationAddress
                 );
-                convertedTokenOutBalance -= amountIn;
-                convertedTokenInBalance += actualAmountOut;
 
-                if (convertedTokenOutBalance == 0) break;
+                uint256 balanceAfter = IERC20Upgradeable(tokenAddressIn).balanceOf(_destinationAddress);
+                amountToConvert -= amountIn;
+                convertedTokenInBalance += (balanceAfter - balanceBefore);
 
+                if (amountToConvert == 0) break;
                 unchecked {
                     ++i;
                 }
             }
         }
 
-        _postPrivateConversion(
-            comptroller,
-            tokenAddressIn,
-            convertedTokenInBalance,
-            tokenAddressOut,
-            convertedTokenOutBalance
-        );
+        _postPrivateConversion(comptroller, tokenAddressIn, convertedTokenInBalance, tokenAddressOut, amountToConvert);
     }
 
     /// @dev This hook is used to update states for the converter after the privateConversion
@@ -863,6 +869,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 convertedTokenOutBalance
     ) internal virtual {}
 
+    /// @notice This hook is used to update the state for asset reserves before transferring tokenOut to user
+    /// @param tokenOutAddress Address of the asset to be transferred to the user
+    /// @param amountOut Amount of tokenAddressOut transferred from this converter
+    function preTransferHook(address tokenOutAddress, uint256 amountOut) internal virtual {}
+
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @dev This function retrieves values without altering token prices.
     /// @param amountInMantissa Amount of tokenAddressIn
@@ -870,6 +881,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @return amountConvertedMantissa Amount of tokenAddressIn should be transferred after conversion
     /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after conversion
+    /// @return tokenInToOutConversion Ratio of tokenIn price and incentive for conversion with tokenOut price
     /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
     /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
     function _getAmountOut(
@@ -988,5 +1000,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     }
 
     /// @notice Get base asset address of the destination contract
+    /// @return Address of the base asset
     function _getDestinationBaseAsset() internal view virtual returns (address) {}
 }

@@ -133,15 +133,9 @@ describe("ConverterNetwork: tests", () => {
 
       await expect(tx).to.be.revertedWithCustomError(converterNetwork, "Unauthorized");
     });
-    it("should revert when zero address is passed", async () => {
-      await accessControl.isAllowedToCall.returns(true);
-
-      const tx = converterNetwork.removeTokenConverter(ethers.constants.AddressZero);
-
-      await expect(tx).to.be.revertedWithCustomError(converterNetwork, "ZeroAddressNotAllowed");
-    });
 
     it("should revert when trying to add converter which does not exist", async () => {
+      await accessControl.isAllowedToCall.returns(true);
       const tx = converterNetwork.removeTokenConverter(userAddress);
 
       await expect(tx).to.be.revertedWithCustomError(converterNetwork, "ConverterDoesNotExist");

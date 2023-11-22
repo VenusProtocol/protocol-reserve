@@ -55,6 +55,7 @@ contract SingleTokenConverter is AbstractTokenConverter {
 
     /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address.
+    /// @return balanceLeft Amount of asset, for _privateConversion
     // solhint-disable-next-line
     function _updateAssetsState(address comptroller, address asset) internal override returns (uint256 balanceLeft) {
         IERC20Upgradeable token = IERC20Upgradeable(asset);
@@ -69,6 +70,7 @@ contract SingleTokenConverter is AbstractTokenConverter {
     }
 
     /// @notice Get base asset address
+    /// @return Address of the base asset(BASE_ASSET)
     function _getDestinationBaseAsset() internal view override returns (address) {
         return BASE_ASSET;
     }
