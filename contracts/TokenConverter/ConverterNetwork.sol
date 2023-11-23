@@ -180,22 +180,27 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8, MaxLoopsLimi
 
         for (uint128 i; i < convertersLength; ) {
             IAbstractTokenConverter converter = allConverters[i];
+
+            unchecked {
+                ++i;
+            }
+
+            if (msg.sender == address(converter)) {
+                continue;
+            }
+
             (, IAbstractTokenConverter.ConversionAccessibility conversionAccess) = converter.conversionConfigurations(
                 _tokenAddressIn,
                 _tokenAddressOut
             );
 
-            if (
-                (conversionAccess == IAbstractTokenConverter.ConversionAccessibility.ALL) &&
-                (msg.sender != address(converter))
-            ) {
+            if (conversionAccess == IAbstractTokenConverter.ConversionAccessibility.ALL) {
                 converters[count] = address(converter);
                 convertersBalance[count] = converter.balanceOf(_tokenAddressOut);
                 ++count;
             } else if (
                 forConverters &&
-                (conversionAccess == IAbstractTokenConverter.ConversionAccessibility.ONLY_FOR_CONVERTERS) &&
-                (msg.sender != address(converter))
+                (conversionAccess == IAbstractTokenConverter.ConversionAccessibility.ONLY_FOR_CONVERTERS)
             ) {
                 converters[count] = address(converter);
                 convertersBalance[count] = converter.balanceOf(_tokenAddressOut);
@@ -206,10 +211,6 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8, MaxLoopsLimi
                 converters[count] = address(converter);
                 convertersBalance[count] = converter.balanceOf(_tokenAddressOut);
                 ++count;
-            }
-
-            unchecked {
-                ++i;
             }
         }
 
