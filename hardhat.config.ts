@@ -6,13 +6,14 @@ import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-etherscan";
 import "@openzeppelin/hardhat-upgrades";
 import "@typechain/hardhat";
+import dotenv from "dotenv";
 import "hardhat-deploy";
 import "hardhat-gas-reporter";
 import { HardhatUserConfig, task } from "hardhat/config";
 import "solidity-coverage";
 import "solidity-docgen";
 
-require("dotenv").config();
+dotenv.config();
 
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   const accounts = await hre.ethers.getSigners();

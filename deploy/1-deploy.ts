@@ -3,7 +3,19 @@ import testnetDeployments from "@venusprotocol/venus-protocol/networks/testnet.j
 import hre, { ethers } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-const ADDRESSES: any = {
+interface Network {
+  vBNBAddress: string;
+  comptroller: string;
+  WBNBAddress: string;
+  timelock: string;
+  acm: string;
+}
+
+interface Addresses {
+  [key: string]: Network;
+}
+
+const ADDRESSES: Addresses = {
   bsctestnet: {
     vBNBAddress: testnetDeployments.Contracts.vBNB,
     comptroller: testnetDeployments.Contracts.Unitroller,
