@@ -206,6 +206,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice When address of the ConverterNetwork is not set or Zero address
     error InvalidConverterNetwork();
 
+    /// @notice Thrown when trying to set non zero incentive for private conversion
+    error NonZeroIncentiveForPrivateConversion();
+
     /// @notice Pause conversion of tokens
     /// @custom:event Emits ConversionPaused on success
     /// @custom:error ConversionTokensPaused thrown when conversion is already paused
@@ -259,6 +262,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @custom:event Emits ConversionConfigUpdated event on success
     /// @custom:error Unauthorized error is thrown when the call is not authorized by AccessControlManager
     /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
+    /// @custom:error NonZeroIncentiveForPrivateConversion is thrown when incentive is non zero for private conversion
     /// @custom:access Controlled by AccessControlManager
     function setConversionConfig(
         address tokenAddressIn,
@@ -279,6 +283,13 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             conversionConfigurations[tokenAddressOut][tokenAddressIn].conversionAccess != ConversionAccessibility.NONE
         ) {
             revert InvalidTokenConfigAddresses();
+        }
+
+        if (
+            (conversionConfig.conversionAccess == ConversionAccessibility.ONLY_FOR_CONVERTERS) &&
+            conversionConfig.incentive != 0
+        ) {
+            revert NonZeroIncentiveForPrivateConversion();
         }
 
         if (
