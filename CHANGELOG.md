@@ -1,3 +1,10 @@
+## [1.2.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v1.2.0-dev.1...v1.2.0-dev.2) (2023-11-28)
+
+
+### Bug Fixes
+
+* remove exports from package.json ([e61df95](https://github.com/VenusProtocol/protocol-reserve/commit/e61df958c0bb272b72cb634c6e09cbcba6cbc548))
+
 ## [1.2.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v1.1.0...v1.2.0-dev.1) (2023-11-17)
 
 
