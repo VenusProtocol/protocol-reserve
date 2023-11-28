@@ -24,12 +24,6 @@
     "typescript",
     "typechain"
   ],
-  "exports": {
-    "deploy": "./dist/deploy",
-    "artifacts": "./artifacts",
-    "contracts": "./contracts",
-    "deployments": "./deployments"
-  },
   "packageManager": "yarn@3.2.0",
   "publishConfig": {
     "access": "public"
