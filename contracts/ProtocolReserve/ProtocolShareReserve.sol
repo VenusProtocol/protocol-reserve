@@ -4,12 +4,11 @@ pragma solidity 0.8.13;
 import { SafeERC20Upgradeable, IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import { MaxLoopsLimitHelper } from "@venusprotocol/isolated-pools/contracts/MaxLoopsLimitHelper.sol";
+import { MaxLoopsLimitHelper } from "@venusprotocol/solidity-utilities/contracts/MaxLoopsLimitHelper.sol";
 
 import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
 import { IComptroller } from "../Interfaces/IComptroller.sol";
 import { IPoolRegistry } from "../Interfaces/IPoolRegistry.sol";
-import { IPrime } from "../Interfaces/IPrime.sol";
 import { IVToken } from "../Interfaces/IVToken.sol";
 import { IIncomeDestination } from "../Interfaces/IIncomeDestination.sol";
 
@@ -27,11 +26,11 @@ contract ProtocolShareReserve is
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice protocol income is categorized into two schemas.
-    /// The first schema is the default one
-    /// The second schema is for spread income from prime markets in core protocol
+    /// The first schema is for spread income
+    /// The second schema is for liquidation income
     enum Schema {
-        DEFAULT,
-        SPREAD_PRIME_CORE
+        PROTOCOL_RESERVES,
+        ADDITIONAL_REVENUE
     }
 
     struct DistributionConfig {
@@ -53,13 +52,10 @@ contract ProtocolShareReserve is
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable vBNB;
 
-    /// @notice address of Prime contract
-    address public prime;
-
     /// @notice address of pool registry contract
     address public poolRegistry;
 
-    uint8 private constant MAX_PERCENT = 100;
+    uint8 public constant MAX_PERCENT = 100;
 
     /// @notice comptroller => asset => schema => balance
     mapping(address => mapping(address => mapping(Schema => uint256))) public assetsReserves;
@@ -70,17 +66,8 @@ contract ProtocolShareReserve is
     /// @notice configuration for different income distribution targets
     DistributionConfig[] public distributionTargets;
 
-    /// @notice asset => boolean
-    mapping(address => bool) public isInPrime;
-
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
-
-    /// @notice Emitted when prime address is updated
-    event PrimeUpdated(address indexed oldPrime, address indexed newPrime);
-
-    /// @notice Emitted when an asset is added to prime program
-    event PrimeAssetUpdated(address indexed asset, bool isPrimeAsset);
 
     /// @notice Event emitted after the updation of the assets reserves.
     event AssetsReservesUpdated(
@@ -171,37 +158,11 @@ contract ProtocolShareReserve is
     }
 
     /**
-     * @dev Prime contract address setter.
-     * @param _prime Address of the prime contract
-     */
-    function setPrime(address _prime) external onlyOwner {
-        if (_prime == address(0)) revert InvalidAddress();
-        emit PrimeUpdated(prime, _prime);
-        prime = _prime;
-    }
-
-    /**
-     * @dev Add/Remove asset to prime program.
-     * @param asset Address of the asset
-     * @param isPrimeAsset Boolean to add/remove asset from prime program
-     */
-    function addOrRemoveAssetFromPrime(address asset, bool isPrimeAsset) external {
-        _checkAccessAllowed("addOrRemoveAssetFromPrime(address,bool)");
-        if (asset == address(0)) revert InvalidAddress();
-        emit PrimeAssetUpdated(asset, isPrimeAsset);
-        isInPrime[asset] = isPrimeAsset;
-    }
-
-    /**
      * @dev Add or update destination targets based on destination address
      * @param configs configurations of the destinations.
      */
     function addOrUpdateDistributionConfigs(DistributionConfig[] calldata configs) external nonReentrant {
         _checkAccessAllowed("addOrUpdateDistributionConfigs(DistributionConfig[])");
-
-        //we need to accrue and release funds to prime before updating the distribution configuration
-        //because prime relies on getUnreleasedFunds and its return value may change after config update
-        _accrueAndReleaseFundsToPrime();
 
         for (uint256 i = 0; i < configs.length; ) {
             DistributionConfig memory _config = configs[i];
@@ -287,8 +248,6 @@ contract ProtocolShareReserve is
      * @param assets assets to be released to distribution targets
      */
     function releaseFunds(address comptroller, address[] calldata assets) external nonReentrant {
-        _accruePrimeInterest();
-
         for (uint256 i = 0; i < assets.length; ) {
             _releaseFund(comptroller, assets[i]);
 
@@ -371,7 +330,7 @@ contract ProtocolShareReserve is
             IPoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) == address(0)
         ) revert InvalidAddress();
 
-        Schema schema = _getSchema(comptroller, asset, incomeType);
+        Schema schema = _getSchema(incomeType);
         uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
         uint256 assetReserve = totalAssetReserve[asset];
 
@@ -384,47 +343,6 @@ contract ProtocolShareReserve is
             assetsReserves[comptroller][asset][schema] += balanceDifference;
             totalAssetReserve[asset] += balanceDifference;
             emit AssetsReservesUpdated(comptroller, asset, balanceDifference, incomeType, schema);
-        }
-    }
-
-    /**
-     * @dev Fetches the list of prime markets and then accrues interest and
-     * releases the funds to prime for each market
-     */
-    function _accrueAndReleaseFundsToPrime() internal {
-        if (prime == address(0)) {
-            return;
-        }
-
-        address[] memory markets = IPrime(prime).getAllMarkets();
-        for (uint256 i = 0; i < markets.length; ) {
-            address market = markets[i];
-            IPrime(prime).accrueInterest(market);
-            _releaseFund(CORE_POOL_COMPTROLLER, _getUnderlying(market));
-
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    /**
-     * @dev Fetches the list of prime markets and then accrues interest
-     * to prime for each market
-     */
-    function _accruePrimeInterest() internal {
-        if (prime == address(0)) {
-            return;
-        }
-
-        address[] memory markets = IPrime(prime).getAllMarkets();
-        for (uint256 i = 0; i < markets.length; ) {
-            address market = markets[i];
-            IPrime(prime).accrueInterest(market);
-
-            unchecked {
-                ++i;
-            }
         }
     }
 
@@ -457,10 +375,12 @@ contract ProtocolShareReserve is
             uint256 transferAmount = (schemaBalances[uint256(_config.schema)] * _config.percentage) / MAX_PERCENT;
             totalTransferAmounts[uint256(_config.schema)] += transferAmount;
 
-            IERC20Upgradeable(asset).safeTransfer(_config.destination, transferAmount);
-            IIncomeDestination(_config.destination).updateAssetsState(comptroller, asset);
+            if (transferAmount != 0) {
+                IERC20Upgradeable(asset).safeTransfer(_config.destination, transferAmount);
+                IIncomeDestination(_config.destination).updateAssetsState(comptroller, asset);
 
-            emit AssetReleased(_config.destination, asset, _config.schema, _config.percentage, transferAmount);
+                emit AssetReleased(_config.destination, asset, _config.schema, _config.percentage, transferAmount);
+            }
 
             unchecked {
                 ++i;
@@ -488,21 +408,15 @@ contract ProtocolShareReserve is
     }
 
     /**
-     * @dev Returns the schema based on comptroller, asset and income type
-     * @param comptroller  Comptroller address(pool)
-     * @param asset Asset address.
+     * @dev Returns the schema based on income type
      * @param incomeType type of income
      * @return schema schema for distribution
      */
-    function _getSchema(
-        address comptroller,
-        address asset,
-        IncomeType incomeType
-    ) internal view returns (Schema schema) {
-        schema = Schema.DEFAULT;
+    function _getSchema(IncomeType incomeType) internal view returns (Schema schema) {
+        schema = Schema.ADDITIONAL_REVENUE;
 
-        if (isInPrime[asset] && comptroller == CORE_POOL_COMPTROLLER && incomeType == IncomeType.SPREAD) {
-            schema = Schema.SPREAD_PRIME_CORE;
+        if (incomeType == IncomeType.SPREAD) {
+            schema = Schema.PROTOCOL_RESERVES;
         }
     }
 
