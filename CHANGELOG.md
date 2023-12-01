@@ -1,3 +1,16 @@
+## [1.2.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v1.2.0-dev.2...v1.2.0-dev.3) (2023-12-01)
+
+
+### Features
+
+* generate file only with addresses of deployed contracts ([063d8d2](https://github.com/VenusProtocol/protocol-reserve/commit/063d8d2dd5405330f30b523bd56829be074fef9e))
+* updating deployment files ([c2a2296](https://github.com/VenusProtocol/protocol-reserve/commit/c2a2296d8e81299c5ffad64b3060f6a7a809b8b8))
+
+
+### Bug Fixes
+
+* unify the use of the env variable DEPLOYER_PRIVATE_KEY ([59ee4ad](https://github.com/VenusProtocol/protocol-reserve/commit/59ee4ad49f8b950fb36a1da307431dc11aa980c8))
+
 ## [1.2.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v1.2.0-dev.1...v1.2.0-dev.2) (2023-11-28)
 
 
