@@ -1,0 +1,10 @@
+{
+  "name": "bsctestnet",
+  "chainId": "97",
+  "addresses": {
+    "DefaultProxyAdmin": "0x7877ffd62649b6a1557b55d4c20fcbab17344c91",
+    "ProtocolShareReserve": "0x25c7c7D6Bf710949fD7f03364E9BA19a1b3c10E3",
+    "ProtocolShareReserve_Implementation": "0x6A7FF4641F52b267102a5a0779cE7a060374d6cC",
+    "ProtocolShareReserve_Proxy": "0x25c7c7D6Bf710949fD7f03364E9BA19a1b3c10E3"
+  }
+}
