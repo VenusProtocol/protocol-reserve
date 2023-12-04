@@ -69,7 +69,7 @@ contract SingleTokenConverter is AbstractTokenConverter {
         tokenBalance = token.balanceOf(address(this));
     }
 
-    /// @notice Get base asset address
+    /// @dev Get base asset address
     function _getDestinationBaseAsset() internal view override returns (address) {
         return BASE_ASSET;
     }

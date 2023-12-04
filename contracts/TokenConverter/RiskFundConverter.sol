@@ -216,7 +216,7 @@ contract RiskFundConverter is AbstractTokenConverter {
         return pools;
     }
 
-    /// @notice Hook to perform after converting tokens
+    /// @dev Hook to perform after converting tokens
     /// @dev After transformation poolsAssetsReserves are settled by pool's reserves fraction
     /// @param tokenInAddress Address of the tokenIn
     /// @param tokenOutAddress Address of the tokenOut
@@ -262,7 +262,7 @@ contract RiskFundConverter is AbstractTokenConverter {
         assetsReserves[tokenOutAddress] -= amountOut;
     }
 
-    /// @notice Operations to perform before sweeping tokens
+    /// @dev Operations to perform before sweeping tokens
     /// @param tokenAddress Address of the token
     /// @param amount Amount transferred to address(to)
     /// @custom:error InsufficientBalance is thrown when amount entered is greater than balance of token
@@ -300,7 +300,7 @@ contract RiskFundConverter is AbstractTokenConverter {
         }
     }
 
-    /// @notice Update the poolAssetsReserves upon transferring the tokens
+    /// @dev Update the poolAssetsReserves upon transferring the tokens
     /// @param pool Address of the pool
     /// @param tokenAddress Address of the token
     /// @param amount Amount transferred to address(to)
@@ -317,7 +317,7 @@ contract RiskFundConverter is AbstractTokenConverter {
         emit AssetsReservesUpdated(pool, tokenAddress, poolAmountShare);
     }
 
-    /// @notice Update the poolsAssetsDirectTransfer mapping
+    /// @dev Update the poolsAssetsDirectTransfer mapping
     /// @param comptrollers Addresses of the pools
     /// @param assets Addresses of the assets need to be added for direct transfer
     /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
@@ -357,7 +357,7 @@ contract RiskFundConverter is AbstractTokenConverter {
         }
     }
 
-    /// @notice This function checks for the given asset is listed in core pool or not
+    /// @dev This function checks for the given asset is listed in core pool or not
     /// @param tokenAddress Address of the asset
     /// @return isAssetListed true if the asset is listed
     function isAssetListedInCore(address tokenAddress) internal view returns (bool isAssetListed) {
@@ -379,7 +379,7 @@ contract RiskFundConverter is AbstractTokenConverter {
         }
     }
 
-    /// @notice This function checks for the given asset is listed or not
+    /// @dev This function checks for the given asset is listed or not
     /// @param comptroller Address of the comptroller
     /// @param asset Address of the asset
     /// @return true if the asset is listed
@@ -391,7 +391,7 @@ contract RiskFundConverter is AbstractTokenConverter {
         return IPoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0);
     }
 
-    /// @notice Get base asset address of the RiskFund
+    /// @dev Get base asset address of the RiskFund
     function _getDestinationBaseAsset() internal view override returns (address) {
         return IRiskFundGetters(destinationAddress).convertibleBaseAsset();
     }

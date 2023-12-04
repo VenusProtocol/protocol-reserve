@@ -109,7 +109,16 @@ describe("MockConverter: tests", () => {
 
       await tx.wait();
 
-      await expect(tx).to.emit(converter, "ConvertedForExactTokens").withArgs(expectedResults[1], expectedResults[0]);
+      await expect(tx)
+        .to.emit(converter, "ConvertedForExactTokens")
+        .withArgs(
+          await owner.getAddress(),
+          await to.getAddress(),
+          tokenIn.address,
+          tokenOut.address,
+          expectedResults[1],
+          expectedResults[0],
+        );
     });
 
     it("Revert on lower amount out than expected", async () => {
@@ -173,7 +182,29 @@ describe("MockConverter: tests", () => {
 
       await tx.wait();
 
-      await expect(tx).to.emit(converter, "ConvertedExactTokens").withArgs(expectedResults[0], expectedResults[1]);
+      await expect(tx)
+        .to.emit(converter, "ConvertedExactTokens")
+        .withArgs(
+          await owner.getAddress(),
+          await to.getAddress(),
+          tokenIn.address,
+          tokenOut.address,
+          expectedResults[0],
+          expectedResults[1],
+        );
+    });
+
+    it("Revert when to address is invalid", async () => {
+      await converter.setConversionConfig(tokenIn.address, tokenOut.address, ConversionConfig);
+      await expect(
+        converter.convertExactTokens(
+          convertToUnit(".5", 18),
+          convertToUnit("1.5", 18),
+          tokenIn.address,
+          tokenOut.address,
+          await ethers.constants.AddressZero,
+        ),
+      ).to.be.revertedWithCustomError(converter, "ZeroAddressNotAllowed");
     });
 
     it("Revert on lower amount out than expected", async () => {
@@ -274,7 +305,14 @@ describe("MockConverter: tests", () => {
         ),
       )
         .to.emit(converter, "ConvertedExactTokensSupportingFeeOnTransferTokens")
-        .withArgs(amountTransferredAfterFees, expectedResults[1]);
+        .withArgs(
+          await owner.getAddress(),
+          await to.getAddress(),
+          tokenInDeflationary.address,
+          tokenOut.address,
+          amountTransferredAfterFees,
+          expectedResults[1],
+        );
     });
 
     it("Revert on deflationary token transfer", async () => {
@@ -555,7 +593,7 @@ describe("MockConverter: tests", () => {
       ).to.be.revertedWithCustomError(converter, "ConversionConfigNotEnabled");
     });
 
-    it("Success on conversing tokenIn to tokenOut for under tokenOut liquidity", async () => {
+    it("Success on converting tokenIn to tokenOut for under tokenOut liquidity", async () => {
       await setConversionConfig();
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
       await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
