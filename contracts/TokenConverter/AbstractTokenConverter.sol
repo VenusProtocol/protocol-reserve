@@ -74,7 +74,7 @@ import { IConverterNetwork } from "../Interfaces/IConverterNetwork.sol";
  * existing converters to save incentive and lower the dependency of users for conversion. So Private Conversion will be executed
  * by converters on it's own whenever funds are received from PSR. No incentive will be offered during private conversion.
  *
- * It will execute on UpdateAssetsState() function call in Converter Contracts. After this function call, converter will first
+ * It will execute on updateAssetsState() function call in Converter Contracts. After this function call, converter will first
  * check for the amount received. If base asset is received then it will be directly sent to the destination address and no private
  * conversion will happen otherwise converter will interact with ConverterNetwork contract to find other valid converters who are providing the conversion for:
  *
@@ -356,7 +356,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             revert AmountInMismatched();
         }
 
-        postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
+        _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
 
         emit ConvertedExactTokens(actualAmountIn, actualAmountOut);
     }
@@ -399,7 +399,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             revert AmountOutMismatched();
         }
 
-        postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
+        _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
         emit ConvertedForExactTokens(actualAmountIn, actualAmountOut);
     }
 
@@ -434,7 +434,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             to
         );
 
-        postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
+        _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
 
         emit ConvertedExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
@@ -471,7 +471,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             to
         );
 
-        postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
+        _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
 
         emit ConvertedForExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
@@ -723,7 +723,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             revert InsufficientPoolLiquidity();
         }
 
-        preTransferHook(tokenAddressOut, amountConvertedMantissa);
+        _preTransferHook(tokenAddressOut, amountConvertedMantissa);
 
         IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
         tokenOut.safeTransfer(to, amountConvertedMantissa);
@@ -776,7 +776,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @param amountIn Amount of tokenIn converted
     /// @param amountOut Amount of tokenOut converted
-    function postConversionHook(
+    function _postConversionHook(
         address tokenAddressIn,
         address tokenAddressOut,
         uint256 amountIn,
@@ -863,7 +863,13 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             }
         }
 
-        _postPrivateConversion(comptroller, tokenAddressIn, convertedTokenInBalance, tokenAddressOut, amountToConvert);
+        _postPrivateConversionHook(
+            comptroller,
+            tokenAddressIn,
+            convertedTokenInBalance,
+            tokenAddressOut,
+            amountToConvert
+        );
     }
 
     /// @dev This hook is used to update states for the converter after the privateConversion
@@ -872,7 +878,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param convertedTokenInBalance Amount of the base asset received after the conversion
     /// @param tokenAddressOut Address of the asset transferred to other converter in exchange of base asset
     /// @param convertedTokenOutBalance Amount of tokenAddressOut transferred from this converter
-    function _postPrivateConversion(
+    function _postPrivateConversionHook(
         address comptroller,
         address tokenAddressIn,
         uint256 convertedTokenInBalance,
@@ -883,7 +889,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice This hook is used to update the state for asset reserves before transferring tokenOut to user
     /// @param tokenOutAddress Address of the asset to be transferred to the user
     /// @param amountOut Amount of tokenAddressOut transferred from this converter
-    function preTransferHook(address tokenOutAddress, uint256 amountOut) internal virtual {}
+    function _preTransferHook(address tokenOutAddress, uint256 amountOut) internal virtual {}
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @dev This function retrieves values without altering token prices.

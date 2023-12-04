@@ -43,7 +43,7 @@ contract MockConverter is AbstractTokenConverter {
         tokenBalance = token.balanceOf(address(this));
     }
 
-    function _postPrivateConversion(
+    function _postPrivateConversionHook(
         address comptroller,
         address tokenAddressIn,
         uint256 convertedTokenInBalance,
