@@ -10,6 +10,7 @@ import "hardhat-deploy";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 import "solidity-docgen";
+import { HardhatUserConfig, task } from "hardhat/config";
 
 //eslint-disable-next-line @typescript-eslint/no-var-requires
 require("dotenv").config();

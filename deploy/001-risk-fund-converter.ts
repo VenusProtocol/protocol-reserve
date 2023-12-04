@@ -96,7 +96,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     vBNB,
     wBNB,
     proxyOwnerAddress,
-  } = addresses[network.name];
+  } = addresses[network.name as keyof Addresses];
 
   comptrollers = [corePool, poolStableCoin, poolDeFi, poolGameFi, poolLiquidStakedBNB, poolTron];
   assets = [[USDT], [USDT], [USDT], [USDT], [USDT], [USDT]];
