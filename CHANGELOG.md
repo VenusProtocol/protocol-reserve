@@ -1,3 +1,10 @@
+## [1.2.0-dev.4](https://github.com/VenusProtocol/protocol-reserve/compare/v1.2.0-dev.3...v1.2.0-dev.4) (2023-12-05)
+
+
+### Features
+
+* build and package typescript deployment files ([70ea3f9](https://github.com/VenusProtocol/protocol-reserve/commit/70ea3f9c32d8fb6f8a519027c9118ec520b366bc))
+
 ## [1.2.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v1.2.0-dev.2...v1.2.0-dev.3) (2023-12-01)
 
 
