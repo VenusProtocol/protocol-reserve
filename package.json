@@ -8,7 +8,7 @@
   },
   "files": [
     "artifacts",
-    "deploy",
+    "dist",
     "deployments",
     "contracts",
     "typechain"
