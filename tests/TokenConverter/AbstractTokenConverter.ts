@@ -458,7 +458,7 @@ describe("MockConverter: tests", () => {
           tokenOut.address,
           await to.getAddress(),
         ),
-      ).to.be.revertedWithCustomError(converter, "AmountOutMismatched");
+      ).to.be.revertedWithCustomError(converter, "DeflationaryTokenNotSupported");
     });
 
     it("Revert for user if onlyForPrivateConversion is enabled", async () => {

@@ -237,6 +237,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Thrown when trying to set non zero incentive for private conversion
     error NonZeroIncentiveForPrivateConversion();
 
+    /// @notice Thrown when using convertForExactTokens deflationary tokens
+    error DeflationaryTokenNotSupported();
+
     /// @notice Pause conversion of tokens
     /// @custom:event Emits ConversionPaused on success
     /// @custom:error ConversionTokensPaused thrown when conversion is already paused
@@ -506,7 +509,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             revert InvalidToAddress();
         }
 
-        (actualAmountIn, actualAmountOut) = _convertForExactTokens(
+        (actualAmountIn, actualAmountOut) = _convertForExactTokensSupportingFeeOnTransferTokens(
             amountInMaxMantissa,
             amountOutMantissa,
             tokenAddressIn,
@@ -726,7 +729,43 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         _doTransferOut(tokenAddressOut, to, amountOutMantissa);
     }
 
-    /// @dev Converts tokens for tokenAddressIn for exact amount of tokenAddressOut
+    /// @dev Converts tokens for tokenAddressIn for exact amount of tokenAddressOut used for non deflationry tokens
+    /// it is called by convertForExactTokens function
+    /// @param amountInMaxMantissa Max amount of tokenAddressIn
+    /// @param amountOutMantissa Amount of tokenAddressOut required as output
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @param to Address of the tokenAddressOut receiver
+    /// @return actualAmountIn Actual amount of tokenAddressIn transferred
+    /// @return actualAmountOut Actual amount of tokenAddressOut transferred
+    /// @custom:error DeflationaryTokenNotSupported is thrown if tokenAddressIn is deflationary token
+    /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
+    function _convertForExactTokens(
+        uint256 amountInMaxMantissa,
+        uint256 amountOutMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut,
+        address to
+    ) internal returns (uint256 actualAmountIn, uint256 actualAmountOut) {
+        _checkPrivateConversion(tokenAddressIn, tokenAddressOut);
+        (, uint256 amountInMantissa) = getUpdatedAmountIn(amountOutMantissa, tokenAddressIn, tokenAddressOut);
+
+        actualAmountIn = _doTransferIn(tokenAddressIn, amountInMantissa);
+
+        if (actualAmountIn != amountInMantissa) {
+            revert DeflationaryTokenNotSupported();
+        }
+
+        if (actualAmountIn > amountInMaxMantissa) {
+            revert AmountInHigherThanMax(amountInMantissa, amountInMaxMantissa);
+        }
+
+        _doTransferOut(tokenAddressOut, to, amountOutMantissa);
+        actualAmountOut = amountOutMantissa;
+    }
+
+    /// @dev Converts tokens for tokenAddressIn for exact amount of tokenAddressOut used for deflationary tokens
+    /// it is called by convertForExactTokensSupportingFeeOnTransferTokens function
     /// @param amountInMaxMantissa Max amount of tokenAddressIn
     /// @param amountOutMantissa Amount of tokenAddressOut required as output
     /// @param tokenAddressIn Address of the token to convert
@@ -735,7 +774,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @return actualAmountIn Actual amount of tokenAddressIn transferred
     /// @return actualAmountOut Actual amount of tokenAddressOut transferred
     /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
-    function _convertForExactTokens(
+    function _convertForExactTokensSupportingFeeOnTransferTokens(
         uint256 amountInMaxMantissa,
         uint256 amountOutMantissa,
         address tokenAddressIn,
