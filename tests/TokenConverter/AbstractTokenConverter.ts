@@ -461,6 +461,48 @@ describe("MockConverter: tests", () => {
       ).to.be.revertedWithCustomError(converter, "DeflationaryTokenNotSupported");
     });
 
+    it("Success on convert exact tokens with supporting fee", async () => {
+      await destination.convertibleBaseAsset.returns(tokenInDeflationary.address);
+
+      const ConversionConfig = {
+        incentive: INCENTIVE,
+        conversionAccess: 1,
+      };
+      await converter.setConversionConfig(tokenInDeflationary.address, tokenOut.address, ConversionConfig);
+
+      const expectedResults = await converter.callStatic.getUpdatedAmountIn(
+        convertToUnit(".5", 18),
+        tokenInDeflationary.address,
+        tokenOut.address,
+      );
+
+      const amountTransferredAfterFees = expectedResults[1].sub(expectedResults[1].div(100));
+      const expectedResults2 = await converter.callStatic.getUpdatedAmountOut(
+        amountTransferredAfterFees,
+        tokenInDeflationary.address,
+        tokenOut.address,
+      );
+
+      await expect(
+        converter.convertForExactTokensSupportingFeeOnTransferTokens(
+          convertToUnit(".25", 18),
+          convertToUnit(".5", 18),
+          tokenInDeflationary.address,
+          tokenOut.address,
+          await to.getAddress(),
+        ),
+      )
+        .to.emit(converter, "ConvertedForExactTokensSupportingFeeOnTransferTokens")
+        .withArgs(
+          await owner.getAddress(),
+          await to.getAddress(),
+          tokenInDeflationary.address,
+          tokenOut.address,
+          amountTransferredAfterFees,
+          expectedResults2[1],
+        );
+    });
+
     it("Revert for user if onlyForPrivateConversion is enabled", async () => {
       const updatedConfig = {
         incentive: 0,
