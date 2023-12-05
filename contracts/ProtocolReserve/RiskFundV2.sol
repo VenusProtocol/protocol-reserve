@@ -9,7 +9,6 @@ import { IRiskFund } from "../Interfaces/IRiskFund.sol";
 import { IRiskFundConverter } from "../Interfaces/IRiskFundConverter.sol";
 
 import { ensureNonzeroAddress, ensureNonzeroValue } from "../Utils/Validators.sol";
-import { EXP_SCALE } from "../Utils/Constants.sol";
 
 import { RiskFundV2Storage } from "./RiskFundStorage.sol";
 
@@ -126,6 +125,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @param amount Amount need to sweep for the pool
     /// @custom:event Emits SweepToken event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/to address is zero
+    /// @custom:error ZeroValueNotAllowed is thrown when amount is zero
     /// @custom:access Only Governance
     function sweepToken(
         address tokenAddress,
@@ -172,7 +172,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
         emit PoolAssetsIncreased(comptroller, asset, amount);
     }
 
-    /// @notice Operations to perform before sweeping tokens
+    /// @dev Operations to perform before sweeping tokens
     /// @param tokenAddress Address of the token
     /// @param amount Amount transferred to address(to)
     /// @custom:error InsufficientBalance is thrown when amount entered is greater than balance

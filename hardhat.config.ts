@@ -8,11 +8,14 @@ import "@openzeppelin/hardhat-upgrades";
 import "@typechain/hardhat";
 import "hardhat-deploy";
 import "hardhat-gas-reporter";
+import { HardhatUserConfig, task } from "hardhat/config";
 import "solidity-coverage";
 import "solidity-docgen";
 
 //eslint-disable-next-line @typescript-eslint/no-var-requires
 require("dotenv").config();
+
+const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
 
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   const accounts = await hre.ethers.getSigners();
@@ -23,13 +26,15 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 });
 
 function isFork() {
-  return process.env.FORK_MAINNET === "true"
+  return process.env.FORK === "true"
     ? {
         allowUnlimitedContractSize: false,
         loggingEnabled: false,
         forking: {
-          url: `${process.env.BSC_ARCHIVE_NODE}`,
-          blockNumber: 31918256,
+          url:
+            process.env[`ARCHIVE_NODE_${process.env.FORKED_NETWORK}`] ||
+            "https://data-seed-prebsc-1-s1.binance.org:8545",
+          blockNumber: 21068448,
         },
         accounts: {
           accountsBalance: "1000000000000000000",
@@ -80,32 +85,39 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: isFork(),
     bsctestnet: {
-      url: process.env.BSC_TESTNET_NODE || "https://data-seed-prebsc-2-s3.binance.org:8545/",
+      url: process.env.ARCHIVE_NODE_bsctestnet || "https://data-seed-prebsc-1-s1.binance.org:8545",
       chainId: 97,
       accounts: {
         mnemonic: process.env.MNEMONIC || "",
       },
+      gasPrice: 10000000000, // 10 gwei
       gasMultiplier: 10,
       timeout: 12000000,
     },
     bscmainnet: {
-      url: process.env.BSC_MAINNET_NODE || "https://bsc-dataseed.binance.org/",
-      gasMultiplier: 10,
-      accounts: {
-        mnemonic: process.env.MNEMONIC || "",
-      },
+      url: process.env.ARCHIVE_NODE_bscmainnet || "https://bsc-dataseed.binance.org/",
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
     sepolia: {
-      url: "https://rpc.notadegen.com/eth/sepolia",
+      url: process.env.ARCHIVE_NODE_sepolia || "https://ethereum-sepolia.blockpi.network/v1/rpc/public",
       chainId: 11155111,
-      gasPrice: 20000000000,
-      accounts: process.env.PRIVATE_KEY ? [`0x${process.env.PRIVATE_KEY}`] : [],
+      live: true,
+      gasPrice: 20000000000, // 20 gwei
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    ethereum: {
+      url: process.env.ARCHIVE_NODE_ethereum || "https://ethereum.blockpi.network/v1/rpc/public",
+      chainId: 1,
+      live: true,
+      timeout: 1200000, // 20 minutes
     },
   },
   etherscan: {
     apiKey: {
       bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       bsctestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      sepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      ethereum: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
     customChains: [
       {
@@ -122,6 +134,22 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api-testnet.bscscan.com/api",
           browserURL: "https://testnet.bscscan.com",
+        },
+      },
+      {
+        network: "sepolia",
+        chainId: 11155111,
+        urls: {
+          apiURL: "https://api-sepolia.etherscan.io/api",
+          browserURL: "https://sepolia.etherscan.io",
+        },
+      },
+      {
+        network: "ethereum",
+        chainId: 1,
+        urls: {
+          apiURL: "https://api.etherscan.io/api",
+          browserURL: "https://etherscan.io",
         },
       },
     ],

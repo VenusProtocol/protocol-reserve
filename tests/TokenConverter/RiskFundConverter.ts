@@ -18,7 +18,7 @@ import {
   MockRiskFundConverter__factory,
   MockToken,
   MockToken__factory,
-  ResilientOracleInterface,
+  ResilientOracle,
   RiskFundV2,
 } from "../../typechain";
 import { convertToUnit } from "../utils";
@@ -30,7 +30,7 @@ let accessControl: FakeContract<IAccessControlManagerV8>;
 let converter: MockContract<MockRiskFundConverter>;
 let tokenIn: MockContract<MockToken>;
 let tokenOut: MockContract<MockToken>;
-let oracle: FakeContract<ResilientOracleInterface>;
+let oracle: FakeContract<ResilientOracle>;
 let poolRegistry: FakeContract<IPoolRegistry>;
 let newPoolRegistry: FakeContract<IPoolRegistry>;
 let riskFund: FakeContract<RiskFundV2>;
@@ -61,7 +61,7 @@ async function fixture(): Promise<void> {
   WBNB = await smock.fake<MockToken>("MockToken");
 
   accessControl = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
-  oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+  oracle = await smock.fake<ResilientOracle>("ResilientOracle");
   converterNetwork = await smock.fake<IConverterNetwork>("IConverterNetwork");
 
   const MockToken = await smock.mock<MockToken__factory>("MockToken");
@@ -250,6 +250,7 @@ describe("Risk fund Converter: tests", () => {
 
       expect(await tokenIn.balanceOf(converter.address)).to.equal(0);
       expect(await tokenIn.balanceOf(riskFund.address)).to.equal(POOL_A_AMOUNT);
+      expect(await converter.getAssetsReserves(tokenIn.address)).to.equal(0);
     });
 
     it("Revert on invalid parameters", async () => {
@@ -274,6 +275,76 @@ describe("Risk fund Converter: tests", () => {
       await expect(
         converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address]], [[true, true]]),
       ).to.be.revertedWithCustomError(converter, "InvalidArguments");
+    });
+  });
+
+  describe("Converting function", () => {
+    const amount = convertToUnit("200", 18);
+    const amountTransferred = convertToUnit("50", 18);
+    const TOKEN_IN_PRICE = convertToUnit("1", 18);
+    const TOKEN_OUT_PRICE = convertToUnit("0.5", 18);
+    const INCENTIVE = convertToUnit("1", 17);
+
+    beforeEach(async () => {
+      newPoolRegistry.getPoolsSupportedByAsset.returns([poolC.address]);
+
+      await converter.setPoolsAssetsReserves(poolC.address, tokenIn.address, 0);
+      await converter.setPoolsAssetsReserves(poolC.address, tokenOut.address, 0);
+      await converter.setPoolsAssetsReserves(corePool.address, tokenIn.address, 0);
+      await converter.setPoolsAssetsReserves(corePool.address, tokenOut.address, 0);
+      await converter.setAssetsReserves(tokenIn.address, 0);
+      await converter.setAssetsReserves(tokenOut.address, 0);
+
+      await tokenIn.faucet(amount);
+      await tokenOut.faucet(amount);
+      await tokenIn.transfer(converter.address, amount);
+      await tokenOut.transfer(converter.address, amount);
+
+      await converter.updateAssetsState(poolC.address, tokenIn.address);
+      await converter.updateAssetsState(poolC.address, tokenOut.address);
+    });
+
+    it("Should update states correctly on conversion of tokens", async () => {
+      const [admin] = await ethers.getSigners();
+
+      expect(await converter.getAssetsReserves(tokenIn.address)).to.equal(amount);
+      expect(await converter.getAssetsReserves(tokenOut.address)).to.equal(amount);
+      await expect(await converter.getPoolAssetReserve(poolC.address, tokenOut.address)).to.equal(amount);
+      await expect(await converter.getPoolAssetReserve(poolC.address, tokenIn.address)).to.equal(amount);
+
+      await riskFund.convertibleBaseAsset.returns(tokenIn.address);
+
+      const ConversionConfig = {
+        incentive: INCENTIVE,
+        conversionAccess: 1,
+      };
+      await converter.connect(admin).setConversionConfig(tokenIn.address, tokenOut.address, ConversionConfig);
+
+      await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
+      await oracle.getPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
+
+      const expectedResults = await converter.callStatic.getUpdatedAmountOut(
+        amountTransferred,
+        tokenIn.address,
+        tokenOut.address,
+      );
+
+      await tokenIn.approve(converter.address, amountTransferred);
+      await converter.convertExactTokens(
+        amountTransferred,
+        convertToUnit(".5", 18),
+        tokenIn.address,
+        tokenOut.address,
+        await unKnown.getAddress(),
+      );
+      await expect(await converter.getAssetsReserves(tokenOut.address)).to.equal(
+        BigNumber(amount).minus(Number(expectedResults[1])),
+      );
+      await expect(await converter.getAssetsReserves(tokenIn.address)).to.equal(amount);
+      await expect(await converter.getPoolAssetReserve(poolC.address, tokenOut.address)).to.equal(
+        BigNumber(amount).minus(Number(expectedResults[1])),
+      );
+      await expect(await converter.getPoolAssetReserve(poolC.address, tokenIn.address)).to.equal(amount);
     });
   });
 });

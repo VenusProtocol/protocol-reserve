@@ -141,16 +141,44 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     event ConverterNetworkAddressUpdated(address indexed oldConverterNetwork, address indexed converterNetwork);
 
     /// @notice Emitted when exact amount of tokens are converted for tokens
-    event ConvertedExactTokens(uint256 amountIn, uint256 amountOut);
+    event ConvertedExactTokens(
+        address indexed sender,
+        address indexed receiver,
+        address tokenAddressIn,
+        address indexed tokenAddressOut,
+        uint256 amountIn,
+        uint256 amountOut
+    );
 
     /// @notice Emitted when tokens are converted for exact amount of tokens
-    event ConvertedForExactTokens(uint256 amountIn, uint256 amountOut);
+    event ConvertedForExactTokens(
+        address indexed sender,
+        address indexed receiver,
+        address tokenAddressIn,
+        address indexed tokenAddressOut,
+        uint256 amountIn,
+        uint256 amountOut
+    );
 
     /// @notice Emitted when exact amount of tokens are converted for tokens, for deflationary tokens
-    event ConvertedExactTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOut);
+    event ConvertedExactTokensSupportingFeeOnTransferTokens(
+        address indexed sender,
+        address indexed receiver,
+        address tokenAddressIn,
+        address indexed tokenAddressOut,
+        uint256 amountIn,
+        uint256 amountOut
+    );
 
     /// @notice Emitted when tokens are converted for exact amount of tokens, for deflationary tokens
-    event ConvertedForExactTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOut);
+    event ConvertedForExactTokensSupportingFeeOnTransferTokens(
+        address indexed sender,
+        address indexed receiver,
+        address tokenAddressIn,
+        address indexed tokenAddressOut,
+        uint256 amountIn,
+        uint256 amountOut
+    );
 
     /// @notice Emitted when conversion is paused
     event ConversionPaused(address indexed sender);
@@ -329,6 +357,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @return actualAmountIn Actual amount transferred to destination
     /// @return actualAmountOut Actual amount transferred to user
     /// @custom:event Emits ConvertedExactTokens event on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when to address is zero
     /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
     /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
     /// @custom:error AmountInMismatched error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
@@ -340,6 +369,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address to
     ) external nonReentrant returns (uint256 actualAmountIn, uint256 actualAmountOut) {
         _checkConversionPaused();
+        ensureNonzeroAddress(to);
         if (to == tokenAddressIn || to == tokenAddressOut) {
             revert InvalidToAddress();
         }
@@ -358,7 +388,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
 
-        emit ConvertedExactTokens(actualAmountIn, actualAmountOut);
+        emit ConvertedExactTokens(msg.sender, to, tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
     }
 
     /// @notice Converts tokens for tokenAddressIn for exact amount of tokenAddressOut if there is enough tokens held by the contract,
@@ -372,6 +402,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @return actualAmountIn Actual amount transferred to destination
     /// @return actualAmountOut Actual amount transferred to user
     /// @custom:event Emits ConvertedForExactTokens event on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when to address is zero
     /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
     /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
     /// @custom:error AmountOutMismatched error is thrown when actualAmountOut is does not match amountOutMantissa
@@ -383,6 +414,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address to
     ) external nonReentrant returns (uint256 actualAmountIn, uint256 actualAmountOut) {
         _checkConversionPaused();
+        ensureNonzeroAddress(to);
         if (to == tokenAddressIn || to == tokenAddressOut) {
             revert InvalidToAddress();
         }
@@ -400,7 +432,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         }
 
         _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
-        emit ConvertedForExactTokens(actualAmountIn, actualAmountOut);
+        emit ConvertedForExactTokens(msg.sender, to, tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
     }
 
     /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut if there is enough tokens held by the contract
@@ -412,6 +444,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @return actualAmountIn Actual amount transferred to destination
     /// @return actualAmountOut Actual amount transferred to user
     /// @custom:event Emits ConvertedExactTokensSupportingFeeOnTransferTokens event on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when to address is zero
     /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
     /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
     function convertExactTokensSupportingFeeOnTransferTokens(
@@ -422,6 +455,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address to
     ) external nonReentrant returns (uint256 actualAmountIn, uint256 actualAmountOut) {
         _checkConversionPaused();
+        ensureNonzeroAddress(to);
         if (to == tokenAddressIn || to == tokenAddressOut) {
             revert InvalidToAddress();
         }
@@ -436,7 +470,14 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
 
-        emit ConvertedExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
+        emit ConvertedExactTokensSupportingFeeOnTransferTokens(
+            msg.sender,
+            to,
+            tokenAddressIn,
+            tokenAddressOut,
+            actualAmountIn,
+            actualAmountOut
+        );
     }
 
     /// @notice Converts tokens for tokenAddressIn for exact amount of tokenAddressOut if there is enough tokens held by the contract,
@@ -449,6 +490,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @return actualAmountIn Actual amount transferred to destination
     /// @return actualAmountOut Actual amount transferred to user
     /// @custom:event Emits ConvertedForExactTokensSupportingFeeOnTransferTokens event on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when to address is zero
     /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
     /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
     function convertForExactTokensSupportingFeeOnTransferTokens(
@@ -459,6 +501,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address to
     ) external nonReentrant returns (uint256 actualAmountIn, uint256 actualAmountOut) {
         _checkConversionPaused();
+        ensureNonzeroAddress(to);
         if (to == tokenAddressIn || to == tokenAddressOut) {
             revert InvalidToAddress();
         }
@@ -473,7 +516,14 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
 
-        emit ConvertedForExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
+        emit ConvertedForExactTokensSupportingFeeOnTransferTokens(
+            msg.sender,
+            to,
+            tokenAddressIn,
+            tokenAddressOut,
+            actualAmountIn,
+            actualAmountOut
+        );
     }
 
     /// @notice To sweep ERC20 tokens and transfer them to user(to address)
@@ -641,14 +691,14 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Get the balance for specific token
     /// @param token Address of the token
     /// @return tokenBalance Balance of the token the contract has
-    function balanceOf(address token) public view virtual returns (uint256 tokenBalance) {}
+    function balanceOf(address token) public view virtual returns (uint256 tokenBalance);
 
-    /// @notice Operations to perform before sweeping tokens
+    /// @dev Operations to perform before sweeping tokens
     /// @param token Address of the token
     /// @param amount Amount transferred to address(to)
     function preSweepToken(address token, uint256 amount) internal virtual {}
 
-    /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut
+    /// @dev Converts exact amount of tokenAddressIn for tokenAddressOut
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param amountOutMinMantissa Min amount of tokenAddressOut required as output
     /// @param tokenAddressIn Address of the token to convert
@@ -676,7 +726,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         _doTransferOut(tokenAddressOut, to, amountOutMantissa);
     }
 
-    /// @notice Converts tokens for tokenAddressIn for exact amount of tokenAddressOut
+    /// @dev Converts tokens for tokenAddressIn for exact amount of tokenAddressOut
     /// @param amountInMaxMantissa Max amount of tokenAddressIn
     /// @param amountOutMantissa Amount of tokenAddressOut required as output
     /// @param tokenAddressIn Address of the token to convert
@@ -706,7 +756,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         _doTransferOut(tokenAddressOut, to, actualAmountOut);
     }
 
-    /// @notice return actualAmountOut from reserves for tokenAddressOut
+    /// @dev return actualAmountOut from reserves for tokenAddressOut
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @param to Address of the tokenAddressOut receiver
     /// @param amountConvertedMantissa Amount of tokenAddressOut supposed to get transferred
@@ -741,7 +791,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         actualAmountIn = balanceAfterDestination - balanceBeforeDestination;
     }
 
-    /// @notice Sets a new price oracle
+    /// @dev Sets a new price oracle
     /// @param priceOracle_ Address of the new price oracle to set
     /// @custom:event Emits PriceOracleUpdated event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when price oracle address is zero
@@ -751,7 +801,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         priceOracle = priceOracle_;
     }
 
-    /// @notice Sets a new destination address
+    /// @dev Sets a new destination address
     /// @param destinationAddress_ The new destination address to be set
     /// @custom:event Emits DestinationAddressUpdated event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when destination address is zero
@@ -771,7 +821,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         converterNetwork = converterNetwork_;
     }
 
-    /// @notice Hook to perform after converting tokens
+    /// @dev Hook to perform after converting tokens
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @param amountIn Amount of tokenIn converted
@@ -932,10 +982,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             incentive = 0;
         }
 
-        /// amount of tokenAddressOut after including incentive
-        uint256 conversionWithIncentive = MANTISSA_ONE + incentive;
         /// conversion rate after considering incentive(conversionWithIncentive)
+        uint256 conversionWithIncentive = MANTISSA_ONE + incentive;
 
+        /// amount of tokenAddressOut after including incentive as amountOutMantissa will be greater than actual as it gets
+        /// multiplied by conversionWithIncentive which will be >= 1
         amountOutMantissa =
             (amountInMantissa * tokenInUnderlyingPrice * conversionWithIncentive) /
             (tokenOutUnderlyingPrice * EXP_SCALE);
@@ -944,7 +995,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
     }
 
-    /// @notice To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
+    /// @dev To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
     /// @dev This function retrieves values without altering token prices.
     /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
     /// @param tokenAddressIn Address of the token to convert
@@ -984,16 +1035,16 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             incentive = 0;
         }
 
-        /// amount of tokenAddressOut after including incentive
-        uint256 conversionWithIncentive = MANTISSA_ONE + incentive;
         /// conversion rate after considering incentive(conversionWithIncentive)
+        uint256 conversionWithIncentive = MANTISSA_ONE + incentive;
         tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
 
+        /// amount of tokenAddressIn after considering incentive(i.e. amountInMantissa will be less than actual amountInMantissa if incentive > 0)
         amountInMantissa = ((amountOutMantissa * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
         amountConvertedMantissa = amountOutMantissa;
     }
 
-    /// @notice Check if msg.sender is allowed to convert as per onlyForPrivateConversions flag
+    /// @dev Check if msg.sender is allowed to convert as per onlyForPrivateConversions flag
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after conversion
     /// @custom:error ConversionEnabledOnlyForPrivateConversions is thrown when conversion is only enabled for private conversion
@@ -1008,7 +1059,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         }
     }
 
-    /// @notice To check, is conversion paused
+    /// @dev To check, is conversion paused
     /// @custom:error ConversionTokensPaused is thrown when token conversion is paused
     function _checkConversionPaused() internal view {
         if (conversionPaused) {
@@ -1016,7 +1067,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         }
     }
 
-    /// @notice Get base asset address of the destination contract
+    /// @dev Get base asset address of the destination contract
     /// @return Address of the base asset
     function _getDestinationBaseAsset() internal view virtual returns (address) {}
 }

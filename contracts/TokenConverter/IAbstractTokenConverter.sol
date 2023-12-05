@@ -101,6 +101,32 @@ interface IAbstractTokenConverter {
         address to
     ) external returns (uint256 actualAmountIn, uint256 actualAmountOut);
 
+    /// @notice Get the configuration for the pair of the tokens
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @return incentives Percentage of incentives to be distributed for the pair of tokens
+    /// @return conversionAccess Accessibility for the pair of tokens
+    function conversionConfigurations(address tokenAddressIn, address tokenAddressOut)
+        external
+        returns (uint256 incentives, ConversionAccessibility conversionAccess);
+
+    /// @notice Get the address of the converterNetwork
+    function converterNetwork() external returns (IConverterNetwork converterNetwork);
+
+    /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
+    /// @param amountInMantissa Amount of tokenAddressIn
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @return amountConvertedMantissa Amount of tokenAddressIn should be transferred after conversion
+    /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after conversion
+    /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
+    /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
+    function getUpdatedAmountOut(
+        uint256 amountInMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut
+    ) external returns (uint256 amountConvertedMantissa, uint256 amountOutMantissa);
+
     /// @notice To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
     /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
     /// @param tokenAddressIn Address of the token to convert
@@ -115,18 +141,38 @@ interface IAbstractTokenConverter {
         address tokenAddressOut
     ) external returns (uint256 amountConvertedMantissa, uint256 amountInMantissa);
 
-    /// @notice Get the configuration for the pair of the tokens
+    /// @notice To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
+    /// @dev This function retrieves values without altering token prices.
+    /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after conversion
-    /// @return incentives Percentage of incentives to be distributed for the pair of tokens
-    /// @return conversionAccess Accessibility for the pair of tokens
-    function conversionConfigurations(address tokenAddressIn, address tokenAddressOut)
-        external
-        returns (uint256 incentives, ConversionAccessibility conversionAccess);
+    /// @return amountConvertedMantissa Amount of tokenAddressOut should be transferred after conversion
+    /// @return amountInMantissa Amount of the tokenAddressIn sender would send to contract before conversion
+    /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
+    /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
+    function getAmountIn(
+        uint256 amountOutMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut
+    ) external view returns (uint256 amountConvertedMantissa, uint256 amountInMantissa);
 
-    /// @notice Get the address of the converterNetwork
-    function converterNetwork() external returns (IConverterNetwork converterNetwork);
+    /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
+    /// @dev This function retrieves values without altering token prices.
+    /// @param amountInMantissa Amount of tokenAddressIn
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @return amountConvertedMantissa Amount of tokenAddressIn should be transferred after conversion
+    /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after conversion
+    /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
+    /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
+    function getAmountOut(
+        uint256 amountInMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut
+    ) external view returns (uint256 amountConvertedMantissa, uint256 amountOutMantissa);
 
-    /// @notice Get the balance of the token for converter
+    /// @notice Get the balance for specific token
+    /// @param token Address of the token
+    /// @return tokenBalance Balance of the token the contract has
     function balanceOf(address token) external view returns (uint256 tokenBalance);
 }
