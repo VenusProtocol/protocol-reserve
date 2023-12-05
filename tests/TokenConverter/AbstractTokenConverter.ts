@@ -396,45 +396,47 @@ describe("MockConverter: tests", () => {
       ).to.be.revertedWithCustomError(converter, "AmountOutMismatched");
     });
 
-    // We can not keep convertForExactTokens with supporting fee.
-    // it.only("Success on convert exact tokens with supporting fee", async () => {
-    //   // Calculation for token transfer to converter after fees deduction.
-    //   const amountDeductedInTransfer = parseUnits(".25", 18).div(100);
-    //   const amountTransferredAfterFees = parseUnits(".25", 18).sub(amountDeductedInTransfer);
+    it("Success on convert exact tokens with supporting fee", async () => {
+      await destination.convertibleBaseAsset.returns(tokenInDeflationary.address);
 
-    //   await destination.convertibleBaseAsset.returns(tokenInDeflationary.address);
-    //   const ConversionConfig = {
-    //     incentive: INCENTIVE,
-    //     enabled: true,
-    //   };
+      const ConversionConfig = {
+        incentive: INCENTIVE,
+        enabled: true,
+      };
+      await converter.setConversionConfig(tokenInDeflationary.address, tokenOut.address, ConversionConfig);
 
-    //   await converter.setConversionConfig(tokenInDeflationary.address, tokenOut.address, ConversionConfig);
+      const expectedResults = await converter.callStatic.getUpdatedAmountIn(
+        convertToUnit(".5", 18),
+        tokenInDeflationary.address,
+        tokenOut.address,
+      );
 
-    //   const expectedResults = await converter.callStatic.getUpdatedAmountIn(
-    //     convertToUnit(".5", 18),
-    //     tokenInDeflationary.address,
-    //     tokenOut.address,
-    //   );
+      const amountTransferredAfterFees = expectedResults[1].sub(expectedResults[1].div(100));
+      const expectedResults2 = await converter.callStatic.getUpdatedAmountOut(
+        amountTransferredAfterFees,
+        tokenInDeflationary.address,
+        tokenOut.address,
+      );
 
-    //   const expectedResults2 = await converter.callStatic.getUpdatedAmountOut(
-    //     amountTransferredAfterFees,
-    //     tokenInDeflationary.address,
-    //     tokenOut.address,
-    //   );
-    //   // Calculation for Token Transferred to converter.
-
-    //   await expect(
-    //     converter.convertForExactTokensSupportingFeeOnTransferTokens(
-    //       convertToUnit(".25", 18),
-    //       convertToUnit(".5", 18),
-    //       tokenInDeflationary.address,
-    //       tokenOut.address,
-    //       await to.getAddress(),
-    //     ),
-    //   )
-    //     .to.emit(converter, "ConvertedForExactTokensSupportingFeeOnTransferTokens")
-    //     .withArgs(amountTransferredAfterFees, expectedResults2[0]);
-    // });
+      await expect(
+        converter.convertForExactTokensSupportingFeeOnTransferTokens(
+          convertToUnit(".25", 18),
+          convertToUnit(".5", 18),
+          tokenInDeflationary.address,
+          tokenOut.address,
+          await to.getAddress(),
+        ),
+      )
+        .to.emit(converter, "ConvertedForExactTokensSupportingFeeOnTransferTokens")
+        .withArgs(
+          await owner.getAddress(),
+          await to.getAddress(),
+          tokenInDeflationary.address,
+          tokenOut.address,
+          amountTransferredAfterFees,
+          expectedResults2[1],
+        );
+    });
   });
 
   describe("Set convert configurations", () => {
