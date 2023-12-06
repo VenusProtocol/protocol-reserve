@@ -1,8 +1,3 @@
-import { ADDRESS_ONE, SEPOLIA_MULTISIG } from './../helpers/utils';
-import mainnetDeployments from "@venusprotocol/venus-protocol/networks/mainnet.json";
-import testnetDeployments from "@venusprotocol/venus-protocol/networks/testnet.json";
-import {addresses as sepoliaDeployments } from "@venusprotocol/governance-contracts/deployments/sepolia_addresses.json";
-
 import hre, { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
@@ -22,8 +17,6 @@ const func: DeployFunction = async ({
   const timelockAddress = (await ethers.getContractOrNull("NormalTimelock"))?.address || MOCK_ADDRESS;
   const acmAddress = (await ethers.getContractOrNull("AccessControlManager"))?.address || MOCK_ADDRESS;
   const loopsLimit = 20;
-
-  console.log(`Timelock: ${ADDRESSES[networkName].timelock}`);
 
   await deploy("ProtocolShareReserve", {
     from: deployer,
