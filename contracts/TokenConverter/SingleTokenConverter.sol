@@ -19,7 +19,12 @@ contract SingleTokenConverter is AbstractTokenConverter {
     address public immutable BASE_ASSET;
 
     /// @notice Emmitted after the funds transferred to the destination address
-    event AssetTransferredToDestination(uint256 amount);
+    event AssetTransferredToDestination(
+        address indexed receiver,
+        address indexed comptroller,
+        address indexed asset,
+        uint256 amount
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     /// @param baseAsset_ Address of the BASE_ASSET token
@@ -65,7 +70,7 @@ contract SingleTokenConverter is AbstractTokenConverter {
         if (asset == BASE_ASSET) {
             balanceLeft = 0;
             token.safeTransfer(destinationAddress, balance);
-            emit AssetTransferredToDestination(balance);
+            emit AssetTransferredToDestination(destinationAddress, comptroller, asset, balance);
         }
     }
 

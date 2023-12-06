@@ -54,7 +54,12 @@ contract RiskFundConverter is AbstractTokenConverter {
     event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
 
     /// @notice Emmitted after the funds transferred to the destination address
-    event AssetTransferredToDestination(address indexed comptroller, address indexed asset, uint256 amount);
+    event AssetTransferredToDestination(
+        address receiver,
+        address indexed comptroller,
+        address indexed asset,
+        uint256 amount
+    );
 
     /// @notice Emitted after the poolsAssetsDirectTransfer mapping is updated
     event PoolAssetsDirectTransferUpdated(address indexed comptroller, address indexed asset, bool value);
@@ -229,7 +234,7 @@ contract RiskFundConverter is AbstractTokenConverter {
                     emit AssetsReservesUpdated(pools[i], tokenOutAddress, distributedDiff);
                     poolAmountInShare = amountIn - distributedInShare;
                 }
-                emit AssetTransferredToDestination(pools[i], tokenInAddress, poolAmountInShare);
+                emit AssetTransferredToDestination(destinationAddress, pools[i], tokenInAddress, poolAmountInShare);
                 IRiskFund(destinationAddress).updatePoolState(pools[i], tokenInAddress, poolAmountInShare);
             }
             unchecked {
@@ -360,7 +365,7 @@ contract RiskFundConverter is AbstractTokenConverter {
                 token.safeTransfer(destinationAddress, balanceDifference);
                 uint256 newDestinationBalance = token.balanceOf(destinationAddress);
 
-                emit AssetTransferredToDestination(comptroller, asset, balanceDifference);
+                emit AssetTransferredToDestination(destinationAddress, comptroller, asset, balanceDifference);
                 IRiskFund(destinationAddress).updatePoolState(
                     comptroller,
                     asset,
@@ -385,7 +390,12 @@ contract RiskFundConverter is AbstractTokenConverter {
         uint256 convertedTokenOutBalance
     ) internal override {
         if (convertedTokenInBalance > 0) {
-            emit AssetTransferredToDestination(comptroller, tokenAddressIn, convertedTokenInBalance);
+            emit AssetTransferredToDestination(
+                destinationAddress,
+                comptroller,
+                tokenAddressIn,
+                convertedTokenInBalance
+            );
             IRiskFund(destinationAddress).updatePoolState(comptroller, tokenAddressIn, convertedTokenInBalance);
         }
         if (convertedTokenOutBalance > 0) {
