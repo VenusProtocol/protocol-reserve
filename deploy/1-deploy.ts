@@ -3,7 +3,7 @@ import testnetDeployments from "@venusprotocol/venus-protocol/networks/testnet.j
 import hre, { ethers } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-interface Network {
+interface Contracts {
   vBNBAddress: string;
   comptroller: string;
   WBNBAddress: string;
@@ -11,9 +11,15 @@ interface Network {
   acm: string;
 }
 
-interface Addresses {
-  [key: string]: Network;
+enum NetworkName {
+  bsctestnet = "bsctestnet",
+  bscmainnet = "bscmainnet",
+  sepolia = "sepolia",
 }
+
+type Addresses = {
+  [key in NetworkName]: Contracts; // Note the "in" operator.
+};
 
 const ADDRESSES: Addresses = {
   bsctestnet: {
@@ -43,7 +49,7 @@ module.exports = async ({ getNamedAccounts, deployments, network }: HardhatRunti
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const networkName = network.name;
+  const networkName = network.name as NetworkName;
 
   const { vBNBAddress, comptroller, WBNBAddress, timelock, acm } = ADDRESSES[networkName];
   const loopsLimit = 20;
