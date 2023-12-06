@@ -23,6 +23,8 @@ const func: DeployFunction = async ({
   const acmAddress = (await ethers.getContractOrNull("AccessControlManager"))?.address || MOCK_ADDRESS;
   const loopsLimit = 20;
 
+  console.log(`Timelock: ${ADDRESSES[networkName].timelock}`);
+
   await deploy("ProtocolShareReserve", {
     from: deployer,
     log: true,
