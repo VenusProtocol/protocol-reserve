@@ -20,3 +20,6 @@ export const convertToUnit = (amount: string | number, decimals: number) => {
 export const convertToBigInt = (amount: string | number, decimals: number) => {
   return BigInt(convertToUnit(amount, decimals));
 };
+
+export const ADDRESS_ONE = "0x0000000000000000000000000000000000000001";
+export const SEPOLIA_MULTISIG = "0x94fa6078b6b8a26f0b6edffbe6501b22a10470fb";
