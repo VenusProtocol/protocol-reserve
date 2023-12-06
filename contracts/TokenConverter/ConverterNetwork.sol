@@ -125,19 +125,20 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8, MaxLoopsLimi
     }
 
     /// @notice This function returns the array containing all the converters addresses
-    /// @return Array containing all the converters addresses
-    function getAllConverters() external view returns (IAbstractTokenConverter[] memory) {
-        return allConverters;
+    /// @return converters Array containing all the converters addresses
+    function getAllConverters() external view returns (IAbstractTokenConverter[] memory converters) {
+        converters = allConverters;
     }
 
     /// @notice This function checks if the given address is a converter or not
     /// @param _tokenConverter Address of the token converter
-    /// @return boolean true if given address is converter otherwise false
-    function isTokenConverter(address _tokenConverter) external view returns (bool) {
+    /// @return isConverter true if given address is converter otherwise false
+    function isTokenConverter(address _tokenConverter) external view returns (bool isConverter) {
         uint128 index = _findConverterIndex(IAbstractTokenConverter(_tokenConverter));
 
-        if (index == type(uint128).max) return false;
-        return true;
+        if (index != type(uint128).max) {
+            isConverter = true;
+        }
     }
 
     /// @notice Adds new converter contract to the array
@@ -164,18 +165,18 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8, MaxLoopsLimi
     /// @param _tokenAddressIn Address of tokenIn
     /// @param _tokenAddressOut Address of tokenOut
     /// @param forConverters Bool to filter out converters on the basis of the conversionAccess
-    /// @return Array of converters
-    /// @return Array of balances with respect to token out
+    /// @return converters Array of converters
+    /// @return convertersBalance Array of balances with respect to token out
     function _findTokenConverters(
         address _tokenAddressIn,
         address _tokenAddressOut,
         bool forConverters
-    ) internal returns (address[] memory, uint256[] memory) {
+    ) internal returns (address[] memory converters, uint256[] memory convertersBalance) {
         uint128 convertersLength = uint128(allConverters.length);
 
         // Create a dynamic array to store the matching converters
-        address[] memory converters = new address[](convertersLength);
-        uint256[] memory convertersBalance = new uint256[](convertersLength);
+        converters = new address[](convertersLength);
+        convertersBalance = new uint256[](convertersLength);
         uint128 count;
 
         for (uint128 i; i < convertersLength; ) {
@@ -220,23 +221,23 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8, MaxLoopsLimi
             mstore(convertersBalance, count)
         }
         sort(convertersBalance, converters);
-        return (converters, convertersBalance);
     }
 
     /// @notice Used to get the index of the converter stored in the array
     /// This will return the index if the converter exists in the array otherwise will return type(uint128).max
     /// @param _tokenConverter Address of the token converter
-    /// @return Index of the converter address in the allConverters array
-    function _findConverterIndex(IAbstractTokenConverter _tokenConverter) internal view returns (uint128) {
+    /// @return index of the converter address in the allConverters array
+    function _findConverterIndex(IAbstractTokenConverter _tokenConverter) internal view returns (uint128 index) {
+        index = type(uint128).max; // Not found, return a large value
+
         uint128 convertersLength = uint128(allConverters.length);
         for (uint128 i; i < convertersLength; ) {
             if (allConverters[i] == _tokenConverter) {
-                return i;
+                index = i;
             }
             unchecked {
                 ++i;
             }
         }
-        return type(uint128).max; // Not found, return a large value
     }
 }

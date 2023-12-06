@@ -70,8 +70,8 @@ contract SingleTokenConverter is AbstractTokenConverter {
     }
 
     /// @dev Get base asset address
-    /// @return Address of the base asset(BASE_ASSET)
-    function _getDestinationBaseAsset() internal view override returns (address) {
-        return BASE_ASSET;
+    /// @return baseAsset Address of the base asset(BASE_ASSET)
+    function _getDestinationBaseAsset() internal view override returns (address baseAsset) {
+        baseAsset = BASE_ASSET;
     }
 }
