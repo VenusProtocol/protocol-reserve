@@ -680,7 +680,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice This method updated the states of this contract after getting funds from PSR
     /// after settling the amount(if any) through privateConversion between converters
     /// @dev This function is called by protocolShareReserve
-    /// @dev call _updateAssetsState to update the states related to the comptroller and asset transfer to the specific converter then it
+    /// @dev call _updateAssetsState to update the states related to the comptroller and asset transfer to the specific converter then
     /// it calls the _privateConversion which will convert the asset into destination's base asset and transfer it to destination address
     /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address
