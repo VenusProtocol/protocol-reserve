@@ -413,7 +413,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     }
 
     /// @notice Converts tokens for tokenAddressIn for exact amount of tokenAddressOut if there is enough tokens held by the contract,
-    ///         otherwise the amount is adjusted
+    /// otherwise the amount is adjusted
     /// @dev Method does not support deflationary tokens transfer
     /// @param amountInMaxMantissa Max amount of tokenAddressIn
     /// @param amountOutMantissa Amount of tokenAddressOut required as output
@@ -498,8 +498,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         );
     }
 
-    /// @notice Converts tokens for tokenAddressIn for exact amount of tokenAddressOut if there is enough tokens held by the contract,
-    ///         otherwise the amount is adjusted
+    /// @notice Converts tokens for tokenAddressIn for amount of tokenAddressOut calculated on the basis of amount of
+    /// tokenAddressIn received by the contract, if there is enough tokens held by the contract, otherwise the amount is adjusted.
+    /// The user will be responsible for bearing any fees associated with token transfers, whether pulling in or pushing out tokens
     /// @param amountInMaxMantissa Max amount of tokenAddressIn
     /// @param amountOutMantissa Amount of tokenAddressOut required as output
     /// @param tokenAddressIn Address of the token to convert
@@ -763,7 +764,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         actualAmountOut = amountOutMantissa;
     }
 
-    /// @dev Converts tokens for tokenAddressIn for exact amount of tokenAddressOut used for deflationary tokens
+    /// @dev Converts tokens for tokenAddressIn for the amount of tokenAddressOut used for deflationary tokens
     /// it is called by convertForExactTokensSupportingFeeOnTransferTokens function
     /// @param amountInMaxMantissa Max amount of tokenAddressIn
     /// @param amountOutMantissa Amount of tokenAddressOut required as output
