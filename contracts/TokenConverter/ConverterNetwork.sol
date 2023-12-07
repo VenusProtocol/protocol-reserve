@@ -186,7 +186,7 @@ contract ConverterNetwork is IConverterNetwork, AccessControlledV8, MaxLoopsLimi
                 ++i;
             }
 
-            if (msg.sender == address(converter)) {
+            if ((address(converter.converterNetwork()) != address(this)) || msg.sender == address(converter)) {
                 continue;
             }
 
