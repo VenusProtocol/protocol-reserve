@@ -639,9 +639,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         if (maxTokenOutReserve < amountOutMantissa) {
             amountInMantissa = ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
             amountConvertedMantissa = maxTokenOutReserve;
-        } else {
-            amountInMantissa = ((amountOutMantissa * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
-            amountConvertedMantissa = amountOutMantissa;
         }
     }
 
