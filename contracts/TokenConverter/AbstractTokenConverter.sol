@@ -101,7 +101,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Maximum incentive could be
     uint256 public constant MAX_INCENTIVE = 0.5e18;
 
-    /// @notice Min amount to convert for private conversions
+    /// @notice Min amount to convert for private conversions. Defined in USD, with 18 decimals
     uint256 public minAmountToConvert;
 
     /// @notice Venus price oracle contract
@@ -964,8 +964,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
                     amountIn = amountToConvert;
                 }
 
-                bool isAmountInValid = _validateMinAmountToConvert(amountIn, tokenAddressOut);
-                if (!isAmountInValid) {
+                if (!_validateMinAmountToConvert(amountIn, tokenAddressOut)) {
                     break;
                 }
 
@@ -1025,10 +1024,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @return isValid true if amount to convert is greater than minimum amount to convert
     function _validateMinAmountToConvert(uint256 amountIn, address tokenAddress) internal returns (bool isValid) {
         priceOracle.updateAssetPrice(tokenAddress);
-        Exp memory baseAssetPrice = Exp({ mantissa: priceOracle.getPrice(tokenAddress) });
-        uint256 amountInMinInUsd = mul_ScalarTruncate(baseAssetPrice, amountIn);
+        uint256 amountInInUsd = (priceOracle.getPrice(tokenAddress) * amountIn) / EXP_SCALE;
 
-        if (amountInMinInUsd >= minAmountToConvert) {
+        if (amountInInUsd >= minAmountToConvert) {
             isValid = true;
         }
     }
@@ -1143,26 +1141,4 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @dev Get base asset address of the destination contract
     /// @return Address of the base asset
     function _getDestinationBaseAsset() internal view virtual returns (address) {}
-
-    /**
-     * @dev Multiply an Exp by a scalar, then truncate to return an unsigned integer.
-     */
-    // solhint-disable-next-line func-name-mixedcase
-    function mul_ScalarTruncate(Exp memory a, uint256 scalar) internal pure returns (uint256) {
-        Exp memory product = mul_(a, scalar);
-        return truncate(product);
-    }
-
-    function mul_(Exp memory a, uint256 b) internal pure returns (Exp memory) {
-        return Exp({ mantissa: mul_(a.mantissa, b) });
-    }
-
-    function mul_(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a * b;
-    }
-
-    function truncate(Exp memory exp) internal pure returns (uint256) {
-        // Note: We are not using careful math here as we're performing a division that cannot fail
-        return exp.mantissa / EXP_SCALE;
-    }
 }
