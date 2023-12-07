@@ -55,7 +55,7 @@ contract RiskFundConverter is AbstractTokenConverter {
 
     /// @notice Emmitted after the funds transferred to the destination address
     event AssetTransferredToDestination(
-        address receiver,
+        address indexed receiver,
         address indexed comptroller,
         address indexed asset,
         uint256 amount

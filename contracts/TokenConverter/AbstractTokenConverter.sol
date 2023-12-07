@@ -803,11 +803,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         _checkPrivateConversion(tokenAddressIn, tokenAddressOut);
         (, uint256 amountInMantissa) = getUpdatedAmountIn(amountOutMantissa, tokenAddressIn, tokenAddressOut);
 
-        actualAmountIn = _doTransferIn(tokenAddressIn, amountInMantissa);
-
-        if (actualAmountIn > amountInMaxMantissa) {
+        if (amountInMantissa > amountInMaxMantissa) {
             revert AmountInHigherThanMax(amountInMantissa, amountInMaxMantissa);
         }
+
+        actualAmountIn = _doTransferIn(tokenAddressIn, amountInMantissa);
 
         (, actualAmountOut) = getUpdatedAmountOut(actualAmountIn, tokenAddressIn, tokenAddressOut);
 
