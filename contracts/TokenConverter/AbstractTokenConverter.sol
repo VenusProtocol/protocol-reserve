@@ -566,8 +566,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         emit SweepToken(tokenAddress, to, amount);
     }
 
-    /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
-    /// @dev This function retrieves values without altering token prices.
+    /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn.
+    /// This function does not account for potential token transfer fees(in case of deflationary tokens)
+    /// @dev This function retrieves values without altering token prices
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after conversion
@@ -603,8 +604,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         }
     }
 
-    /// @notice To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
-    /// @dev This function retrieves values without altering token prices.
+    /// @notice To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut.
+    /// This function does not account for potential token transfer fees(in case of deflationary tokens)
+    /// @dev This function retrieves values without altering token prices
     /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after conversion
