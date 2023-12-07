@@ -165,9 +165,9 @@ contract RiskFundConverter is AbstractTokenConverter {
 
     /// @notice Get the balance for specific token
     /// @param tokenAddress Address of the token
-    /// @return balance Reserves of the token the contract has
-    function balanceOf(address tokenAddress) public view override returns (uint256 balance) {
-        balance = assetsReserves[tokenAddress];
+    /// @return tokenBalance Reserves of the token the contract has
+    function balanceOf(address tokenAddress) public view override returns (uint256 tokenBalance) {
+        tokenBalance = assetsReserves[tokenAddress];
     }
 
     /// @notice Get the array of all pools addresses
