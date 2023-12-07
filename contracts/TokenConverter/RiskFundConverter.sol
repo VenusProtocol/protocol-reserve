@@ -440,8 +440,8 @@ contract RiskFundConverter is AbstractTokenConverter {
     }
 
     /// @dev Get base asset address of the RiskFund
-    /// @return baseAsset Address of the base asset(RiskFund)
-    function _getDestinationBaseAsset() internal view override returns (address baseAsset) {
-        baseAsset = IRiskFundGetters(destinationAddress).convertibleBaseAsset();
+    /// @return destinationBaseAsset Address of the base asset(RiskFund)
+    function _getDestinationBaseAsset() internal view override returns (address destinationBaseAsset) {
+        destinationBaseAsset = IRiskFundGetters(destinationAddress).convertibleBaseAsset();
     }
 }

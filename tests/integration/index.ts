@@ -59,14 +59,12 @@ const TOKEN_OUT_PRICE = convertToUnit("1", 18); // usdt price
 async function deployConverter(token: string) {
   const converterFactory = await smock.mock<SingleTokenConverter__factory>("SingleTokenConverter");
 
-  const converter = await upgrades.deployProxy(
-    converterFactory,
-    [accessControl.address, oracle.address, destinationAddress],
-    {
-      unsafeAllow: ["constructor", "state-variable-immutable"],
-      constructorArgs: [token],
-    },
-  );
+  const converter = await upgrades.deployProxy(converterFactory, [
+    accessControl.address,
+    oracle.address,
+    destinationAddress,
+    token,
+  ]);
 
   return converter;
 }

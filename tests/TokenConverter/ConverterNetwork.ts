@@ -44,16 +44,12 @@ const INCENTIVE = convertToUnit("1", 17);
 
 async function deployConverter(token: string) {
   const converterFactory = await smock.mock<SingleTokenConverter__factory>("SingleTokenConverter");
-
-  const converter = await upgrades.deployProxy(
-    converterFactory,
-    [accessControl.address, oracle.address, destinationAddress],
-    {
-      unsafeAllow: ["constructor", "state-variable-immutable"],
-      constructorArgs: [token],
-    },
-  );
-
+  const converter = await upgrades.deployProxy(converterFactory, [
+    accessControl.address,
+    oracle.address,
+    destinationAddress,
+    token,
+  ]);
   return converter;
 }
 

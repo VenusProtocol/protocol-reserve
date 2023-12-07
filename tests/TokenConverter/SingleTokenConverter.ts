@@ -53,14 +53,12 @@ async function fixture(): Promise<void> {
   xvs = await MockToken.deploy("XVS", "xvs", 18);
   await xvs.faucet(parseUnits("1000", 18));
 
-  converter = await upgrades.deployProxy(
-    converterFactory,
-    [accessControl.address, oracle.address, xvsVaultTreasury.address],
-    {
-      unsafeAllow: ["constructor", "state-variable-immutable"],
-      constructorArgs: [xvs.address],
-    },
-  );
+  converter = await upgrades.deployProxy(converterFactory, [
+    accessControl.address,
+    oracle.address,
+    xvsVaultTreasury.address,
+    xvs.address,
+  ]);
 
   await converter.setConverterNetwork(converterNetwork.address);
 }
@@ -94,5 +92,30 @@ describe("XVS vault Converter: tests", () => {
     await converter.updateAssetsState(fakeComptroller.address, xvs.address);
     expect(await converter.balanceOf(xvs.address)).to.equals(0);
     expect(await xvs.balanceOf(xvsVaultTreasury.address)).to.equals(XVS_AMOUNT);
+  });
+
+  describe("setBaseAsset", () => {
+    it("Should revert when zero address is set", async () => {
+      await expect(converter.setBaseAsset(await ethers.constants.AddressZero)).to.be.revertedWithCustomError(
+        converter,
+        "ZeroAddressNotAllowed",
+      );
+    });
+
+    it("Should revert when called by non owner", async () => {
+      const [, nonOwner] = await ethers.getSigners();
+
+      await expect(converter.connect(nonOwner).setBaseAsset(await ethers.constants.AddressZero)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
+    });
+
+    it("Should set base asset successfully", async () => {
+      const [, unknownAddress] = await ethers.getSigners();
+
+      await expect(converter.setBaseAsset(unknownAddress.address))
+        .to.emit(converter, "BaseAssetUpdated")
+        .withArgs(xvs.address, unknownAddress.address);
+    });
   });
 });
