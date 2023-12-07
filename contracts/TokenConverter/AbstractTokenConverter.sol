@@ -101,6 +101,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Maximum incentive could be
     uint256 public constant MAX_INCENTIVE = 0.5e18;
 
+    /// @notice Min amount to convert for private conversions
+    uint256 public minAmountToConvert;
+
     /// @notice Venus price oracle contract
     ResilientOracle public priceOracle;
 
@@ -189,6 +192,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Event emitted when tokens are swept
     event SweepToken(address indexed token, address indexed to, uint256 amount);
 
+    /// @notice Emitted when minimum amount to convert is updated
+    event MinAmountToConvertUpdated(uint256 oldMinAmountToConvert, uint256 newMinAmountToConvert);
+
     /// @notice Thrown when actualAmountOut does not match with amountOutMantissa for convertForExactTokens
     error AmountOutMismatched();
 
@@ -239,6 +245,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
     /// @notice Thrown when using convertForExactTokens deflationary tokens
     error DeflationaryTokenNotSupported();
+
+    /// @notice Thrown when minimum amount to convert is zero
+    error InvalidMinimumAmountToConvert();
 
     /**
      * @notice Modifier to ensure valid conversion parameters for a token conversion
@@ -304,6 +313,14 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @custom:access Only Governance
     function setConverterNetwork(IConverterNetwork converterNetwork_) external onlyOwner {
         _setConverterNetwork(converterNetwork_);
+    }
+
+    /// @notice Min amount to convert setter
+    /// @param minAmountToConvert_ Min amount to convert
+    /// @custom:access Only Governance
+    function setMinAmountToConvert(uint256 minAmountToConvert_) external {
+        _checkAccessAllowed("setMinAmountToConvert(uint256)");
+        _setMinAmountToConvert(minAmountToConvert_);
     }
 
     /// @notice Set the configuration for new or existing conversion pair
@@ -862,6 +879,16 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         converterNetwork = converterNetwork_;
     }
 
+    /// @notice Min amount to convert setter
+    /// @param minAmountToConvert_ Min amount to convert
+    /// @custom:event MinAmountToConvertUpdated is emitted in success
+    /// @custom:error ZeroValueNotAllowed is thrown if the provided value is 0
+    function _setMinAmountToConvert(uint256 minAmountToConvert_) internal {
+        ensureNonzeroValue(minAmountToConvert_);
+        emit MinAmountToConvertUpdated(minAmountToConvert, minAmountToConvert_);
+        minAmountToConvert = minAmountToConvert_;
+    }
+
     /// @dev Hook to perform after converting tokens
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after conversion
@@ -877,24 +904,29 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param accessControlManager_ Access control manager contract address
     /// @param priceOracle_ Resilient oracle address
     /// @param destinationAddress_  Address at all incoming tokens will transferred to
+    /// @param minAmountToConvert_ minimum amount to convert
     function __AbstractTokenConverter_init(
         address accessControlManager_,
         ResilientOracle priceOracle_,
-        address destinationAddress_
+        address destinationAddress_,
+        uint256 minAmountToConvert_
     ) internal onlyInitializing {
         __AccessControlled_init(accessControlManager_);
         __ReentrancyGuard_init();
-        __AbstractTokenConverter_init_unchained(priceOracle_, destinationAddress_);
+        __AbstractTokenConverter_init_unchained(priceOracle_, destinationAddress_, minAmountToConvert_);
     }
 
     /// @param priceOracle_ Resilient oracle address
     /// @param destinationAddress_  Address at all incoming tokens will transferred to
-    function __AbstractTokenConverter_init_unchained(ResilientOracle priceOracle_, address destinationAddress_)
-        internal
-        onlyInitializing
-    {
+    /// @param minAmountToConvert_ minimum amount to convert
+    function __AbstractTokenConverter_init_unchained(
+        ResilientOracle priceOracle_,
+        address destinationAddress_,
+        uint256 minAmountToConvert_
+    ) internal onlyInitializing {
         _setPriceOracle(priceOracle_);
         _setDestination(destinationAddress_);
+        _setMinAmountToConvert(minAmountToConvert_);
         conversionPaused = false;
     }
 
@@ -930,6 +962,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
                 );
                 if (amountIn > amountToConvert) {
                     amountIn = amountToConvert;
+                }
+
+                bool isAmountInValid = _validateMinAmountToConvert(amountIn, tokenAddressOut);
+                if (!isAmountInValid) {
+                    break;
                 }
 
                 uint256 balanceBefore = IERC20Upgradeable(tokenAddressIn).balanceOf(_destinationAddress);
@@ -981,6 +1018,20 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param tokenOutAddress Address of the asset to be transferred to the user
     /// @param amountOut Amount of tokenAddressOut transferred from this converter
     function _preTransferHook(address tokenOutAddress, uint256 amountOut) internal virtual {}
+
+    /// @dev Checks if amount to convert is greater than minimum amount to convert or not
+    /// @param amountIn The amount to convert
+    /// @param tokenAddress Address of the token
+    /// @return isValid true if amount to convert is greater than minimum amount to convert
+    function _validateMinAmountToConvert(uint256 amountIn, address tokenAddress) internal returns (bool isValid) {
+        priceOracle.updateAssetPrice(tokenAddress);
+        Exp memory baseAssetPrice = Exp({ mantissa: priceOracle.getPrice(tokenAddress) });
+        uint256 amountInMinInUsd = mul_ScalarTruncate(baseAssetPrice, amountIn);
+
+        if (amountInMinInUsd >= minAmountToConvert) {
+            isValid = true;
+        }
+    }
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @dev This function retrieves values without altering token prices.
@@ -1092,4 +1143,26 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @dev Get base asset address of the destination contract
     /// @return Address of the base asset
     function _getDestinationBaseAsset() internal view virtual returns (address) {}
+
+    /**
+     * @dev Multiply an Exp by a scalar, then truncate to return an unsigned integer.
+     */
+    // solhint-disable-next-line func-name-mixedcase
+    function mul_ScalarTruncate(Exp memory a, uint256 scalar) internal pure returns (uint256) {
+        Exp memory product = mul_(a, scalar);
+        return truncate(product);
+    }
+
+    function mul_(Exp memory a, uint256 b) internal pure returns (Exp memory) {
+        return Exp({ mantissa: mul_(a.mantissa, b) });
+    }
+
+    function mul_(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a * b;
+    }
+
+    function truncate(Exp memory exp) internal pure returns (uint256) {
+        // Note: We are not using careful math here as we're performing a division that cannot fail
+        return exp.mantissa / EXP_SCALE;
+    }
 }

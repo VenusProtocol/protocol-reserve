@@ -104,6 +104,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param priceOracle_ Resilient oracle address
     /// @param destinationAddress_  Address at all incoming tokens will transferred to
     /// @param poolRegistry_ Address of the pool registry
+    /// @param minAmountToConvert_ minimum amount to convert
     /// @param comptrollers Addresses of the pools
     /// @param assets Addresses of the assets need to be added for direct transfer
     /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
@@ -113,12 +114,13 @@ contract RiskFundConverter is AbstractTokenConverter {
         ResilientOracle priceOracle_,
         address destinationAddress_,
         address poolRegistry_,
+        uint256 minAmountToConvert_,
         address[] calldata comptrollers,
         address[][] calldata assets,
         bool[][] calldata values
     ) public initializer {
         // Initialize AbstractTokenConverter
-        __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
+        __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_, minAmountToConvert_);
         ensureNonzeroAddress(poolRegistry_);
         poolRegistry = poolRegistry_;
         _setPoolsAssetsDirectTransfer(comptrollers, assets, values);

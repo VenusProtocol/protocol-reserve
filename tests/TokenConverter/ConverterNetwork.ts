@@ -41,6 +41,7 @@ let ConversionConfig: {
 };
 
 const INCENTIVE = convertToUnit("1", 17);
+const MIN_AMOUNT_TO_CONVERT = convertToUnit("1", 18);
 
 async function deployConverter(token: string) {
   const converterFactory = await smock.mock<SingleTokenConverter__factory>("SingleTokenConverter");
@@ -49,6 +50,7 @@ async function deployConverter(token: string) {
     oracle.address,
     destinationAddress,
     token,
+    MIN_AMOUNT_TO_CONVERT,
   ]);
   return converter;
 }

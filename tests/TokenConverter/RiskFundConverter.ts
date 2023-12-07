@@ -26,6 +26,8 @@ import { convertToUnit } from "../utils";
 const { expect } = chai;
 chai.use(smock.matchers);
 
+const MIN_AMOUNT_TO_CONVERT = convertToUnit("1", 18);
+
 let accessControl: FakeContract<IAccessControlManagerV8>;
 let converter: MockContract<MockRiskFundConverter>;
 let tokenIn: MockContract<MockToken>;
@@ -81,6 +83,7 @@ async function fixture(): Promise<void> {
       oracle.address,
       riskFund.address,
       poolRegistry.address,
+      MIN_AMOUNT_TO_CONVERT,
       [poolA.address],
       [[tokenIn.address]],
       [[true]],

@@ -31,6 +31,8 @@ let converterNetwork: FakeContract<IConverterNetwork>;
 let xvsVaultTreasury: FakeContract<XVSVaultTreasury>;
 let tokenInDeflationary: MockContract<MockDeflatingToken>;
 
+const MIN_AMOUNT_TO_CONVERT = convertToUnit("1", 18);
+
 async function fixture(): Promise<void> {
   const converterFactory = await smock.mock<SingleTokenConverter__factory>("SingleTokenConverter");
 
@@ -58,6 +60,7 @@ async function fixture(): Promise<void> {
     oracle.address,
     xvsVaultTreasury.address,
     xvs.address,
+    MIN_AMOUNT_TO_CONVERT,
   ]);
 
   await converter.setConverterNetwork(converterNetwork.address);

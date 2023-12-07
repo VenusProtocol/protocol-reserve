@@ -23,6 +23,10 @@ interface IAbstractTokenConverter {
         ConversionAccessibility conversionAccess;
     }
 
+    struct Exp {
+        uint256 mantissa;
+    }
+
     /// @notice Pause conversion of tokens
     function pauseConversion() external;
 

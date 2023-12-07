@@ -39,16 +39,18 @@ contract SingleTokenConverter is AbstractTokenConverter {
     /// @param accessControlManager_ Access control manager contract address
     /// @param priceOracle_ Resilient oracle address
     /// @param destinationAddress_  Address at all incoming tokens will transferred to
+    /// @param minAmountToConvert_ Minimum amount to convert
     function initialize(
         address accessControlManager_,
         ResilientOracle priceOracle_,
         address destinationAddress_,
-        address baseAsset_
+        address baseAsset_,
+        uint256 minAmountToConvert_
     ) public initializer {
         _setBaseAsset(baseAsset_);
 
         // Initialize AbstractTokenConverter
-        __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
+        __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_, minAmountToConvert_);
     }
 
     /// @notice Sets the base asset for the contract
