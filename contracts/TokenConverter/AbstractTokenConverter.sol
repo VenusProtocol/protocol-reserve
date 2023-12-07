@@ -240,6 +240,26 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Thrown when using convertForExactTokens deflationary tokens
     error DeflationaryTokenNotSupported();
 
+    /**
+     * @notice Modifier to ensure valid conversion parameters for a token conversion
+     * and check if conversion is paused or not
+     * @param to The recipient address for the converted tokens
+     * @param tokenAddressIn The input token address for the conversion
+     * @param tokenAddressOut The output token address for the conversion
+     */
+    modifier validConversionParameters(
+        address to,
+        address tokenAddressIn,
+        address tokenAddressOut
+    ) {
+        _checkConversionPaused();
+        ensureNonzeroAddress(to);
+        if (to == tokenAddressIn || to == tokenAddressOut) {
+            revert InvalidToAddress();
+        }
+        _;
+    }
+
     /// @notice Pause conversion of tokens
     /// @custom:event Emits ConversionPaused on success
     /// @custom:error ConversionTokensPaused thrown when conversion is already paused
@@ -370,13 +390,12 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external nonReentrant returns (uint256 actualAmountIn, uint256 actualAmountOut) {
-        _checkConversionPaused();
-        ensureNonzeroAddress(to);
-        if (to == tokenAddressIn || to == tokenAddressOut) {
-            revert InvalidToAddress();
-        }
-
+    )
+        external
+        validConversionParameters(to, tokenAddressIn, tokenAddressOut)
+        nonReentrant
+        returns (uint256 actualAmountIn, uint256 actualAmountOut)
+    {
         (actualAmountIn, actualAmountOut) = _convertExactTokens(
             amountInMantissa,
             amountOutMinMantissa,
@@ -390,7 +409,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         }
 
         _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
-
         emit ConvertedExactTokens(msg.sender, to, tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
     }
 
@@ -415,13 +433,12 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external nonReentrant returns (uint256 actualAmountIn, uint256 actualAmountOut) {
-        _checkConversionPaused();
-        ensureNonzeroAddress(to);
-        if (to == tokenAddressIn || to == tokenAddressOut) {
-            revert InvalidToAddress();
-        }
-
+    )
+        external
+        validConversionParameters(to, tokenAddressIn, tokenAddressOut)
+        nonReentrant
+        returns (uint256 actualAmountIn, uint256 actualAmountOut)
+    {
         (actualAmountIn, actualAmountOut) = _convertForExactTokens(
             amountInMaxMantissa,
             amountOutMantissa,
@@ -456,13 +473,12 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external nonReentrant returns (uint256 actualAmountIn, uint256 actualAmountOut) {
-        _checkConversionPaused();
-        ensureNonzeroAddress(to);
-        if (to == tokenAddressIn || to == tokenAddressOut) {
-            revert InvalidToAddress();
-        }
-
+    )
+        external
+        validConversionParameters(to, tokenAddressIn, tokenAddressOut)
+        nonReentrant
+        returns (uint256 actualAmountIn, uint256 actualAmountOut)
+    {
         (actualAmountIn, actualAmountOut) = _convertExactTokens(
             amountInMantissa,
             amountOutMinMantissa,
@@ -472,7 +488,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         );
 
         _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
-
         emit ConvertedExactTokensSupportingFeeOnTransferTokens(
             msg.sender,
             to,
@@ -502,13 +517,12 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external nonReentrant returns (uint256 actualAmountIn, uint256 actualAmountOut) {
-        _checkConversionPaused();
-        ensureNonzeroAddress(to);
-        if (to == tokenAddressIn || to == tokenAddressOut) {
-            revert InvalidToAddress();
-        }
-
+    )
+        external
+        validConversionParameters(to, tokenAddressIn, tokenAddressOut)
+        nonReentrant
+        returns (uint256 actualAmountIn, uint256 actualAmountOut)
+    {
         (actualAmountIn, actualAmountOut) = _convertForExactTokensSupportingFeeOnTransferTokens(
             amountInMaxMantissa,
             amountOutMantissa,
@@ -518,7 +532,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         );
 
         _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
-
         emit ConvertedForExactTokensSupportingFeeOnTransferTokens(
             msg.sender,
             to,
