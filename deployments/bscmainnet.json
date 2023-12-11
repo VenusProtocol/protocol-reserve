@@ -3,7 +3,7 @@
   "chainId": "56",
   "contracts": {
     "DefaultProxyAdmin": {
-      "address": "0x6beb6D2695B67FEb73ad4f172E8E2975497187e4",
+      "address": "0x3f918bA9446552AB184C6Ffd2e2fcB1FA5ee1e59",
       "abi": [
         {
           "inputs": [
