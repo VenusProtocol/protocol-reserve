@@ -231,7 +231,7 @@ describe("ProtocolShareReserve: Tests", function () {
 
     await protocolShareReserve.removeDistributionConfig(SCHEMA_PROTOCOL_RESERVE, ONE_ADDRESS);
 
-    expect(protocolShareReserve.distributionTargets(6)).to.have.reverted;
+    await expect(protocolShareReserve.distributionTargets(6)).to.have.reverted;
     expect(await protocolShareReserve.totalDistributions()).to.be.equal(6);
 
     await protocolShareReserve.addOrUpdateDistributionConfigs([
