@@ -1,16 +1,15 @@
 import hre, { ethers } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-
 const func: DeployFunction = async ({ getNamedAccounts, deployments }: HardhatRuntimeEnvironment) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const vBNBAddress = (await ethers.getContract('vBNB')).address
-  const comptrollerAddress = (await ethers.getContract('Unitroller')).address
-  const WBNBAddress = (await ethers.getContract('WBNB')).address
-  const timelockAddress = (await ethers.getContract('NormalTimelock')).address
-  const acmAddress = (await ethers.getContract('AccessControlManager')).address
+  const vBNBAddress = (await ethers.getContract("vBNB")).address;
+  const comptrollerAddress = (await ethers.getContract("Unitroller")).address;
+  const WBNBAddress = (await ethers.getContract("WBNB")).address;
+  const timelockAddress = (await ethers.getContract("NormalTimelock")).address;
+  const acmAddress = (await ethers.getContract("AccessControlManager")).address;
   const loopsLimit = 20;
 
   await deploy("ProtocolShareReserve", {
@@ -40,4 +39,4 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments }: HardhatRu
 
 func.tags = ["deploy"];
 
-export default func
+export default func;

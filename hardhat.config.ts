@@ -172,8 +172,8 @@ const config: HardhatUserConfig = {
       ],
       bscmainnet: [
         "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
-        "node_modules/@venusprotocol/governance-contracts/deployments/bscmainnet"
-    ],
+        "node_modules/@venusprotocol/governance-contracts/deployments/bscmainnet",
+      ],
     },
   },
   mocha: {
