@@ -1,3 +1,10 @@
+## [1.2.0-dev.5](https://github.com/VenusProtocol/protocol-reserve/compare/v1.2.0-dev.4...v1.2.0-dev.5) (2023-12-11)
+
+
+### Bug Fixes
+
+* max percent in psr ([0914d83](https://github.com/VenusProtocol/protocol-reserve/commit/0914d83a70807138a395110dbf30934c7b6eb12b))
+
 ## [1.2.0-dev.4](https://github.com/VenusProtocol/protocol-reserve/compare/v1.2.0-dev.3...v1.2.0-dev.4) (2023-12-05)
 
 
