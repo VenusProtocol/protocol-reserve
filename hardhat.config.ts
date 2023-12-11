@@ -160,6 +160,22 @@ const config: HardhatUserConfig = {
     cache: "./cache",
     artifacts: "./artifacts",
   },
+  external: {
+    deployments: {
+      bsctestnet: [
+        "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
+        "node_modules/@venusprotocol/governance-contracts/deployments/bsctestnet",
+      ],
+      sepolia: [
+        "node_modules/@venusprotocol/venus-protocol/deployments/sepolia",
+        "node_modules/@venusprotocol/governance-contracts/deployments/sepolia",
+      ],
+      bscmainnet: [
+        "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
+        "node_modules/@venusprotocol/governance-contracts/deployments/bscmainnet"
+    ],
+    },
+  },
   mocha: {
     timeout: 200000000,
   },
