@@ -36,7 +36,7 @@ contract ProtocolShareReserve is
     struct DistributionConfig {
         Schema schema;
         /// @dev percenatge is represented without any scale
-        uint8 percentage;
+        uint16 percentage;
         address destination;
     }
 
@@ -55,7 +55,7 @@ contract ProtocolShareReserve is
     /// @notice address of pool registry contract
     address public poolRegistry;
 
-    uint8 public constant MAX_PERCENT = 100;
+    uint16 public constant MAX_PERCENT = 1e4;
 
     /// @notice comptroller => asset => schema => balance
     mapping(address => mapping(address => mapping(Schema => uint256))) public assetsReserves;
@@ -99,16 +99,16 @@ contract ProtocolShareReserve is
     /// @notice Event emitted when distribution configuration is updated
     event DistributionConfigUpdated(
         address indexed destination,
-        uint8 oldPercentage,
-        uint8 newPercentage,
+        uint16 oldPercentage,
+        uint16 newPercentage,
         Schema schema
     );
 
     /// @notice Event emitted when distribution configuration is added
-    event DistributionConfigAdded(address indexed destination, uint8 percentage, Schema schema);
+    event DistributionConfigAdded(address indexed destination, uint16 percentage, Schema schema);
 
     /// @notice Event emitted when distribution configuration is removed
-    event DistributionConfigRemoved(address indexed destination, uint8 percentage, Schema schema);
+    event DistributionConfigRemoved(address indexed destination, uint16 percentage, Schema schema);
 
     /**
      * @dev Constructor to initialize the immutable variables
@@ -424,7 +424,7 @@ contract ProtocolShareReserve is
      */
     function _ensurePercentages() internal view {
         uint256 totalSchemas = uint256(type(Schema).max) + 1;
-        uint8[] memory totalPercentages = new uint8[](totalSchemas);
+        uint16[] memory totalPercentages = new uint16[](totalSchemas);
 
         uint256 distributionTargetsLength = distributionTargets.length;
         for (uint256 i = 0; i < distributionTargetsLength; ) {
