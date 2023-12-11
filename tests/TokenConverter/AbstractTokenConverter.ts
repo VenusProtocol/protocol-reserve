@@ -31,6 +31,7 @@ let converterNetwork: FakeContract<IConverterNetwork>;
 let converter: MockContract<MockConverter>;
 let tokenIn: MockContract<MockToken>;
 let tokenOut: MockContract<MockToken>;
+let tokenOut2: MockContract<MockToken>;
 let oracle: FakeContract<ResilientOracle>;
 let tokenInDeflationary: MockContract<MockDeflatingToken>;
 let to: Signer;
@@ -71,6 +72,7 @@ async function fixture(): Promise<void> {
   tokenInDeflationary = await MockTokenDeflationary.deploy(parseUnits("1000", 18));
 
   tokenOut = await MockToken.deploy("TokenOut", "tokenOut", 18);
+  tokenOut2 = await MockToken.deploy("TokenOut2", "tokenOut2", 18);
   await tokenOut.faucet(parseUnits("1000", 18));
 
   converter = await Converter.deploy();
@@ -534,6 +536,14 @@ describe("MockConverter: tests", () => {
       accessControl.isAllowedToCall.returns(true);
     });
 
+    it("Revert on setting conversion config for batch on invalid arguments", async () => {
+      const tokenOutAddressesArray = [tokenOut.address, tokenOut2.address];
+      const conversionConfigurationsArray = [ConversionConfig];
+      await expect(
+        converter.setConversionConfigs(tokenIn.address, tokenOutAddressesArray, conversionConfigurationsArray),
+      ).to.be.revertedWithCustomError(converter, "InputLengthMisMatch");
+    });
+
     it("Revert on not access to set convert configurations", async () => {
       accessControl.isAllowedToCall.reset;
       accessControl.isAllowedToCall.returns(false);
@@ -595,6 +605,20 @@ describe("MockConverter: tests", () => {
         .withArgs(tokenIn.address, tokenOut.address, 0, INCENTIVE, 0, 1);
 
       isExist = await converter.conversionConfigurations(tokenIn.address, tokenOut.address);
+
+      expect(isExist[0]).to.equal(INCENTIVE);
+      expect(isExist[1]).to.equal(1);
+    });
+
+    it("Batch set conversion configs should execute successfully", async () => {
+      const tokenOutAddressesArray = [tokenOut.address, tokenOut2.address];
+      const conversionConfigurationsArray = [ConversionConfig, ConversionConfig];
+      await converter.setConversionConfigs(tokenIn.address, tokenOutAddressesArray, conversionConfigurationsArray);
+      let isExist = await converter.conversionConfigurations(tokenIn.address, tokenOut.address);
+
+      expect(isExist[0]).to.equal(INCENTIVE);
+      expect(isExist[1]).to.equal(1);
+      isExist = await converter.conversionConfigurations(tokenIn.address, tokenOut2.address);
 
       expect(isExist[0]).to.equal(INCENTIVE);
       expect(isExist[1]).to.equal(1);

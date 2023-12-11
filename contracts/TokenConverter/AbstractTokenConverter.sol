@@ -249,6 +249,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Thrown when minimum amount to convert is zero
     error InvalidMinimumAmountToConvert();
 
+    /// @notice Thrown when there is a mismatch in the length of input arrays
+    error InputLengthMisMatch();
+
     /**
      * @notice Modifier to ensure valid conversion parameters for a token conversion
      * and check if conversion is paused or not
@@ -323,67 +326,24 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         _setMinAmountToConvert(minAmountToConvert_);
     }
 
-    /// @notice Set the configuration for new or existing conversion pair
+    /// @notice Batch sets the conversion configurations
     /// @param tokenAddressIn Address of tokenIn
-    /// @param tokenAddressOut Address of tokenOut
-    /// @param conversionConfig ConversionConfig config details to update
-    /// @custom:event Emits ConversionConfigUpdated event on success
-    /// @custom:error Unauthorized error is thrown when the call is not authorized by AccessControlManager
-    /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
-    /// @custom:error NonZeroIncentiveForPrivateConversion is thrown when incentive is non zero for private conversion
-    /// @custom:access Controlled by AccessControlManager
-    function setConversionConfig(
+    /// @param tokenAddressesOut Array of addresses of tokenOut
+    /// @param conversionConfigs Array of conversionConfig config details to update
+    /// @custom:error InputLengthMisMatch is thrown when tokenAddressesOut and conversionConfigs array length mismatches
+    function setConversionConfigs(
         address tokenAddressIn,
-        address tokenAddressOut,
-        ConversionConfig calldata conversionConfig
+        address[] calldata tokenAddressesOut,
+        ConversionConfig[] calldata conversionConfigs
     ) external {
-        _checkAccessAllowed("setConversionConfig(address,address,ConversionConfig)");
-        ensureNonzeroAddress(tokenAddressIn);
-        ensureNonzeroAddress(tokenAddressOut);
+        uint256 tokenOutArrayLength = tokenAddressesOut.length;
+        if (tokenOutArrayLength != conversionConfigs.length) revert InputLengthMisMatch();
 
-        if (conversionConfig.incentive > MAX_INCENTIVE) {
-            revert IncentiveTooHigh(conversionConfig.incentive, MAX_INCENTIVE);
-        }
-
-        if (
-            (tokenAddressIn == tokenAddressOut) ||
-            (tokenAddressIn != _getDestinationBaseAsset()) ||
-            conversionConfigurations[tokenAddressOut][tokenAddressIn].conversionAccess != ConversionAccessibility.NONE
-        ) {
-            revert InvalidTokenConfigAddresses();
-        }
-
-        if (
-            (conversionConfig.conversionAccess == ConversionAccessibility.ONLY_FOR_CONVERTERS) &&
-            conversionConfig.incentive != 0
-        ) {
-            revert NonZeroIncentiveForPrivateConversion();
-        }
-
-        if (
-            ((conversionConfig.conversionAccess == ConversionAccessibility.ONLY_FOR_CONVERTERS) ||
-                (conversionConfig.conversionAccess == ConversionAccessibility.ALL)) &&
-            (address(converterNetwork) == address(0))
-        ) {
-            revert InvalidConverterNetwork();
-        }
-
-        ConversionConfig storage configuration = conversionConfigurations[tokenAddressIn][tokenAddressOut];
-
-        emit ConversionConfigUpdated(
-            tokenAddressIn,
-            tokenAddressOut,
-            configuration.incentive,
-            conversionConfig.incentive,
-            configuration.conversionAccess,
-            conversionConfig.conversionAccess
-        );
-
-        if (conversionConfig.conversionAccess == ConversionAccessibility.NONE) {
-            delete conversionConfigurations[tokenAddressIn][tokenAddressOut];
-        } else {
-            configuration.incentive = conversionConfig.incentive;
-            configuration.conversionAccess = conversionConfig.conversionAccess;
+        for (uint256 i; i < tokenOutArrayLength; ) {
+            setConversionConfig(tokenAddressIn, tokenAddressesOut[i], conversionConfigs[i]);
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -707,6 +667,70 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 balanceDiff = _updateAssetsState(comptroller, asset);
         if (balanceDiff > 0) {
             _privateConversion(comptroller, asset, balanceDiff);
+        }
+    }
+
+    /// @notice Set the configuration for new or existing conversion pair
+    /// @param tokenAddressIn Address of tokenIn
+    /// @param tokenAddressOut Address of tokenOut
+    /// @param conversionConfig ConversionConfig config details to update
+    /// @custom:event Emits ConversionConfigUpdated event on success
+    /// @custom:error Unauthorized error is thrown when the call is not authorized by AccessControlManager
+    /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
+    /// @custom:error NonZeroIncentiveForPrivateConversion is thrown when incentive is non zero for private conversion
+    /// @custom:access Controlled by AccessControlManager
+    function setConversionConfig(
+        address tokenAddressIn,
+        address tokenAddressOut,
+        ConversionConfig calldata conversionConfig
+    ) public {
+        _checkAccessAllowed("setConversionConfig(address,address,ConversionConfig)");
+        ensureNonzeroAddress(tokenAddressIn);
+        ensureNonzeroAddress(tokenAddressOut);
+
+        if (conversionConfig.incentive > MAX_INCENTIVE) {
+            revert IncentiveTooHigh(conversionConfig.incentive, MAX_INCENTIVE);
+        }
+
+        if (
+            (tokenAddressIn == tokenAddressOut) ||
+            (tokenAddressIn != _getDestinationBaseAsset()) ||
+            conversionConfigurations[tokenAddressOut][tokenAddressIn].conversionAccess != ConversionAccessibility.NONE
+        ) {
+            revert InvalidTokenConfigAddresses();
+        }
+
+        if (
+            (conversionConfig.conversionAccess == ConversionAccessibility.ONLY_FOR_CONVERTERS) &&
+            conversionConfig.incentive != 0
+        ) {
+            revert NonZeroIncentiveForPrivateConversion();
+        }
+
+        if (
+            ((conversionConfig.conversionAccess == ConversionAccessibility.ONLY_FOR_CONVERTERS) ||
+                (conversionConfig.conversionAccess == ConversionAccessibility.ALL)) &&
+            (address(converterNetwork) == address(0))
+        ) {
+            revert InvalidConverterNetwork();
+        }
+
+        ConversionConfig storage configuration = conversionConfigurations[tokenAddressIn][tokenAddressOut];
+
+        emit ConversionConfigUpdated(
+            tokenAddressIn,
+            tokenAddressOut,
+            configuration.incentive,
+            conversionConfig.incentive,
+            configuration.conversionAccess,
+            conversionConfig.conversionAccess
+        );
+
+        if (conversionConfig.conversionAccess == ConversionAccessibility.NONE) {
+            delete conversionConfigurations[tokenAddressIn][tokenAddressOut];
+        } else {
+            configuration.incentive = conversionConfig.incentive;
+            configuration.conversionAccess = conversionConfig.conversionAccess;
         }
     }
 
