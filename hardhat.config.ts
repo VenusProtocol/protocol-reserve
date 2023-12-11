@@ -9,13 +9,35 @@ import "@typechain/hardhat";
 import dotenv from "dotenv";
 import "hardhat-deploy";
 import "hardhat-gas-reporter";
-import { HardhatUserConfig, task } from "hardhat/config";
+import { HardhatUserConfig, extendConfig, task } from "hardhat/config";
+import { HardhatConfig } from "hardhat/types";
 import "solidity-coverage";
 import "solidity-docgen";
 
 dotenv.config();
 
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
+
+const externalDeployments = {
+  bsctestnet: [
+    "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
+    "node_modules/@venusprotocol/governance-contracts/deployments/bsctestnet",
+  ],
+  sepolia: [
+    "node_modules/@venusprotocol/venus-protocol/deployments/sepolia",
+    "node_modules/@venusprotocol/governance-contracts/deployments/sepolia",
+  ],
+  bscmainnet: [
+    "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
+    "node_modules/@venusprotocol/governance-contracts/deployments/bscmainnet",
+  ],
+};
+
+extendConfig((config: HardhatConfig) => {
+  if (process.env.EXPORT !== "true") {
+    config.external = { ...config.external, deployments: externalDeployments };
+  }
+});
 
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   const accounts = await hre.ethers.getSigners();
@@ -161,20 +183,7 @@ const config: HardhatUserConfig = {
     artifacts: "./artifacts",
   },
   external: {
-    deployments: {
-      bsctestnet: [
-        "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
-        "node_modules/@venusprotocol/governance-contracts/deployments/bsctestnet",
-      ],
-      sepolia: [
-        "node_modules/@venusprotocol/venus-protocol/deployments/sepolia",
-        "node_modules/@venusprotocol/governance-contracts/deployments/sepolia",
-      ],
-      bscmainnet: [
-        "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
-        "node_modules/@venusprotocol/governance-contracts/deployments/bscmainnet",
-      ],
-    },
+    deployments: {},
   },
   mocha: {
     timeout: 200000000,
