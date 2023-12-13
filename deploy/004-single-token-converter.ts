@@ -19,7 +19,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const BaseAssets: BaseAssets = {
+  const baseAssets: BaseAssets = {
     USDTPrimeConverter: (await ethers.getContract("USDT")).address,
     USDCPrimeConverter: (await ethers.getContract("USDC")).address,
     BTCBPrimeConverter: (await ethers.getContract("BTCB")).address,
@@ -48,8 +48,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const SingleTokenConverter = await ethers.getContractFactory("SingleTokenConverter");
 
-  for (const asset in BaseAssets) {
-    const baseAsset = BaseAssets[asset];
+  for (const singleTokenConverterName in baseAssets) {
+    const baseAsset = baseAssets[singleTokenConverterName];
 
     let destinationAddress = (await ethers.getContract("PrimeLiquidityProvider")).address;
     if (baseAsset == (await ethers.getContract("XVS")).address) {
@@ -57,7 +57,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     }
     const args: string[] = [acmAddress, oracleAddress, destinationAddress, baseAsset, MIN_AMOUNT_TO_CONVERT];
 
-    await deploy(asset, {
+    await deploy(singleTokenConverterName, {
       from: deployer,
       contract: "BeaconProxy",
       args: [SingleTokenConverterBeacon.address, SingleTokenConverter.interface.encodeFunctionData("initialize", args)],
