@@ -1,3 +1,52 @@
+## [1.2.0-dev.6](https://github.com/VenusProtocol/protocol-reserve/compare/v1.2.0-dev.5...v1.2.0-dev.6) (2023-12-12)
+
+
+### Features
+
+* build and package typescript deployment files ([2361ca0](https://github.com/VenusProtocol/protocol-reserve/commit/2361ca09c7b7ca015ad2d5295fad34a7fd68c38b))
+* generate file only with addresses of deployed contracts ([0858c7e](https://github.com/VenusProtocol/protocol-reserve/commit/0858c7e0c6949798e45234b5ae301581bd5caaa2))
+* updating deployment files ([4d69337](https://github.com/VenusProtocol/protocol-reserve/commit/4d69337e4a36e80d7bf95d2cfa4a4b667fe5a49d))
+* updating deployment files ([4027513](https://github.com/VenusProtocol/protocol-reserve/commit/402751354f9c7d900560fe3627f1ba3b27b03592))
+* updating deployment files ([b9c516c](https://github.com/VenusProtocol/protocol-reserve/commit/b9c516cf3d0f4405f2412d6dc80f2d9e21454043))
+* updating deployment files ([11c43ae](https://github.com/VenusProtocol/protocol-reserve/commit/11c43aea6728ee865494d2d379022202afa4b05b))
+* updating deployment files ([c295957](https://github.com/VenusProtocol/protocol-reserve/commit/c295957d7ae1471124d4a131045c235fc93aae2b))
+* updating deployment files ([d6d9557](https://github.com/VenusProtocol/protocol-reserve/commit/d6d9557c01173350d29b7c10fe6020935f776d48))
+
+
+### Bug Fixes
+
+* add coverage report ([1ebdf3d](https://github.com/VenusProtocol/protocol-reserve/commit/1ebdf3d37d42db35c95fb17880f972ec7ff99cdd))
+* added cobertura report ([70ed511](https://github.com/VenusProtocol/protocol-reserve/commit/70ed511ec928935450d6c30fce5d1625f649c6a3))
+* added types ([ac83c2c](https://github.com/VenusProtocol/protocol-reserve/commit/ac83c2c718762d8faf3ebc75a6ff3c4587acac4b))
+* exclude external deployments when exporting ([da32649](https://github.com/VenusProtocol/protocol-reserve/commit/da32649a69c4b9eebcb8b563b94ea694c993efa3))
+* fix build with missing type ([1c71743](https://github.com/VenusProtocol/protocol-reserve/commit/1c71743f918ffd6f0d697fab0aef7609665d42c4))
+* fixed compile and lint issues ([41cdc93](https://github.com/VenusProtocol/protocol-reserve/commit/41cdc938fc2ef079169ca93ced621b90e6b28824))
+* fixed compile and lint issues ([77de73a](https://github.com/VenusProtocol/protocol-reserve/commit/77de73a37e50eb3b25cb57d0981bc90d31940a58))
+* fixed lint ([dbf1864](https://github.com/VenusProtocol/protocol-reserve/commit/dbf1864819bf4c04eb66d21aba27922dc227a594))
+* fixed lint ([f269468](https://github.com/VenusProtocol/protocol-reserve/commit/f26946885c46bcf100a0f3922effd71f11bcb56b))
+* fixed proxy address ([de9df20](https://github.com/VenusProtocol/protocol-reserve/commit/de9df206c4d2ba903e50dd6f553bc16ab8241e3a))
+* remove exports from package.json ([747eabf](https://github.com/VenusProtocol/protocol-reserve/commit/747eabf1d2ec34137d26ecb8063f9b8c3fff11e5))
+* removed path and fixed lint ([753b565](https://github.com/VenusProtocol/protocol-reserve/commit/753b565822b4d1c6c06bc14da5a14d8d98afc518))
+* removed report formats ([88ece40](https://github.com/VenusProtocol/protocol-reserve/commit/88ece407529d703139cfd8b8ae51e52c1752e730))
+* resolved conflict ([a4efd48](https://github.com/VenusProtocol/protocol-reserve/commit/a4efd48e0f0cf0c478aade1857dd40e591db2bce))
+* revert DefaultProxyAdmin addr ([89b916a](https://github.com/VenusProtocol/protocol-reserve/commit/89b916a95701621148ab0cc3cc567b1499989068))
+* unify the use of the env variable DEPLOYER_PRIVATE_KEY ([e766787](https://github.com/VenusProtocol/protocol-reserve/commit/e7667879c9a9a8dc1cfd8060ebcc0864ccdacd87))
+* use imported address and change export ([9aa8473](https://github.com/VenusProtocol/protocol-reserve/commit/9aa8473193f0398a2abe208fa55d13308ca49739))
+
+## [1.2.0-dev.5](https://github.com/VenusProtocol/protocol-reserve/compare/v1.2.0-dev.4...v1.2.0-dev.5) (2023-12-11)
+
+
+### Bug Fixes
+
+* max percent in psr ([0914d83](https://github.com/VenusProtocol/protocol-reserve/commit/0914d83a70807138a395110dbf30934c7b6eb12b))
+
+## [1.2.0-dev.4](https://github.com/VenusProtocol/protocol-reserve/compare/v1.2.0-dev.3...v1.2.0-dev.4) (2023-12-05)
+
+
+### Features
+
+* build and package typescript deployment files ([70ea3f9](https://github.com/VenusProtocol/protocol-reserve/commit/70ea3f9c32d8fb6f8a519027c9118ec520b366bc))
+
 ## [1.2.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v1.2.0-dev.2...v1.2.0-dev.3) (2023-12-01)
 
 
