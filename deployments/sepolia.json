@@ -168,7 +168,7 @@
       ]
     },
     "ProtocolShareReserve": {
-      "address": "0x1c411eFdEb018D584b24e79A562aa5e062FD2c37",
+      "address": "0xCd3978f90e237b73818f32588e7E4A95e8dc058d",
       "abi": [
         {
           "anonymous": false,
@@ -425,9 +425,9 @@
             },
             {
               "indexed": false,
-              "internalType": "uint8",
+              "internalType": "uint16",
               "name": "percentage",
-              "type": "uint8"
+              "type": "uint16"
             },
             {
               "indexed": false,
@@ -450,9 +450,9 @@
             },
             {
               "indexed": false,
-              "internalType": "uint8",
+              "internalType": "uint16",
               "name": "percentage",
-              "type": "uint8"
+              "type": "uint16"
             },
             {
               "indexed": false,
@@ -475,15 +475,15 @@
             },
             {
               "indexed": false,
-              "internalType": "uint8",
+              "internalType": "uint16",
               "name": "oldPercentage",
-              "type": "uint8"
+              "type": "uint16"
             },
             {
               "indexed": false,
-              "internalType": "uint8",
+              "internalType": "uint16",
               "name": "newPercentage",
-              "type": "uint8"
+              "type": "uint16"
             },
             {
               "indexed": false,
@@ -658,9 +658,9 @@
           "name": "MAX_PERCENT",
           "outputs": [
             {
-              "internalType": "uint8",
+              "internalType": "uint16",
               "name": "",
-              "type": "uint8"
+              "type": "uint16"
             }
           ],
           "stateMutability": "view",
@@ -709,9 +709,9 @@
                   "type": "uint8"
                 },
                 {
-                  "internalType": "uint8",
+                  "internalType": "uint16",
                   "name": "percentage",
-                  "type": "uint8"
+                  "type": "uint16"
                 },
                 {
                   "internalType": "address",
@@ -774,9 +774,9 @@
               "type": "uint8"
             },
             {
-              "internalType": "uint8",
+              "internalType": "uint16",
               "name": "percentage",
-              "type": "uint8"
+              "type": "uint16"
             },
             {
               "internalType": "address",
@@ -1089,7 +1089,7 @@
       ]
     },
     "ProtocolShareReserve_Implementation": {
-      "address": "0x728Fc8bD9cF689Bc780B7fC1aeAa942efD292f18",
+      "address": "0x6165A16BDca60146cC563b63d0d355927c279C55",
       "abi": [
         {
           "inputs": [
@@ -1244,9 +1244,9 @@
             },
             {
               "indexed": false,
-              "internalType": "uint8",
+              "internalType": "uint16",
               "name": "percentage",
-              "type": "uint8"
+              "type": "uint16"
             },
             {
               "indexed": false,
@@ -1269,9 +1269,9 @@
             },
             {
               "indexed": false,
-              "internalType": "uint8",
+              "internalType": "uint16",
               "name": "percentage",
-              "type": "uint8"
+              "type": "uint16"
             },
             {
               "indexed": false,
@@ -1294,15 +1294,15 @@
             },
             {
               "indexed": false,
-              "internalType": "uint8",
+              "internalType": "uint16",
               "name": "oldPercentage",
-              "type": "uint8"
+              "type": "uint16"
             },
             {
               "indexed": false,
-              "internalType": "uint8",
+              "internalType": "uint16",
               "name": "newPercentage",
-              "type": "uint8"
+              "type": "uint16"
             },
             {
               "indexed": false,
@@ -1477,9 +1477,9 @@
           "name": "MAX_PERCENT",
           "outputs": [
             {
-              "internalType": "uint8",
+              "internalType": "uint16",
               "name": "",
-              "type": "uint8"
+              "type": "uint16"
             }
           ],
           "stateMutability": "view",
@@ -1528,9 +1528,9 @@
                   "type": "uint8"
                 },
                 {
-                  "internalType": "uint8",
+                  "internalType": "uint16",
                   "name": "percentage",
-                  "type": "uint8"
+                  "type": "uint16"
                 },
                 {
                   "internalType": "address",
@@ -1593,9 +1593,9 @@
               "type": "uint8"
             },
             {
-              "internalType": "uint8",
+              "internalType": "uint16",
               "name": "percentage",
-              "type": "uint8"
+              "type": "uint16"
             },
             {
               "internalType": "address",
@@ -1887,7 +1887,7 @@
       ]
     },
     "ProtocolShareReserve_Proxy": {
-      "address": "0x1c411eFdEb018D584b24e79A562aa5e062FD2c37",
+      "address": "0xCd3978f90e237b73818f32588e7E4A95e8dc058d",
       "abi": [
         {
           "inputs": [
