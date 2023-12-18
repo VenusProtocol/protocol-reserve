@@ -31,6 +31,7 @@ let converterNetwork: FakeContract<IConverterNetwork>;
 let converter: MockContract<MockConverter>;
 let tokenIn: MockContract<MockToken>;
 let tokenOut: MockContract<MockToken>;
+let tokenOut2: MockContract<MockToken>;
 let oracle: FakeContract<ResilientOracle>;
 let tokenInDeflationary: MockContract<MockDeflatingToken>;
 let to: Signer;
@@ -48,6 +49,7 @@ const TOKEN_OUT_MAX = convertToUnit("1.5", 18);
 const TOKEN_IN_PRICE = convertToUnit("1", 18);
 const TOKEN_OUT_PRICE = convertToUnit("0.5", 18);
 const MANTISSA_ONE = convertToUnit("1", 18);
+const MIN_AMOUNT_TO_CONVERT = convertToUnit("1", 18);
 
 async function fixture(): Promise<void> {
   [owner, to] = await ethers.getSigners();
@@ -70,10 +72,16 @@ async function fixture(): Promise<void> {
   tokenInDeflationary = await MockTokenDeflationary.deploy(parseUnits("1000", 18));
 
   tokenOut = await MockToken.deploy("TokenOut", "tokenOut", 18);
+  tokenOut2 = await MockToken.deploy("TokenOut2", "tokenOut2", 18);
   await tokenOut.faucet(parseUnits("1000", 18));
 
   converter = await Converter.deploy();
-  await converter.AbstractTokenConverter_init(accessControl.address, oracle.address, destination.address);
+  await converter.AbstractTokenConverter_init(
+    accessControl.address,
+    oracle.address,
+    destination.address,
+    MIN_AMOUNT_TO_CONVERT,
+  );
   accessControl.isAllowedToCall.returns(true);
 
   await converter.setConverterNetwork(converterNetwork.address);
@@ -528,6 +536,14 @@ describe("MockConverter: tests", () => {
       accessControl.isAllowedToCall.returns(true);
     });
 
+    it("Revert on setting conversion config for batch on invalid arguments", async () => {
+      const tokenOutAddressesArray = [tokenOut.address, tokenOut2.address];
+      const conversionConfigurationsArray = [ConversionConfig];
+      await expect(
+        converter.setConversionConfigs(tokenIn.address, tokenOutAddressesArray, conversionConfigurationsArray),
+      ).to.be.revertedWithCustomError(converter, "InputLengthMisMatch");
+    });
+
     it("Revert on not access to set convert configurations", async () => {
       accessControl.isAllowedToCall.reset;
       accessControl.isAllowedToCall.returns(false);
@@ -594,6 +610,20 @@ describe("MockConverter: tests", () => {
       expect(isExist[1]).to.equal(1);
     });
 
+    it("Batch set conversion configs should execute successfully", async () => {
+      const tokenOutAddressesArray = [tokenOut.address, tokenOut2.address];
+      const conversionConfigurationsArray = [ConversionConfig, ConversionConfig];
+      await converter.setConversionConfigs(tokenIn.address, tokenOutAddressesArray, conversionConfigurationsArray);
+      let isExist = await converter.conversionConfigurations(tokenIn.address, tokenOut.address);
+
+      expect(isExist[0]).to.equal(INCENTIVE);
+      expect(isExist[1]).to.equal(1);
+      isExist = await converter.conversionConfigurations(tokenIn.address, tokenOut2.address);
+
+      expect(isExist[0]).to.equal(INCENTIVE);
+      expect(isExist[1]).to.equal(1);
+    });
+
     it("Update the incentive", async () => {
       const NEW_INCENTIVE = convertToUnit("2", 17);
 
@@ -629,6 +659,28 @@ describe("MockConverter: tests", () => {
 
       value = await converter.conversionConfigurations(tokenIn.address, tokenOut.address);
       expect(value[1]).to.equal(2);
+    });
+  });
+
+  describe("Set minAmountToConvert", () => {
+    it("Should revert on zero value", async () => {
+      await expect(converter.setMinAmountToConvert(0)).to.be.revertedWithCustomError(converter, "ZeroValueNotAllowed");
+    });
+
+    it("Should revert when access is not given to user", async () => {
+      accessControl.isAllowedToCall.returns(false);
+      await expect(converter.setMinAmountToConvert(MIN_AMOUNT_TO_CONVERT)).to.be.revertedWithCustomError(
+        converter,
+        "Unauthorized",
+      );
+      accessControl.isAllowedToCall.returns(true);
+    });
+
+    it("Should execute successfully", async () => {
+      await expect(converter.setMinAmountToConvert(MIN_AMOUNT_TO_CONVERT)).to.emit(
+        converter,
+        "MinAmountToConvertUpdated",
+      );
     });
   });
 

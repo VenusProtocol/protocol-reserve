@@ -55,18 +55,18 @@ let ConversionConfig: {
 const INCENTIVE = convertToUnit("1", 17);
 const TOKEN_IN_PRICE = convertToUnit("0.5", 18); // usdc price
 const TOKEN_OUT_PRICE = convertToUnit("1", 18); // usdt price
+const MIN_AMOUNT_TO_CONVERT = convertToUnit("1", 18);
 
 async function deployConverter(token: string) {
   const converterFactory = await smock.mock<SingleTokenConverter__factory>("SingleTokenConverter");
 
-  const converter = await upgrades.deployProxy(
-    converterFactory,
-    [accessControl.address, oracle.address, destinationAddress],
-    {
-      unsafeAllow: ["constructor", "state-variable-immutable"],
-      constructorArgs: [token],
-    },
-  );
+  const converter = await upgrades.deployProxy(converterFactory, [
+    accessControl.address,
+    oracle.address,
+    destinationAddress,
+    token,
+    MIN_AMOUNT_TO_CONVERT,
+  ]);
 
   return converter;
 }
@@ -105,6 +105,7 @@ async function fixture(): Promise<void> {
       oracle.address,
       riskFund.address,
       poolRegistry.address,
+      MIN_AMOUNT_TO_CONVERT,
       [poolA.address],
       [[usdt.address]],
       [[true]],

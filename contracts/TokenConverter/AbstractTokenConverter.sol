@@ -101,6 +101,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Maximum incentive could be
     uint256 public constant MAX_INCENTIVE = 0.5e18;
 
+    /// @notice Min amount to convert for private conversions. Defined in USD, with 18 decimals
+    uint256 public minAmountToConvert;
+
     /// @notice Venus price oracle contract
     ResilientOracle public priceOracle;
 
@@ -189,6 +192,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Event emitted when tokens are swept
     event SweepToken(address indexed token, address indexed to, uint256 amount);
 
+    /// @notice Emitted when minimum amount to convert is updated
+    event MinAmountToConvertUpdated(uint256 oldMinAmountToConvert, uint256 newMinAmountToConvert);
+
     /// @notice Thrown when actualAmountOut does not match with amountOutMantissa for convertForExactTokens
     error AmountOutMismatched();
 
@@ -240,6 +246,32 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Thrown when using convertForExactTokens deflationary tokens
     error DeflationaryTokenNotSupported();
 
+    /// @notice Thrown when minimum amount to convert is zero
+    error InvalidMinimumAmountToConvert();
+
+    /// @notice Thrown when there is a mismatch in the length of input arrays
+    error InputLengthMisMatch();
+
+    /**
+     * @notice Modifier to ensure valid conversion parameters for a token conversion
+     * and check if conversion is paused or not
+     * @param to The recipient address for the converted tokens
+     * @param tokenAddressIn The input token address for the conversion
+     * @param tokenAddressOut The output token address for the conversion
+     */
+    modifier validConversionParameters(
+        address to,
+        address tokenAddressIn,
+        address tokenAddressOut
+    ) {
+        _checkConversionPaused();
+        ensureNonzeroAddress(to);
+        if (to == tokenAddressIn || to == tokenAddressOut) {
+            revert InvalidToAddress();
+        }
+        _;
+    }
+
     /// @notice Pause conversion of tokens
     /// @custom:event Emits ConversionPaused on success
     /// @custom:error ConversionTokensPaused thrown when conversion is already paused
@@ -286,6 +318,358 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         _setConverterNetwork(converterNetwork_);
     }
 
+    /// @notice Min amount to convert setter
+    /// @param minAmountToConvert_ Min amount to convert
+    /// @custom:access Only Governance
+    function setMinAmountToConvert(uint256 minAmountToConvert_) external {
+        _checkAccessAllowed("setMinAmountToConvert(uint256)");
+        _setMinAmountToConvert(minAmountToConvert_);
+    }
+
+    /// @notice Batch sets the conversion configurations
+    /// @param tokenAddressIn Address of tokenIn
+    /// @param tokenAddressesOut Array of addresses of tokenOut
+    /// @param conversionConfigs Array of conversionConfig config details to update
+    /// @custom:error InputLengthMisMatch is thrown when tokenAddressesOut and conversionConfigs array length mismatches
+    function setConversionConfigs(
+        address tokenAddressIn,
+        address[] calldata tokenAddressesOut,
+        ConversionConfig[] calldata conversionConfigs
+    ) external {
+        uint256 tokenOutArrayLength = tokenAddressesOut.length;
+        if (tokenOutArrayLength != conversionConfigs.length) revert InputLengthMisMatch();
+
+        for (uint256 i; i < tokenOutArrayLength; ) {
+            setConversionConfig(tokenAddressIn, tokenAddressesOut[i], conversionConfigs[i]);
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut if there is enough tokens held by the contract
+    /// @dev Method does not support deflationary tokens transfer
+    /// @param amountInMantissa Amount of tokenAddressIn
+    /// @param amountOutMinMantissa Min amount of tokenAddressOut required as output
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @param to Address of the tokenAddressOut receiver
+    /// @return actualAmountIn Actual amount transferred to destination
+    /// @return actualAmountOut Actual amount transferred to user
+    /// @custom:event Emits ConvertedExactTokens event on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when to address is zero
+    /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
+    /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
+    /// @custom:error AmountInMismatched error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
+    function convertExactTokens(
+        uint256 amountInMantissa,
+        uint256 amountOutMinMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut,
+        address to
+    )
+        external
+        validConversionParameters(to, tokenAddressIn, tokenAddressOut)
+        nonReentrant
+        returns (uint256 actualAmountIn, uint256 actualAmountOut)
+    {
+        (actualAmountIn, actualAmountOut) = _convertExactTokens(
+            amountInMantissa,
+            amountOutMinMantissa,
+            tokenAddressIn,
+            tokenAddressOut,
+            to
+        );
+
+        if (actualAmountIn != amountInMantissa) {
+            revert AmountInMismatched();
+        }
+
+        _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
+        emit ConvertedExactTokens(msg.sender, to, tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
+    }
+
+    /// @notice Converts tokens for tokenAddressIn for exact amount of tokenAddressOut if there is enough tokens held by the contract,
+    /// otherwise the amount is adjusted
+    /// @dev Method does not support deflationary tokens transfer
+    /// @param amountInMaxMantissa Max amount of tokenAddressIn
+    /// @param amountOutMantissa Amount of tokenAddressOut required as output
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @param to Address of the tokenAddressOut receiver
+    /// @return actualAmountIn Actual amount transferred to destination
+    /// @return actualAmountOut Actual amount transferred to user
+    /// @custom:event Emits ConvertedForExactTokens event on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when to address is zero
+    /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
+    /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
+    /// @custom:error AmountOutMismatched error is thrown when actualAmountOut is does not match amountOutMantissa
+    function convertForExactTokens(
+        uint256 amountInMaxMantissa,
+        uint256 amountOutMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut,
+        address to
+    )
+        external
+        validConversionParameters(to, tokenAddressIn, tokenAddressOut)
+        nonReentrant
+        returns (uint256 actualAmountIn, uint256 actualAmountOut)
+    {
+        (actualAmountIn, actualAmountOut) = _convertForExactTokens(
+            amountInMaxMantissa,
+            amountOutMantissa,
+            tokenAddressIn,
+            tokenAddressOut,
+            to
+        );
+
+        if (actualAmountOut != amountOutMantissa) {
+            revert AmountOutMismatched();
+        }
+
+        _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
+        emit ConvertedForExactTokens(msg.sender, to, tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
+    }
+
+    /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut if there is enough tokens held by the contract
+    /// @param amountInMantissa Amount of tokenAddressIn
+    /// @param amountOutMinMantissa Min amount of tokenAddressOut required as output
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @param to Address of the tokenAddressOut receiver
+    /// @return actualAmountIn Actual amount transferred to destination
+    /// @return actualAmountOut Actual amount transferred to user
+    /// @custom:event Emits ConvertedExactTokensSupportingFeeOnTransferTokens event on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when to address is zero
+    /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
+    /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
+    function convertExactTokensSupportingFeeOnTransferTokens(
+        uint256 amountInMantissa,
+        uint256 amountOutMinMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut,
+        address to
+    )
+        external
+        validConversionParameters(to, tokenAddressIn, tokenAddressOut)
+        nonReentrant
+        returns (uint256 actualAmountIn, uint256 actualAmountOut)
+    {
+        (actualAmountIn, actualAmountOut) = _convertExactTokens(
+            amountInMantissa,
+            amountOutMinMantissa,
+            tokenAddressIn,
+            tokenAddressOut,
+            to
+        );
+
+        _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
+        emit ConvertedExactTokensSupportingFeeOnTransferTokens(
+            msg.sender,
+            to,
+            tokenAddressIn,
+            tokenAddressOut,
+            actualAmountIn,
+            actualAmountOut
+        );
+    }
+
+    /// @notice Converts tokens for tokenAddressIn for amount of tokenAddressOut calculated on the basis of amount of
+    /// tokenAddressIn received by the contract, if there is enough tokens held by the contract, otherwise the amount is adjusted.
+    /// The user will be responsible for bearing any fees associated with token transfers, whether pulling in or pushing out tokens
+    /// @param amountInMaxMantissa Max amount of tokenAddressIn
+    /// @param amountOutMantissa Amount of tokenAddressOut required as output
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @param to Address of the tokenAddressOut receiver
+    /// @return actualAmountIn Actual amount transferred to destination
+    /// @return actualAmountOut Actual amount transferred to user
+    /// @custom:event Emits ConvertedForExactTokensSupportingFeeOnTransferTokens event on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when to address is zero
+    /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
+    /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
+    function convertForExactTokensSupportingFeeOnTransferTokens(
+        uint256 amountInMaxMantissa,
+        uint256 amountOutMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut,
+        address to
+    )
+        external
+        validConversionParameters(to, tokenAddressIn, tokenAddressOut)
+        nonReentrant
+        returns (uint256 actualAmountIn, uint256 actualAmountOut)
+    {
+        (actualAmountIn, actualAmountOut) = _convertForExactTokensSupportingFeeOnTransferTokens(
+            amountInMaxMantissa,
+            amountOutMantissa,
+            tokenAddressIn,
+            tokenAddressOut,
+            to
+        );
+
+        _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
+        emit ConvertedForExactTokensSupportingFeeOnTransferTokens(
+            msg.sender,
+            to,
+            tokenAddressIn,
+            tokenAddressOut,
+            actualAmountIn,
+            actualAmountOut
+        );
+    }
+
+    /// @notice To sweep ERC20 tokens and transfer them to user(to address)
+    /// @param tokenAddress The address of the ERC-20 token to sweep
+    /// @param to The address to which tokens will be transferred
+    /// @param amount The amount to transfer
+    /// @custom:event Emits SweepToken event on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/to address is zero
+    /// @custom:access Only Governance
+    function sweepToken(
+        address tokenAddress,
+        address to,
+        uint256 amount
+    ) external onlyOwner nonReentrant {
+        ensureNonzeroAddress(tokenAddress);
+        ensureNonzeroAddress(to);
+        ensureNonzeroValue(amount);
+
+        IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
+        preSweepToken(tokenAddress, amount);
+        token.safeTransfer(to, amount);
+
+        emit SweepToken(tokenAddress, to, amount);
+    }
+
+    /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn.
+    /// This function does not account for potential token transfer fees(in case of deflationary tokens)
+    /// @dev This function retrieves values without altering token prices
+    /// @param amountInMantissa Amount of tokenAddressIn
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @return amountConvertedMantissa Amount of tokenAddressIn should be transferred after conversion
+    /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after conversion
+    /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
+    /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
+    /// @custom:error ConversionEnabledOnlyForPrivateConversions is thrown when conversion is only enabled for private conversion
+    function getAmountOut(
+        uint256 amountInMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut
+    ) external view returns (uint256 amountConvertedMantissa, uint256 amountOutMantissa) {
+        if (
+            conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==
+            ConversionAccessibility.ONLY_FOR_CONVERTERS
+        ) {
+            revert ConversionEnabledOnlyForPrivateConversions();
+        }
+
+        amountConvertedMantissa = amountInMantissa;
+        uint256 tokenInToOutConversion;
+        (amountOutMantissa, tokenInToOutConversion) = _getAmountOut(amountInMantissa, tokenAddressIn, tokenAddressOut);
+
+        uint256 maxTokenOutReserve = balanceOf(tokenAddressOut);
+
+        /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
+        if (maxTokenOutReserve < amountOutMantissa) {
+            amountConvertedMantissa =
+                ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) /
+                tokenInToOutConversion; //round-up
+            amountOutMantissa = maxTokenOutReserve;
+        }
+    }
+
+    /// @notice To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut.
+    /// This function does not account for potential token transfer fees(in case of deflationary tokens)
+    /// @dev This function retrieves values without altering token prices
+    /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @return amountConvertedMantissa Amount of tokenAddressOut should be transferred after conversion
+    /// @return amountInMantissa Amount of the tokenAddressIn sender would send to contract before conversion
+    /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
+    /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
+    /// @custom:error ConversionEnabledOnlyForPrivateConversions is thrown when conversion is only enabled for private conversion
+    function getAmountIn(
+        uint256 amountOutMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut
+    ) external view returns (uint256 amountConvertedMantissa, uint256 amountInMantissa) {
+        if (
+            conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==
+            ConversionAccessibility.ONLY_FOR_CONVERTERS
+        ) {
+            revert ConversionEnabledOnlyForPrivateConversions();
+        }
+
+        amountConvertedMantissa = amountOutMantissa;
+        uint256 tokenInToOutConversion;
+        (amountInMantissa, tokenInToOutConversion) = _getAmountIn(amountOutMantissa, tokenAddressIn, tokenAddressOut);
+        uint256 maxTokenOutReserve = balanceOf(tokenAddressOut);
+
+        /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
+        if (maxTokenOutReserve < amountOutMantissa) {
+            amountInMantissa = ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
+            amountConvertedMantissa = maxTokenOutReserve;
+        }
+    }
+
+    /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
+    /// @param amountInMantissa Amount of tokenAddressIn
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @return amountConvertedMantissa Amount of tokenAddressIn should be transferred after conversion
+    /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after conversion
+    /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
+    /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
+    function getUpdatedAmountOut(
+        uint256 amountInMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut
+    ) public returns (uint256 amountConvertedMantissa, uint256 amountOutMantissa) {
+        priceOracle.updateAssetPrice(tokenAddressIn);
+        priceOracle.updateAssetPrice(tokenAddressOut);
+
+        (amountOutMantissa, ) = _getAmountOut(amountInMantissa, tokenAddressIn, tokenAddressOut);
+        amountConvertedMantissa = amountInMantissa;
+    }
+
+    /// @notice To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
+    /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
+    /// @param tokenAddressIn Address of the token to convert
+    /// @param tokenAddressOut Address of the token to get after conversion
+    /// @return amountConvertedMantissa Amount of tokenAddressOut should be transferred after conversion
+    /// @return amountInMantissa Amount of the tokenAddressIn sender would send to contract before conversion
+    /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
+    /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
+    function getUpdatedAmountIn(
+        uint256 amountOutMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut
+    ) public returns (uint256 amountConvertedMantissa, uint256 amountInMantissa) {
+        priceOracle.updateAssetPrice(tokenAddressIn);
+        priceOracle.updateAssetPrice(tokenAddressOut);
+
+        (amountInMantissa, ) = _getAmountIn(amountOutMantissa, tokenAddressIn, tokenAddressOut);
+        amountConvertedMantissa = amountOutMantissa;
+    }
+
+    /// @notice This method updated the states of this contract after getting funds from PSR
+    /// after settling the amount(if any) through privateConversion between converters
+    /// @dev This function is called by protocolShareReserve
+    /// @dev call _updateAssetsState to update the states related to the comptroller and asset transfer to the specific converter then
+    /// it calls the _privateConversion which will convert the asset into destination's base asset and transfer it to destination address
+    /// @param comptroller Comptroller address (pool)
+    /// @param asset Asset address
+    function updateAssetsState(address comptroller, address asset) public nonReentrant {
+        uint256 balanceDiff = _updateAssetsState(comptroller, asset);
+        if (balanceDiff > 0) {
+            _privateConversion(comptroller, asset, balanceDiff);
+        }
+    }
+
     /// @notice Set the configuration for new or existing conversion pair
     /// @param tokenAddressIn Address of tokenIn
     /// @param tokenAddressOut Address of tokenOut
@@ -299,7 +683,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         address tokenAddressIn,
         address tokenAddressOut,
         ConversionConfig calldata conversionConfig
-    ) external {
+    ) public {
         _checkAccessAllowed("setConversionConfig(address,address,ConversionConfig)");
         ensureNonzeroAddress(tokenAddressIn);
         ensureNonzeroAddress(tokenAddressOut);
@@ -347,347 +731,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         } else {
             configuration.incentive = conversionConfig.incentive;
             configuration.conversionAccess = conversionConfig.conversionAccess;
-        }
-    }
-
-    /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut if there is enough tokens held by the contract
-    /// @dev Method does not support deflationary tokens transfer
-    /// @param amountInMantissa Amount of tokenAddressIn
-    /// @param amountOutMinMantissa Min amount of tokenAddressOut required as output
-    /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after conversion
-    /// @param to Address of the tokenAddressOut receiver
-    /// @return actualAmountIn Actual amount transferred to destination
-    /// @return actualAmountOut Actual amount transferred to user
-    /// @custom:event Emits ConvertedExactTokens event on success
-    /// @custom:error ZeroAddressNotAllowed is thrown when to address is zero
-    /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
-    /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
-    /// @custom:error AmountInMismatched error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
-    function convertExactTokens(
-        uint256 amountInMantissa,
-        uint256 amountOutMinMantissa,
-        address tokenAddressIn,
-        address tokenAddressOut,
-        address to
-    ) external nonReentrant returns (uint256 actualAmountIn, uint256 actualAmountOut) {
-        _checkConversionPaused();
-        ensureNonzeroAddress(to);
-        if (to == tokenAddressIn || to == tokenAddressOut) {
-            revert InvalidToAddress();
-        }
-
-        (actualAmountIn, actualAmountOut) = _convertExactTokens(
-            amountInMantissa,
-            amountOutMinMantissa,
-            tokenAddressIn,
-            tokenAddressOut,
-            to
-        );
-
-        if (actualAmountIn != amountInMantissa) {
-            revert AmountInMismatched();
-        }
-
-        _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
-
-        emit ConvertedExactTokens(msg.sender, to, tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
-    }
-
-    /// @notice Converts tokens for tokenAddressIn for exact amount of tokenAddressOut if there is enough tokens held by the contract,
-    ///         otherwise the amount is adjusted
-    /// @dev Method does not support deflationary tokens transfer
-    /// @param amountInMaxMantissa Max amount of tokenAddressIn
-    /// @param amountOutMantissa Amount of tokenAddressOut required as output
-    /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after conversion
-    /// @param to Address of the tokenAddressOut receiver
-    /// @return actualAmountIn Actual amount transferred to destination
-    /// @return actualAmountOut Actual amount transferred to user
-    /// @custom:event Emits ConvertedForExactTokens event on success
-    /// @custom:error ZeroAddressNotAllowed is thrown when to address is zero
-    /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
-    /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
-    /// @custom:error AmountOutMismatched error is thrown when actualAmountOut is does not match amountOutMantissa
-    function convertForExactTokens(
-        uint256 amountInMaxMantissa,
-        uint256 amountOutMantissa,
-        address tokenAddressIn,
-        address tokenAddressOut,
-        address to
-    ) external nonReentrant returns (uint256 actualAmountIn, uint256 actualAmountOut) {
-        _checkConversionPaused();
-        ensureNonzeroAddress(to);
-        if (to == tokenAddressIn || to == tokenAddressOut) {
-            revert InvalidToAddress();
-        }
-
-        (actualAmountIn, actualAmountOut) = _convertForExactTokens(
-            amountInMaxMantissa,
-            amountOutMantissa,
-            tokenAddressIn,
-            tokenAddressOut,
-            to
-        );
-
-        if (actualAmountOut != amountOutMantissa) {
-            revert AmountOutMismatched();
-        }
-
-        _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
-        emit ConvertedForExactTokens(msg.sender, to, tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
-    }
-
-    /// @notice Converts exact amount of tokenAddressIn for tokenAddressOut if there is enough tokens held by the contract
-    /// @param amountInMantissa Amount of tokenAddressIn
-    /// @param amountOutMinMantissa Min amount of tokenAddressOut required as output
-    /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after conversion
-    /// @param to Address of the tokenAddressOut receiver
-    /// @return actualAmountIn Actual amount transferred to destination
-    /// @return actualAmountOut Actual amount transferred to user
-    /// @custom:event Emits ConvertedExactTokensSupportingFeeOnTransferTokens event on success
-    /// @custom:error ZeroAddressNotAllowed is thrown when to address is zero
-    /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
-    /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
-    function convertExactTokensSupportingFeeOnTransferTokens(
-        uint256 amountInMantissa,
-        uint256 amountOutMinMantissa,
-        address tokenAddressIn,
-        address tokenAddressOut,
-        address to
-    ) external nonReentrant returns (uint256 actualAmountIn, uint256 actualAmountOut) {
-        _checkConversionPaused();
-        ensureNonzeroAddress(to);
-        if (to == tokenAddressIn || to == tokenAddressOut) {
-            revert InvalidToAddress();
-        }
-
-        (actualAmountIn, actualAmountOut) = _convertExactTokens(
-            amountInMantissa,
-            amountOutMinMantissa,
-            tokenAddressIn,
-            tokenAddressOut,
-            to
-        );
-
-        _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
-
-        emit ConvertedExactTokensSupportingFeeOnTransferTokens(
-            msg.sender,
-            to,
-            tokenAddressIn,
-            tokenAddressOut,
-            actualAmountIn,
-            actualAmountOut
-        );
-    }
-
-    /// @notice Converts tokens for tokenAddressIn for exact amount of tokenAddressOut if there is enough tokens held by the contract,
-    ///         otherwise the amount is adjusted
-    /// @param amountInMaxMantissa Max amount of tokenAddressIn
-    /// @param amountOutMantissa Amount of tokenAddressOut required as output
-    /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after conversion
-    /// @param to Address of the tokenAddressOut receiver
-    /// @return actualAmountIn Actual amount transferred to destination
-    /// @return actualAmountOut Actual amount transferred to user
-    /// @custom:event Emits ConvertedForExactTokensSupportingFeeOnTransferTokens event on success
-    /// @custom:error ZeroAddressNotAllowed is thrown when to address is zero
-    /// @custom:error InvalidToAddress error is thrown when address(to) is same as tokenAddressIn or tokenAddressOut
-    /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
-    function convertForExactTokensSupportingFeeOnTransferTokens(
-        uint256 amountInMaxMantissa,
-        uint256 amountOutMantissa,
-        address tokenAddressIn,
-        address tokenAddressOut,
-        address to
-    ) external nonReentrant returns (uint256 actualAmountIn, uint256 actualAmountOut) {
-        _checkConversionPaused();
-        ensureNonzeroAddress(to);
-        if (to == tokenAddressIn || to == tokenAddressOut) {
-            revert InvalidToAddress();
-        }
-
-        (actualAmountIn, actualAmountOut) = _convertForExactTokensSupportingFeeOnTransferTokens(
-            amountInMaxMantissa,
-            amountOutMantissa,
-            tokenAddressIn,
-            tokenAddressOut,
-            to
-        );
-
-        _postConversionHook(tokenAddressIn, tokenAddressOut, actualAmountIn, actualAmountOut);
-
-        emit ConvertedForExactTokensSupportingFeeOnTransferTokens(
-            msg.sender,
-            to,
-            tokenAddressIn,
-            tokenAddressOut,
-            actualAmountIn,
-            actualAmountOut
-        );
-    }
-
-    /// @notice To sweep ERC20 tokens and transfer them to user(to address)
-    /// @param tokenAddress The address of the ERC-20 token to sweep
-    /// @param to The address to which tokens will be transferred
-    /// @param amount The amount to transfer
-    /// @custom:event Emits SweepToken event on success
-    /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/to address is zero
-    /// @custom:access Only Governance
-    function sweepToken(
-        address tokenAddress,
-        address to,
-        uint256 amount
-    ) external onlyOwner nonReentrant {
-        ensureNonzeroAddress(tokenAddress);
-        ensureNonzeroAddress(to);
-        ensureNonzeroValue(amount);
-
-        IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
-        preSweepToken(tokenAddress, amount);
-        token.safeTransfer(to, amount);
-
-        emit SweepToken(tokenAddress, to, amount);
-    }
-
-    /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
-    /// @dev This function retrieves values without altering token prices.
-    /// @param amountInMantissa Amount of tokenAddressIn
-    /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after conversion
-    /// @return amountConvertedMantissa Amount of tokenAddressIn should be transferred after conversion
-    /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after conversion
-    /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
-    /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
-    /// @custom:error ConversionEnabledOnlyForPrivateConversions is thrown when conversion is only enabled for private conversion
-    function getAmountOut(
-        uint256 amountInMantissa,
-        address tokenAddressIn,
-        address tokenAddressOut
-    ) external view returns (uint256 amountConvertedMantissa, uint256 amountOutMantissa) {
-        if (
-            conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==
-            ConversionAccessibility.ONLY_FOR_CONVERTERS
-        ) {
-            revert ConversionEnabledOnlyForPrivateConversions();
-        }
-
-        uint256 tokenInToOutConversion;
-        (amountConvertedMantissa, amountOutMantissa, tokenInToOutConversion) = _getAmountOut(
-            amountInMantissa,
-            tokenAddressIn,
-            tokenAddressOut
-        );
-
-        uint256 maxTokenOutReserve = balanceOf(tokenAddressOut);
-
-        /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
-        if (maxTokenOutReserve < amountOutMantissa) {
-            amountConvertedMantissa =
-                ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) /
-                tokenInToOutConversion; //round-up
-            amountOutMantissa = maxTokenOutReserve;
-        }
-    }
-
-    /// @notice To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
-    /// @dev This function retrieves values without altering token prices.
-    /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
-    /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after conversion
-    /// @return amountConvertedMantissa Amount of tokenAddressOut should be transferred after conversion
-    /// @return amountInMantissa Amount of the tokenAddressIn sender would send to contract before conversion
-    /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
-    /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
-    /// @custom:error ConversionEnabledOnlyForPrivateConversions is thrown when conversion is only enabled for private conversion
-    function getAmountIn(
-        uint256 amountOutMantissa,
-        address tokenAddressIn,
-        address tokenAddressOut
-    ) external view returns (uint256 amountConvertedMantissa, uint256 amountInMantissa) {
-        if (
-            conversionConfigurations[tokenAddressIn][tokenAddressOut].conversionAccess ==
-            ConversionAccessibility.ONLY_FOR_CONVERTERS
-        ) {
-            revert ConversionEnabledOnlyForPrivateConversions();
-        }
-
-        uint256 tokenInToOutConversion;
-        (amountConvertedMantissa, amountInMantissa, tokenInToOutConversion) = _getAmountIn(
-            amountOutMantissa,
-            tokenAddressIn,
-            tokenAddressOut
-        );
-        uint256 maxTokenOutReserve = balanceOf(tokenAddressOut);
-
-        /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
-        if (maxTokenOutReserve < amountOutMantissa) {
-            amountInMantissa = ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
-            amountConvertedMantissa = maxTokenOutReserve;
-        } else {
-            amountInMantissa = ((amountOutMantissa * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
-            amountConvertedMantissa = amountOutMantissa;
-        }
-    }
-
-    /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
-    /// @param amountInMantissa Amount of tokenAddressIn
-    /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after conversion
-    /// @return amountConvertedMantissa Amount of tokenAddressIn should be transferred after conversion
-    /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after conversion
-    /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
-    /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
-    function getUpdatedAmountOut(
-        uint256 amountInMantissa,
-        address tokenAddressIn,
-        address tokenAddressOut
-    ) public returns (uint256 amountConvertedMantissa, uint256 amountOutMantissa) {
-        priceOracle.updateAssetPrice(tokenAddressIn);
-        priceOracle.updateAssetPrice(tokenAddressOut);
-        (amountConvertedMantissa, amountOutMantissa, ) = _getAmountOut(
-            amountInMantissa,
-            tokenAddressIn,
-            tokenAddressOut
-        );
-    }
-
-    /// @notice To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
-    /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
-    /// @param tokenAddressIn Address of the token to convert
-    /// @param tokenAddressOut Address of the token to get after conversion
-    /// @return amountConvertedMantissa Amount of tokenAddressOut should be transferred after conversion
-    /// @return amountInMantissa Amount of the tokenAddressIn sender would send to contract before conversion
-    /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
-    /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
-    function getUpdatedAmountIn(
-        uint256 amountOutMantissa,
-        address tokenAddressIn,
-        address tokenAddressOut
-    ) public returns (uint256 amountConvertedMantissa, uint256 amountInMantissa) {
-        priceOracle.updateAssetPrice(tokenAddressIn);
-        priceOracle.updateAssetPrice(tokenAddressOut);
-
-        (amountConvertedMantissa, amountInMantissa, ) = _getAmountIn(
-            amountOutMantissa,
-            tokenAddressIn,
-            tokenAddressOut
-        );
-    }
-
-    /// @notice This method updated the states of this contract after getting funds from PSR
-    /// after settling the amount(if any) through privateConversion between converters
-    /// @dev This function is called by protocolShareReserve
-    /// @dev call _updateAssetsState to update the states related to the comptroller and asset transfer to the specific converter then it
-    /// it calls the _privateConversion which will convert the asset into destination's base asset and transfer it to destination address
-    /// @param comptroller Comptroller address (pool)
-    /// @param asset Asset address
-    function updateAssetsState(address comptroller, address asset) public nonReentrant {
-        uint256 balanceDiff = _updateAssetsState(comptroller, asset);
-        if (balanceDiff > 0) {
-            _privateConversion(comptroller, asset, balanceDiff);
         }
     }
 
@@ -764,7 +807,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         actualAmountOut = amountOutMantissa;
     }
 
-    /// @dev Converts tokens for tokenAddressIn for exact amount of tokenAddressOut used for deflationary tokens
+    /// @dev Converts tokens for tokenAddressIn for the amount of tokenAddressOut used for deflationary tokens
     /// it is called by convertForExactTokensSupportingFeeOnTransferTokens function
     /// @param amountInMaxMantissa Max amount of tokenAddressIn
     /// @param amountOutMantissa Amount of tokenAddressOut required as output
@@ -784,11 +827,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         _checkPrivateConversion(tokenAddressIn, tokenAddressOut);
         (, uint256 amountInMantissa) = getUpdatedAmountIn(amountOutMantissa, tokenAddressIn, tokenAddressOut);
 
-        actualAmountIn = _doTransferIn(tokenAddressIn, amountInMantissa);
-
-        if (actualAmountIn > amountInMaxMantissa) {
+        if (amountInMantissa > amountInMaxMantissa) {
             revert AmountInHigherThanMax(amountInMantissa, amountInMaxMantissa);
         }
+
+        actualAmountIn = _doTransferIn(tokenAddressIn, amountInMantissa);
 
         (, actualAmountOut) = getUpdatedAmountOut(actualAmountIn, tokenAddressIn, tokenAddressOut);
 
@@ -860,6 +903,16 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         converterNetwork = converterNetwork_;
     }
 
+    /// @notice Min amount to convert setter
+    /// @param minAmountToConvert_ Min amount to convert
+    /// @custom:event MinAmountToConvertUpdated is emitted in success
+    /// @custom:error ZeroValueNotAllowed is thrown if the provided value is 0
+    function _setMinAmountToConvert(uint256 minAmountToConvert_) internal {
+        ensureNonzeroValue(minAmountToConvert_);
+        emit MinAmountToConvertUpdated(minAmountToConvert, minAmountToConvert_);
+        minAmountToConvert = minAmountToConvert_;
+    }
+
     /// @dev Hook to perform after converting tokens
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after conversion
@@ -875,24 +928,29 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param accessControlManager_ Access control manager contract address
     /// @param priceOracle_ Resilient oracle address
     /// @param destinationAddress_  Address at all incoming tokens will transferred to
+    /// @param minAmountToConvert_ minimum amount to convert
     function __AbstractTokenConverter_init(
         address accessControlManager_,
         ResilientOracle priceOracle_,
-        address destinationAddress_
+        address destinationAddress_,
+        uint256 minAmountToConvert_
     ) internal onlyInitializing {
         __AccessControlled_init(accessControlManager_);
         __ReentrancyGuard_init();
-        __AbstractTokenConverter_init_unchained(priceOracle_, destinationAddress_);
+        __AbstractTokenConverter_init_unchained(priceOracle_, destinationAddress_, minAmountToConvert_);
     }
 
     /// @param priceOracle_ Resilient oracle address
     /// @param destinationAddress_  Address at all incoming tokens will transferred to
-    function __AbstractTokenConverter_init_unchained(ResilientOracle priceOracle_, address destinationAddress_)
-        internal
-        onlyInitializing
-    {
+    /// @param minAmountToConvert_ minimum amount to convert
+    function __AbstractTokenConverter_init_unchained(
+        ResilientOracle priceOracle_,
+        address destinationAddress_,
+        uint256 minAmountToConvert_
+    ) internal onlyInitializing {
         _setPriceOracle(priceOracle_);
         _setDestination(destinationAddress_);
+        _setMinAmountToConvert(minAmountToConvert_);
         conversionPaused = false;
     }
 
@@ -928,6 +986,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
                 );
                 if (amountIn > amountToConvert) {
                     amountIn = amountToConvert;
+                }
+
+                if (!_validateMinAmountToConvert(amountIn, tokenAddressOut)) {
+                    break;
                 }
 
                 uint256 balanceBefore = IERC20Upgradeable(tokenAddressIn).balanceOf(_destinationAddress);
@@ -980,12 +1042,24 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param amountOut Amount of tokenAddressOut transferred from this converter
     function _preTransferHook(address tokenOutAddress, uint256 amountOut) internal virtual {}
 
+    /// @dev Checks if amount to convert is greater than minimum amount to convert or not
+    /// @param amountIn The amount to convert
+    /// @param tokenAddress Address of the token
+    /// @return isValid true if amount to convert is greater than minimum amount to convert
+    function _validateMinAmountToConvert(uint256 amountIn, address tokenAddress) internal returns (bool isValid) {
+        priceOracle.updateAssetPrice(tokenAddress);
+        uint256 amountInInUsd = (priceOracle.getPrice(tokenAddress) * amountIn) / EXP_SCALE;
+
+        if (amountInInUsd >= minAmountToConvert) {
+            isValid = true;
+        }
+    }
+
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @dev This function retrieves values without altering token prices.
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after conversion
-    /// @return amountConvertedMantissa Amount of tokenAddressIn should be transferred after conversion
     /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after conversion
     /// @return tokenInToOutConversion Ratio of tokenIn price and incentive for conversion with tokenOut price
     /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
@@ -994,15 +1068,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 amountInMantissa,
         address tokenAddressIn,
         address tokenAddressOut
-    )
-        internal
-        view
-        returns (
-            uint256 amountConvertedMantissa,
-            uint256 amountOutMantissa,
-            uint256 tokenInToOutConversion
-        )
-    {
+    ) internal view returns (uint256 amountOutMantissa, uint256 tokenInToOutConversion) {
         if (amountInMantissa == 0) {
             revert InsufficientInputAmount();
         }
@@ -1029,7 +1095,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         amountOutMantissa =
             (amountInMantissa * tokenInUnderlyingPrice * conversionWithIncentive) /
             (tokenOutUnderlyingPrice * EXP_SCALE);
-        amountConvertedMantissa = amountInMantissa;
 
         tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
     }
@@ -1039,23 +1104,15 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after conversion
-    /// @return amountConvertedMantissa Amount of tokenAddressOut should be transferred after conversion
     /// @return amountInMantissa Amount of the tokenAddressIn sender would send to contract before conversion
+    /// @return tokenInToOutConversion Ratio of tokenIn price and incentive for conversion with tokenOut price
     /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
     /// @custom:error ConversionConfigNotEnabled is thrown when conversion is disabled or config does not exist for given pair
     function _getAmountIn(
         uint256 amountOutMantissa,
         address tokenAddressIn,
         address tokenAddressOut
-    )
-        internal
-        view
-        returns (
-            uint256 amountConvertedMantissa,
-            uint256 amountInMantissa,
-            uint256 tokenInToOutConversion
-        )
-    {
+    ) internal view returns (uint256 amountInMantissa, uint256 tokenInToOutConversion) {
         if (amountOutMantissa == 0) {
             revert InsufficientOutputAmount();
         }
@@ -1080,7 +1137,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         /// amount of tokenAddressIn after considering incentive(i.e. amountInMantissa will be less than actual amountInMantissa if incentive > 0)
         amountInMantissa = ((amountOutMantissa * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
-        amountConvertedMantissa = amountOutMantissa;
     }
 
     /// @dev Check if msg.sender is allowed to convert as per onlyForPrivateConversions flag

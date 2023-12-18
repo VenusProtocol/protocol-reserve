@@ -33,9 +33,10 @@ contract MockConverter is AbstractTokenConverter {
     function AbstractTokenConverter_init(
         address accessControlManager_,
         ResilientOracle priceOracle_,
-        address destinationAddress_
+        address destinationAddress_,
+        uint256 minAmountToConvert_
     ) public initializer {
-        __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
+        __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_, minAmountToConvert_);
     }
 
     function balanceOf(address tokenAddress) public view override returns (uint256 tokenBalance) {

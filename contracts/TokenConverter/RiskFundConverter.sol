@@ -54,7 +54,12 @@ contract RiskFundConverter is AbstractTokenConverter {
     event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
 
     /// @notice Emmitted after the funds transferred to the destination address
-    event AssetTransferredToDestination(address indexed comptroller, address indexed asset, uint256 amount);
+    event AssetTransferredToDestination(
+        address indexed receiver,
+        address indexed comptroller,
+        address indexed asset,
+        uint256 amount
+    );
 
     /// @notice Emitted after the poolsAssetsDirectTransfer mapping is updated
     event PoolAssetsDirectTransferUpdated(address indexed comptroller, address indexed asset, bool value);
@@ -99,6 +104,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param priceOracle_ Resilient oracle address
     /// @param destinationAddress_  Address at all incoming tokens will transferred to
     /// @param poolRegistry_ Address of the pool registry
+    /// @param minAmountToConvert_ minimum amount to convert
     /// @param comptrollers Addresses of the pools
     /// @param assets Addresses of the assets need to be added for direct transfer
     /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
@@ -108,12 +114,13 @@ contract RiskFundConverter is AbstractTokenConverter {
         ResilientOracle priceOracle_,
         address destinationAddress_,
         address poolRegistry_,
+        uint256 minAmountToConvert_,
         address[] calldata comptrollers,
         address[][] calldata assets,
         bool[][] calldata values
     ) public initializer {
         // Initialize AbstractTokenConverter
-        __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
+        __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_, minAmountToConvert_);
         ensureNonzeroAddress(poolRegistry_);
         poolRegistry = poolRegistry_;
         _setPoolsAssetsDirectTransfer(comptrollers, assets, values);
@@ -148,44 +155,43 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @dev Get the Amount of the asset in the risk fund for the specific pool
     /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address
-    /// @return Asset's reserve in risk fund
+    /// @return reserves Asset's reserve in risk fund
     /// @custom:error MarketNotExistInPool When asset does not exist in the pool(comptroller)
     /// @custom:error ReentrancyGuardError thrown to prevent reentrancy during the function execution
-    function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256) {
+    function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256 reserves) {
         if (_reentrancyGuardEntered()) revert ReentrancyGuardError();
         if (!ensureAssetListed(comptroller, asset)) revert MarketNotExistInPool(comptroller, asset);
 
-        return poolsAssetsReserves[comptroller][asset];
+        reserves = poolsAssetsReserves[comptroller][asset];
     }
 
     /// @notice Get the balance for specific token
     /// @param tokenAddress Address of the token
-    /// @return Reserves of the token the contract has
-    function balanceOf(address tokenAddress) public view override returns (uint256) {
-        return assetsReserves[tokenAddress];
+    /// @return tokenBalance Reserves of the token the contract has
+    function balanceOf(address tokenAddress) public view override returns (uint256 tokenBalance) {
+        tokenBalance = assetsReserves[tokenAddress];
     }
 
     /// @notice Get the array of all pools addresses
     /// @param tokenAddress Address of the token
-    /// @return Array of the pools addresses in which token is available
-    function getPools(address tokenAddress) public view returns (address[] memory) {
-        address[] memory pools = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenAddress);
+    /// @return poolsWithCore Array of the pools addresses in which token is available
+    function getPools(address tokenAddress) public view returns (address[] memory poolsWithCore) {
+        poolsWithCore = IPoolRegistry(poolRegistry).getPoolsSupportedByAsset(tokenAddress);
 
         if (isAssetListedInCore(tokenAddress)) {
-            uint256 poolsLength = pools.length;
-            address[] memory poolsWithCore = new address[](poolsLength + 1);
+            uint256 poolsLength = poolsWithCore.length;
+            address[] memory extendedPools = new address[](poolsLength + 1);
 
             for (uint256 i; i < poolsLength; ) {
-                poolsWithCore[i] = pools[i];
+                extendedPools[i] = poolsWithCore[i];
                 unchecked {
                     ++i;
                 }
             }
-            poolsWithCore[poolsLength] = CORE_POOL_COMPTROLLER;
-            return poolsWithCore;
-        }
 
-        return pools;
+            extendedPools[poolsLength] = CORE_POOL_COMPTROLLER;
+            poolsWithCore = extendedPools;
+        }
     }
 
     /// @dev This hook is used to update the state for asset reserves before transferring tokenOut to user
@@ -230,7 +236,7 @@ contract RiskFundConverter is AbstractTokenConverter {
                     emit AssetsReservesUpdated(pools[i], tokenOutAddress, distributedDiff);
                     poolAmountInShare = amountIn - distributedInShare;
                 }
-                emit AssetTransferredToDestination(pools[i], tokenInAddress, poolAmountInShare);
+                emit AssetTransferredToDestination(destinationAddress, pools[i], tokenInAddress, poolAmountInShare);
                 IRiskFund(destinationAddress).updatePoolState(pools[i], tokenInAddress, poolAmountInShare);
             }
             unchecked {
@@ -339,17 +345,20 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// and transferring funds to the protocol share reserve
     /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address
-    /// @return Amount of asset, for _privateConversion
+    /// @return balanceDifference Amount of asset, for _privateConversion
     /// @custom:event AssetTransferredToDestination emits when poolsAssetsDirectTransfer is enabled for entered comptroller and asset
     /// @custom:error MarketNotExistInPool When asset does not exist in the pool(comptroller)
-    function _updateAssetsState(address comptroller, address asset) internal override returns (uint256) {
+    function _updateAssetsState(address comptroller, address asset)
+        internal
+        override
+        returns (uint256 balanceDifference)
+    {
         if (!ensureAssetListed(comptroller, asset)) revert MarketNotExistInPool(comptroller, asset);
 
         IERC20Upgradeable token = IERC20Upgradeable(asset);
         uint256 currentBalance = token.balanceOf(address(this));
         uint256 assetReserve = assetsReserves[asset];
         if (currentBalance > assetReserve) {
-            uint256 balanceDifference;
             unchecked {
                 balanceDifference = currentBalance - assetReserve;
             }
@@ -358,15 +367,14 @@ contract RiskFundConverter is AbstractTokenConverter {
                 token.safeTransfer(destinationAddress, balanceDifference);
                 uint256 newDestinationBalance = token.balanceOf(destinationAddress);
 
-                emit AssetTransferredToDestination(comptroller, asset, balanceDifference);
+                emit AssetTransferredToDestination(destinationAddress, comptroller, asset, balanceDifference);
                 IRiskFund(destinationAddress).updatePoolState(
                     comptroller,
                     asset,
                     newDestinationBalance - previousDestinationBalance
                 );
-                return 0;
+                balanceDifference = 0;
             }
-            return balanceDifference;
         }
     }
 
@@ -384,7 +392,12 @@ contract RiskFundConverter is AbstractTokenConverter {
         uint256 convertedTokenOutBalance
     ) internal override {
         if (convertedTokenInBalance > 0) {
-            emit AssetTransferredToDestination(comptroller, tokenAddressIn, convertedTokenInBalance);
+            emit AssetTransferredToDestination(
+                destinationAddress,
+                comptroller,
+                tokenAddressIn,
+                convertedTokenInBalance
+            );
             IRiskFund(destinationAddress).updatePoolState(comptroller, tokenAddressIn, convertedTokenInBalance);
         }
         if (convertedTokenOutBalance > 0) {
@@ -419,18 +432,18 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @dev This function checks for the given asset is listed or not
     /// @param comptroller Address of the comptroller
     /// @param asset Address of the asset
-    /// @return true if the asset is listed
-    function ensureAssetListed(address comptroller, address asset) internal view returns (bool) {
+    /// @return isListed true if the asset is listed
+    function ensureAssetListed(address comptroller, address asset) internal view returns (bool isListed) {
         if (comptroller == CORE_POOL_COMPTROLLER) {
-            return isAssetListedInCore(asset);
+            isListed = isAssetListedInCore(asset);
+        } else {
+            isListed = IPoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0);
         }
-
-        return IPoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0);
     }
 
     /// @dev Get base asset address of the RiskFund
-    /// @return Address of the base asset(RiskFund)
-    function _getDestinationBaseAsset() internal view override returns (address) {
-        return IRiskFundGetters(destinationAddress).convertibleBaseAsset();
+    /// @return destinationBaseAsset Address of the base asset(RiskFund)
+    function _getDestinationBaseAsset() internal view override returns (address destinationBaseAsset) {
+        destinationBaseAsset = IRiskFundGetters(destinationAddress).convertibleBaseAsset();
     }
 }
