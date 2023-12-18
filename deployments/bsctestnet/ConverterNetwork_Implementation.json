@@ -464,9 +464,7 @@
         "blockNumber": 35921348,
         "transactionHash": "0x4fae2cacc0c6c7649d14186ee6e64d79454d06efe2a35fd14fc18bd7ed8c5e7d",
         "address": "0x39b1432442AfeA0b37d23aAe7Da30e92Df96c0Df",
-        "topics": [
-          "0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498"
-        ],
+        "topics": ["0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498"],
         "data": "0x00000000000000000000000000000000000000000000000000000000000000ff",
         "logIndex": 0,
         "blockHash": "0xe079f0e854c6d0c09e3af0a71461dfbe37ec2509b0e7059b4ade09034650d66b"

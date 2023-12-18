@@ -2,9 +2,26 @@
   "name": "bsctestnet",
   "chainId": "97",
   "addresses": {
+    "BTCBPrimeConverter": "0x357eD75C02A26C44fB84527B5d64B80D6222C5a1",
+    "ConverterNetwork": "0x650B1C775E737c439129611f068AFA3763b57Ff5",
+    "ConverterNetwork_Implementation": "0x39b1432442AfeA0b37d23aAe7Da30e92Df96c0Df",
+    "ConverterNetwork_Proxy": "0x650B1C775E737c439129611f068AFA3763b57Ff5",
     "DefaultProxyAdmin": "0x7877ffd62649b6a1557b55d4c20fcbab17344c91",
+    "ETHPrimeConverter": "0x9084aFAaa6b06171B59Ce629295c86c8974CcEF8",
     "ProtocolShareReserve": "0x25c7c7D6Bf710949fD7f03364E9BA19a1b3c10E3",
-    "ProtocolShareReserve_Implementation": "0x6A7FF4641F52b267102a5a0779cE7a060374d6cC",
-    "ProtocolShareReserve_Proxy": "0x25c7c7D6Bf710949fD7f03364E9BA19a1b3c10E3"
+    "ProtocolShareReserve_Implementation": "0x194777360f9DFAA147F462349E9bC9002F72b0EE",
+    "ProtocolShareReserve_Proxy": "0x25c7c7D6Bf710949fD7f03364E9BA19a1b3c10E3",
+    "RiskFundConverter": "0x07c10cd93d7ACE4c1EfAE0248393e96c072A69F3",
+    "RiskFundConverter_Implementation": "0xDCE951479649C8b99ea09a157f2dC136C2b31b82",
+    "RiskFundConverter_Proxy": "0x07c10cd93d7ACE4c1EfAE0248393e96c072A69F3",
+    "RiskFundV2_Implementation": "0x217a907B0c6a7Dc67a21F769a915722B98136F82",
+    "SingleTokenConverterBeacon": "0xbB518461E11b622820684e99Bc0a957f7517a29E",
+    "SingleTokenConverterImp": "0xa7c352e5eb243eF8711a620E7694A88DA5Eca3E7",
+    "USDCPrimeConverter": "0x18F2543DCCD09dEb0e28575008CD24c0700e964B",
+    "USDTPrimeConverter": "0x8B7F7176176c4eF5BeDCC5BC5958dFBD8DD9a740",
+    "XVSVaultConverter": "0x354B807373a9D07A08b0F6a4064B9Ef80fAD7DBf",
+    "XVSVaultTreasury": "0x128E0Ef5139D7758C6Bec20FD8Ee96DA65535b53",
+    "XVSVaultTreasury_Implementation": "0x8858eacc7235F2672143A4279ac3F6f258fA9054",
+    "XVSVaultTreasury_Proxy": "0x128E0Ef5139D7758C6Bec20FD8Ee96DA65535b53"
   }
 }

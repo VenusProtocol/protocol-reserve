@@ -1397,9 +1397,7 @@
         "blockNumber": 35921124,
         "transactionHash": "0x37eaa5cbfec8cec424693fda82dbf6a2805724bc24f659ee0b681d89ad07f7b8",
         "address": "0xa7c352e5eb243eF8711a620E7694A88DA5Eca3E7",
-        "topics": [
-          "0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498"
-        ],
+        "topics": ["0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498"],
         "data": "0x00000000000000000000000000000000000000000000000000000000000000ff",
         "logIndex": 0,
         "blockHash": "0xa6c18640f7e2a4c6aea7e5d9be0bd5e7ddd14a8aab87e44a4edf2eeff90f4800"
