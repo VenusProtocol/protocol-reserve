@@ -15,19 +15,22 @@ import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 contract SingleTokenConverter is AbstractTokenConverter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    /// @notice Address of the BASE_ASSET token
-    address public immutable BASE_ASSET;
+    /// @notice Address of the base asset token
+    address public baseAsset;
+
+    /// @notice Emitted when base asset is updated
+    event BaseAssetUpdated(address indexed oldBaseAsset, address indexed newBaseAsset);
 
     /// @notice Emmitted after the funds transferred to the destination address
-    event AssetTransferredToDestination(uint256 amount);
+    event AssetTransferredToDestination(
+        address indexed receiver,
+        address indexed comptroller,
+        address indexed asset,
+        uint256 amount
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    /// @param baseAsset_ Address of the BASE_ASSET token
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address baseAsset_) {
-        ensureNonzeroAddress(baseAsset_);
-        BASE_ASSET = baseAsset_;
-
+    constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
         // to set the state variables.
         _disableInitializers();
@@ -36,29 +39,25 @@ contract SingleTokenConverter is AbstractTokenConverter {
     /// @param accessControlManager_ Access control manager contract address
     /// @param priceOracle_ Resilient oracle address
     /// @param destinationAddress_  Address at all incoming tokens will transferred to
+    /// @param minAmountToConvert_ Minimum amount to convert
     function initialize(
         address accessControlManager_,
         ResilientOracle priceOracle_,
-        address destinationAddress_
+        address destinationAddress_,
+        address baseAsset_,
+        uint256 minAmountToConvert_
     ) public initializer {
+        _setBaseAsset(baseAsset_);
+
         // Initialize AbstractTokenConverter
-        __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_);
+        __AbstractTokenConverter_init(accessControlManager_, priceOracle_, destinationAddress_, minAmountToConvert_);
     }
 
-    /// @dev This function is called by protocolShareReserve
-    /// @param comptroller Comptroller address (pool)
-    /// @param asset Asset address.
-    // solhint-disable-next-line
-    function updateAssetsState(address comptroller, address asset) public nonReentrant {
-        uint256 balance;
-        if (asset == BASE_ASSET) {
-            IERC20Upgradeable token = IERC20Upgradeable(BASE_ASSET);
-            balance = token.balanceOf(address(this));
-
-            token.safeTransfer(destinationAddress, balance);
-        }
-
-        emit AssetTransferredToDestination(balance);
+    /// @notice Sets the base asset for the contract
+    /// @param baseAsset_ The new address of the base asset
+    /// @custom:access Only Governance
+    function setBaseAsset(address baseAsset_) external onlyOwner {
+        _setBaseAsset(baseAsset_);
     }
 
     /// @notice Get the balance for specific token
@@ -69,8 +68,35 @@ contract SingleTokenConverter is AbstractTokenConverter {
         tokenBalance = token.balanceOf(address(this));
     }
 
+    /// @param comptroller Comptroller address (pool)
+    /// @param asset Asset address.
+    /// @return balanceLeft Amount of asset, for _privateConversion
+    // solhint-disable-next-line
+    function _updateAssetsState(address comptroller, address asset) internal override returns (uint256 balanceLeft) {
+        IERC20Upgradeable token = IERC20Upgradeable(asset);
+        uint256 balance = token.balanceOf(address(this));
+        balanceLeft = balance;
+
+        if (asset == baseAsset) {
+            balanceLeft = 0;
+            token.safeTransfer(destinationAddress, balance);
+            emit AssetTransferredToDestination(destinationAddress, comptroller, asset, balance);
+        }
+    }
+
+    /// @dev Sets the base asset for the contract
+    /// @param baseAsset_ The new address of the base asset
+    /// @custom:error ZeroAddressNotAllowed is thrown when address is zero
+    /// @custom:event BaseAssetUpdated is emitted on success
+    function _setBaseAsset(address baseAsset_) internal {
+        ensureNonzeroAddress(baseAsset_);
+        emit BaseAssetUpdated(baseAsset, baseAsset_);
+        baseAsset = baseAsset_;
+    }
+
     /// @dev Get base asset address
-    function _getDestinationBaseAsset() internal view override returns (address) {
-        return BASE_ASSET;
+    /// @return destinationBaseAsset Address of the base asset(baseAsset)
+    function _getDestinationBaseAsset() internal view override returns (address destinationBaseAsset) {
+        destinationBaseAsset = baseAsset;
     }
 }

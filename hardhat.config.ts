@@ -21,15 +21,21 @@ const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
 const externalDeployments = {
   bsctestnet: [
     "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
+    "node_modules/@venusprotocol/isolated-pools/deployments/bsctestnet",
     "node_modules/@venusprotocol/governance-contracts/deployments/bsctestnet",
+    "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
   ],
   sepolia: [
     "node_modules/@venusprotocol/venus-protocol/deployments/sepolia",
+    "node_modules/@venusprotocol/isolated-pools/deployments/sepolia",
     "node_modules/@venusprotocol/governance-contracts/deployments/sepolia",
+    "node_modules/@venusprotocol/oracle/deployments/sepolia",
   ],
   bscmainnet: [
     "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
+    "node_modules/@venusprotocol/isolated-pools/deployments/bscmainnet",
     "node_modules/@venusprotocol/governance-contracts/deployments/bscmainnet",
+    "node_modules/@venusprotocol/oracle/deployments/bscmainnet",
   ],
 };
 

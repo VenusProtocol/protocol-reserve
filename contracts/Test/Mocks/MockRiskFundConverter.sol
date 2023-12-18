@@ -16,7 +16,11 @@ contract MockRiskFundConverter is RiskFundConverter {
         uint256 amountIn,
         uint256 amountOut
     ) external {
-        super.postConversionHook(tokenInAddress, tokenOutAddress, amountIn, amountOut);
+        super._postConversionHook(tokenInAddress, tokenOutAddress, amountIn, amountOut);
+    }
+
+    function preTransferHookMock(address tokenOutAddress, uint256 amountOut) external {
+        super._preTransferHook(tokenOutAddress, amountOut);
     }
 
     function setAssetsReserves(address asset, uint256 amount) external {

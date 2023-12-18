@@ -9,6 +9,7 @@ import { ethers, upgrades } from "hardhat";
 import {
   IAccessControlManagerV8,
   IComptroller,
+  IConverterNetwork,
   IPoolRegistry,
   IVToken,
   MockDeflatingToken,
@@ -25,6 +26,8 @@ import { convertToUnit } from "../utils";
 const { expect } = chai;
 chai.use(smock.matchers);
 
+const MIN_AMOUNT_TO_CONVERT = convertToUnit("1", 18);
+
 let accessControl: FakeContract<IAccessControlManagerV8>;
 let converter: MockContract<MockRiskFundConverter>;
 let tokenIn: MockContract<MockToken>;
@@ -33,6 +36,7 @@ let oracle: FakeContract<ResilientOracle>;
 let poolRegistry: FakeContract<IPoolRegistry>;
 let newPoolRegistry: FakeContract<IPoolRegistry>;
 let riskFund: FakeContract<RiskFundV2>;
+let converterNetwork: FakeContract<IConverterNetwork>;
 let tokenInDeflationary: MockContract<MockDeflatingToken>;
 let unKnown: Signer;
 let corePool: FakeContract<IComptroller>;
@@ -60,6 +64,7 @@ async function fixture(): Promise<void> {
 
   accessControl = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
   oracle = await smock.fake<ResilientOracle>("ResilientOracle");
+  converterNetwork = await smock.fake<IConverterNetwork>("IConverterNetwork");
 
   const MockToken = await smock.mock<MockToken__factory>("MockToken");
   const MockTokenDeflationary = await smock.mock<MockDeflatingToken__factory>("MockDeflatingToken");
@@ -78,6 +83,7 @@ async function fixture(): Promise<void> {
       oracle.address,
       riskFund.address,
       poolRegistry.address,
+      MIN_AMOUNT_TO_CONVERT,
       [poolA.address],
       [[tokenIn.address]],
       [[true]],
@@ -89,6 +95,8 @@ async function fixture(): Promise<void> {
       constructorArgs: [corePool.address, vBNB.address, WBNB.address],
     },
   );
+
+  await converter.setConverterNetwork(converterNetwork.address);
 }
 
 describe("Risk fund Converter: tests", () => {
@@ -119,6 +127,7 @@ describe("Risk fund Converter: tests", () => {
 
     poolRegistry.getPoolsSupportedByAsset.returns([poolA.address, poolB.address, poolC.address]);
     await converter.setAssetsReserves(tokenOut.address, TOTAL_ASSESTS_RESERVES);
+    await converter.preTransferHookMock(tokenOut.address, AMOUNT_OUT);
     await converter.postConversionHookMock(tokenIn.address, tokenOut.address, AMOUNT_IN, AMOUNT_OUT);
 
     const poolAShare = new BigNumber(POOL_A_AMOUNT).dividedBy(TOTAL_ASSESTS_RESERVES).multipliedBy(AMOUNT_OUT);
@@ -309,12 +318,9 @@ describe("Risk fund Converter: tests", () => {
       await riskFund.convertibleBaseAsset.returns(tokenIn.address);
 
       const ConversionConfig = {
-        tokenAddressIn: tokenIn.address,
-        tokenAddressOut: tokenOut.address,
         incentive: INCENTIVE,
-        enabled: true,
+        conversionAccess: 1,
       };
-
       await converter.connect(admin).setConversionConfig(tokenIn.address, tokenOut.address, ConversionConfig);
 
       await oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);

@@ -5,7 +5,6 @@ import { SafeERC20Upgradeable, IERC20Upgradeable } from "@openzeppelin/contracts
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { MaxLoopsLimitHelper } from "@venusprotocol/solidity-utilities/contracts/MaxLoopsLimitHelper.sol";
-import { MaxLoopsLimitHelper } from "@venusprotocol/solidity-utilities/contracts/MaxLoopsLimitHelper.sol";
 
 import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
 import { IComptroller } from "../Interfaces/IComptroller.sol";
@@ -70,7 +69,7 @@ contract ProtocolShareReserve is
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
 
-    /// @notice Event emitted after the updation of the assets reserves.
+    /// @notice Event emitted after updating of the assets reserves.
     event AssetsReservesUpdated(
         address indexed comptroller,
         address indexed asset,
