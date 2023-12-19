@@ -1,5 +1,5 @@
 import { parseUnits } from "ethers/lib/utils";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
@@ -20,11 +20,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const wBNBAddress = (await ethers.getContract("WBNB")).address;
   const riskFundAddress = (await ethers.getContract("RiskFund")).address;
   const poolRegistryAddress = (await ethers.getContract("PoolRegistry")).address;
-  const poolStableCoinAddress = (await ethers.getContract("Comptroller_StableCoins")).address;
   const poolDeFiAddress = (await ethers.getContract("Comptroller_DeFi")).address;
   const poolGameFiAddress = (await ethers.getContract("Comptroller_GameFi")).address;
   const poolTronAddress = (await ethers.getContract("Comptroller_Tron")).address;
   const timelockAddress = (await ethers.getContract("NormalTimelock")).address;
+
+  let poolStableCoinAddress;
+  if (network.name === "bscmainnet") {
+    poolStableCoinAddress = (await ethers.getContract("Comptroller_Stablecoins")).address;
+  } else {
+    poolStableCoinAddress = (await ethers.getContract("Comptroller_StableCoins")).address;
+  }
 
   const comptrollers = [corePoolAddress, poolStableCoinAddress, poolDeFiAddress, poolGameFiAddress, poolTronAddress];
   const assets = [[usdtAddress, btcbAddress, ethAddress], [usdtAddress], [usdtAddress], [usdtAddress], [usdtAddress]];
