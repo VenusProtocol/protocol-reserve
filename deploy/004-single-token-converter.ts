@@ -48,8 +48,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const SingleTokenConverter = await ethers.getContractFactory("SingleTokenConverter");
 
-  for (const singleTokenConverterName in baseAssets) {
-    const baseAsset = baseAssets[singleTokenConverterName];
+  for (const [singleTokenConverterName, baseAsset] of Object.entries(baseAssets)) {
 
     let destinationAddress = (await ethers.getContract("PrimeLiquidityProvider")).address;
     if (baseAsset == (await ethers.getContract("XVS")).address) {
