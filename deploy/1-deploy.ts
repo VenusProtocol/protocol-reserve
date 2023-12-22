@@ -24,7 +24,7 @@ const func: DeployFunction = async ({
     deterministicDeployment: false,
     args: [comptrollerAddress, WBNBAddress, vBNBAddress],
     proxy: {
-      owner: timelockAddress,
+      owner: live ? timelockAddress : deployer,
       proxyContract: "OpenZeppelinTransparentProxy",
       execute: {
         methodName: "initialize",
