@@ -11,6 +11,7 @@ import { IComptroller } from "../Interfaces/IComptroller.sol";
 import { IPoolRegistry } from "../Interfaces/IPoolRegistry.sol";
 import { IVToken } from "../Interfaces/IVToken.sol";
 import { IIncomeDestination } from "../Interfaces/IIncomeDestination.sol";
+import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 
 error InvalidAddress();
 error UnsupportedAsset();
@@ -122,9 +123,9 @@ contract ProtocolShareReserve is
         address _wbnb,
         address _vbnb
     ) {
-        if (_corePoolComptroller == address(0)) revert InvalidAddress();
-        if (_wbnb == address(0)) revert InvalidAddress();
-        if (_vbnb == address(0)) revert InvalidAddress();
+        ensureNonzeroAddress(_corePoolComptroller);
+        ensureNonzeroAddress(_wbnb);
+        ensureNonzeroAddress(_vbnb);
 
         CORE_POOL_COMPTROLLER = _corePoolComptroller;
         WBNB = _wbnb;
@@ -152,7 +153,7 @@ contract ProtocolShareReserve is
      * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
      */
     function setPoolRegistry(address _poolRegistry) external onlyOwner {
-        if (_poolRegistry == address(0)) revert InvalidAddress();
+        ensureNonzeroAddress(_poolRegistry);
         emit PoolRegistryUpdated(poolRegistry, _poolRegistry);
         poolRegistry = _poolRegistry;
     }
@@ -166,7 +167,7 @@ contract ProtocolShareReserve is
 
         for (uint256 i = 0; i < configs.length; ) {
             DistributionConfig memory _config = configs[i];
-            if (_config.destination == address(0)) revert InvalidAddress();
+            ensureNonzeroAddress(_config.destination);
 
             bool updated = false;
             uint256 distributionTargetsLength = distributionTargets.length;
@@ -324,7 +325,8 @@ contract ProtocolShareReserve is
         IncomeType incomeType
     ) public override(IProtocolShareReserve) nonReentrant {
         if (!IComptroller(comptroller).isComptroller()) revert InvalidAddress();
-        if (asset == address(0)) revert InvalidAddress();
+        ensureNonzeroAddress(asset);
+
         if (
             comptroller != CORE_POOL_COMPTROLLER &&
             IPoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) == address(0)
