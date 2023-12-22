@@ -1,3 +1,10 @@
+## [1.2.0-dev.7](https://github.com/VenusProtocol/protocol-reserve/compare/v1.2.0-dev.6...v1.2.0-dev.7) (2023-12-22)
+
+
+### Bug Fixes
+
+* remove compiler version 0.5.16 ([cdb9c51](https://github.com/VenusProtocol/protocol-reserve/commit/cdb9c5120af9436646647276d4fc29e2e471041d))
+
 ## [1.2.0-dev.6](https://github.com/VenusProtocol/protocol-reserve/compare/v1.2.0-dev.5...v1.2.0-dev.6) (2023-12-12)
 
 
