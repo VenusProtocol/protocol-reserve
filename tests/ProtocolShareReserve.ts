@@ -99,32 +99,32 @@ const configureDistribution = async (setup: SetupProtocolShareReserveFixture) =>
   await setup.protocolShareReserve.addOrUpdateDistributionConfigs([
     {
       schema: SCHEMA_PROTOCOL_RESERVE,
-      percentage: 40,
+      percentage: 4000,
       destination: setup.riskFundSwapper.address,
     },
     {
       schema: SCHEMA_PROTOCOL_RESERVE,
-      percentage: 20,
+      percentage: 2000,
       destination: setup.xvsVaultSwapper.address,
     },
     {
       schema: SCHEMA_PROTOCOL_RESERVE,
-      percentage: 40,
+      percentage: 4000,
       destination: setup.dao.address,
     },
     {
       schema: SCHEMA_ADDITIONAL_REVENUE,
-      percentage: 48,
+      percentage: 4800,
       destination: setup.riskFundSwapper.address,
     },
     {
       schema: SCHEMA_ADDITIONAL_REVENUE,
-      percentage: 26,
+      percentage: 2600,
       destination: setup.xvsVaultSwapper.address,
     },
     {
       schema: SCHEMA_ADDITIONAL_REVENUE,
-      percentage: 26,
+      percentage: 2600,
       destination: setup.dao.address,
     },
   ]);
@@ -152,27 +152,27 @@ describe("ProtocolShareReserve: Tests", function () {
 
     expect(config1.schema).to.equal(SCHEMA_PROTOCOL_RESERVE);
     expect(config1.destination).to.equal(setup.riskFundSwapper.address);
-    expect(config1.percentage).to.equal(40);
+    expect(config1.percentage).to.equal(4000);
 
     expect(config2.schema).to.equal(SCHEMA_PROTOCOL_RESERVE);
     expect(config2.destination).to.equal(setup.xvsVaultSwapper.address);
-    expect(config2.percentage).to.equal(20);
+    expect(config2.percentage).to.equal(2000);
 
     expect(config3.schema).to.equal(SCHEMA_PROTOCOL_RESERVE);
     expect(config3.destination).to.equal(setup.dao.address);
-    expect(config3.percentage).to.equal(40);
+    expect(config3.percentage).to.equal(4000);
 
     expect(config4.schema).to.equal(SCHEMA_ADDITIONAL_REVENUE);
     expect(config4.destination).to.equal(setup.riskFundSwapper.address);
-    expect(config4.percentage).to.equal(48);
+    expect(config4.percentage).to.equal(4800);
 
     expect(config5.schema).to.equal(SCHEMA_ADDITIONAL_REVENUE);
     expect(config5.destination).to.equal(setup.xvsVaultSwapper.address);
-    expect(config5.percentage).to.equal(26);
+    expect(config5.percentage).to.equal(2600);
 
     expect(config6.schema).to.equal(SCHEMA_ADDITIONAL_REVENUE);
     expect(config6.destination).to.equal(setup.dao.address);
-    expect(config6.percentage).to.equal(26);
+    expect(config6.percentage).to.equal(2600);
   });
 
   it("update configuration of schemas", async () => {
@@ -181,7 +181,7 @@ describe("ProtocolShareReserve: Tests", function () {
       protocolShareReserve.addOrUpdateDistributionConfigs([
         {
           schema: SCHEMA_PROTOCOL_RESERVE,
-          percentage: 30,
+          percentage: 3000,
           destination: signers[0].address,
         },
       ]),
@@ -190,12 +190,12 @@ describe("ProtocolShareReserve: Tests", function () {
     await protocolShareReserve.addOrUpdateDistributionConfigs([
       {
         schema: SCHEMA_PROTOCOL_RESERVE,
-        percentage: 30,
+        percentage: 3000,
         destination: setup.riskFundSwapper.address,
       },
       {
         schema: SCHEMA_PROTOCOL_RESERVE,
-        percentage: 30,
+        percentage: 3000,
         destination: setup.xvsVaultSwapper.address,
       },
     ]);
@@ -204,7 +204,7 @@ describe("ProtocolShareReserve: Tests", function () {
 
     expect(config1.schema).to.equal(SCHEMA_PROTOCOL_RESERVE);
     expect(config1.destination).to.equal(setup.riskFundSwapper.address);
-    expect(config1.percentage).to.equal(30);
+    expect(config1.percentage).to.equal(3000);
   });
 
   it("remove configuration", async () => {
@@ -231,7 +231,7 @@ describe("ProtocolShareReserve: Tests", function () {
 
     await protocolShareReserve.removeDistributionConfig(SCHEMA_PROTOCOL_RESERVE, ONE_ADDRESS);
 
-    expect(protocolShareReserve.distributionTargets(6)).to.have.reverted;
+    await expect(protocolShareReserve.distributionTargets(6)).to.have.reverted;
     expect(await protocolShareReserve.totalDistributions()).to.be.equal(6);
 
     await protocolShareReserve.addOrUpdateDistributionConfigs([

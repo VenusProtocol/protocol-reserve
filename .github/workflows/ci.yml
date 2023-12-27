@@ -49,6 +49,26 @@ jobs:
       - name: "Test the contracts and generate the coverage report"
         run: "npx hardhat coverage"
 
+      - name: Code Coverage Report
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: coverage/**/cobertura-coverage.xml
+          badge: true
+          fail_below_min: false
+          format: markdown
+          hide_branch_rate: false
+          hide_complexity: true
+          indicators: true
+          output: both
+          thresholds: "50 80"
+
+      - name: Add Coverage PR Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        if: github.event_name == 'pull_request'
+        with:
+          recreate: true
+          path: code-coverage-results.md
+
   docgen:
     name: Docgen
     runs-on: ubuntu-latest
@@ -69,3 +89,61 @@ jobs:
 
       - name: Create docgen
         run: yarn docgen
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2
+        with:
+          node-version: 18
+          cache: "yarn"
+
+      - name: Install dependencies
+        # Hack to get around failing "ethereumjs-abi The remote archive doesn't match the expected checksum" error
+        run: YARN_CHECKSUM_BEHAVIOR=update yarn
+
+      - name: Build
+        run: yarn build
+
+      - name: Verify deployments work
+        run: yarn hardhat deploy
+
+  export-deployments:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.VENUS_TOOLS_TOKEN }}
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2
+        with:
+          node-version: 18
+          cache: "yarn"
+
+      - name: Install dependencies
+        # Hack to get around failing "ethereumjs-abi The remote archive doesn't match the expected checksum" error
+        run: YARN_CHECKSUM_BEHAVIOR=update yarn
+
+      - name: Export deployments
+        run: |
+          for NETWORK in bsctestnet bscmainnet ethereum sepolia; do
+            EXPORT=true yarn hardhat export --network ${NETWORK} --export ./deployments/${NETWORK}.json
+            jq -M '{name, chainId, addresses: .contracts | map_values(.address)}' ./deployments/${NETWORK}.json > ./deployments/${NETWORK}_addresses.json
+          done
+          yarn prettier
+
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "feat: updating deployment files"
+          file_pattern: "deployments/*.json"
