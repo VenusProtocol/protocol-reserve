@@ -3,7 +3,7 @@
   "chainId": "11155111",
   "contracts": {
     "DefaultProxyAdmin": {
-      "address": "0x0FdEe9E8DB74A04690a63C9520ff793c0Ac36262",
+      "address": "0x01435866babd91311b1355cf3af488cca36db68e",
       "abi": [
         {
           "inputs": [
@@ -168,7 +168,7 @@
       ]
     },
     "ProtocolShareReserve": {
-      "address": "0xCd3978f90e237b73818f32588e7E4A95e8dc058d",
+      "address": "0xbea70755cc3555708ca11219adB0db4C80F6721B",
       "abi": [
         {
           "anonymous": false,
@@ -1089,7 +1089,7 @@
       ]
     },
     "ProtocolShareReserve_Implementation": {
-      "address": "0x6165A16BDca60146cC563b63d0d355927c279C55",
+      "address": "0x5429e6ddc967c7f6a1e2c13bb812b6c6a57cbe19",
       "abi": [
         {
           "inputs": [
@@ -1887,7 +1887,7 @@
       ]
     },
     "ProtocolShareReserve_Proxy": {
-      "address": "0xCd3978f90e237b73818f32588e7E4A95e8dc058d",
+      "address": "0xbea70755cc3555708ca11219adB0db4C80F6721B",
       "abi": [
         {
           "inputs": [
