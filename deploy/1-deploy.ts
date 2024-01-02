@@ -1,4 +1,4 @@
-import hre, { ethers } from "hardhat";
+import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
@@ -32,15 +32,6 @@ const func: DeployFunction = async ({
       },
     },
   });
-
-  const psr = await hre.ethers.getContract("ProtocolShareReserve");
-  const psrOwner = await psr.owner();
-
-  if (psrOwner === deployer) {
-    const tx = await psr.transferOwnership(timelockAddress);
-    await tx.wait();
-    console.log("Transferred ownership of PSR to Timelock");
-  }
 };
 
 func.tags = ["deploy"];
