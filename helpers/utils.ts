@@ -13,6 +13,10 @@ BigNumber.config({
   EXPONENTIAL_AT: 1e9,
 });
 
+export const convertToUnit = (amount: string | number, decimals: number) => {
+  return new BigNumber(amount).times(new BigNumber(10).pow(decimals)).toString();
+};
+
 export const ADDRESS_ONE = "0x0000000000000000000000000000000000000001";
 
 interface ChainAddressesConfig {
