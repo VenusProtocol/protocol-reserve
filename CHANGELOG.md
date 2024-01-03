@@ -1,3 +1,13 @@
+## [1.3.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v1.2.0...v1.3.0-dev.1) (2024-01-03)
+
+
+### Features
+
+* update dependencies ([5462ca9](https://github.com/VenusProtocol/protocol-reserve/commit/5462ca98577100cf6c0f286c36b29db63ddf7c3b))
+* updating deployment files ([e6348b7](https://github.com/VenusProtocol/protocol-reserve/commit/e6348b72a8c9b2ff81b10a17660d8ce49e34ef08))
+* updating deployment files ([b28f9ca](https://github.com/VenusProtocol/protocol-reserve/commit/b28f9ca99f626a7d09fe93255f8d906ad29264db))
+* updating deployment files ([80226d8](https://github.com/VenusProtocol/protocol-reserve/commit/80226d8b95d03b1ee3c925718fd8666afa29790a))
+
 ## [1.2.0](https://github.com/VenusProtocol/protocol-reserve/compare/v1.1.0...v1.2.0) (2023-12-27)
 
 
