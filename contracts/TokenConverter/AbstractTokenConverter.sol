@@ -6,8 +6,8 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
+import { MANTISSA_ONE, EXP_SCALE } from "@venusprotocol/solidity-utilities/contracts/constants.sol";
 
-import { MANTISSA_ONE, EXP_SCALE } from "../Utils/Constants.sol";
 import { ensureNonzeroAddress, ensureNonzeroValue } from "../Utils/Validators.sol";
 import { IAbstractTokenConverter } from "./IAbstractTokenConverter.sol";
 import { IConverterNetwork } from "../Interfaces/IConverterNetwork.sol";
