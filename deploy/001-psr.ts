@@ -43,6 +43,6 @@ const func: DeployFunction = async ({
   }
 };
 
-func.tags = ["deploy"];
+func.tags = ["ProtocolShareReserve"];
 
 export default func;

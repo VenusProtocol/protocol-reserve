@@ -4,15 +4,13 @@ import { DeployResult } from "hardhat-deploy/dist/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
+import { ADDRESS_ONE, ADDRESS_TWO } from "../helpers/utils";
+
 interface BaseAssets {
-  USDTPrimeConverter: string;
-  USDCPrimeConverter: string;
-  BTCBPrimeConverter: string;
-  ETHPrimeConverter: string;
-  XVSVaultConverter: string;
+  [key: string]: string;
 }
 
-const MIN_AMOUNT_TO_CONVERT = parseUnits("10", 18);
+const MIN_AMOUNT_TO_CONVERT = parseUnits("10", 18).toString();
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -20,15 +18,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
 
   const baseAssets: BaseAssets = {
-    USDTPrimeConverter: (await ethers.getContract("USDT")).address,
-    USDCPrimeConverter: (await ethers.getContract("USDC")).address,
-    BTCBPrimeConverter: (await ethers.getContract("BTCB")).address,
-    ETHPrimeConverter: (await ethers.getContract("ETH")).address,
-    XVSVaultConverter: (await ethers.getContract("XVS")).address,
+    USDTPrimeConverter: (await ethers.getContractOrNull("USDT"))?.address || ADDRESS_ONE,
+    USDCPrimeConverter: (await ethers.getContractOrNull("USDC"))?.address || ADDRESS_ONE,
+    BTCBPrimeConverter: (await ethers.getContractOrNull("BTCB"))?.address || ADDRESS_ONE,
+    ETHPrimeConverter: (await ethers.getContractOrNull("ETH"))?.address || ADDRESS_ONE,
+    XVSVaultConverter: (await ethers.getContractOrNull("XVS"))?.address || ADDRESS_TWO,
   };
 
-  const acmAddress = (await ethers.getContract("AccessControlManager")).address;
-  const oracleAddress = (await ethers.getContract("ResilientOracle")).address;
+  const acmAddress = (await ethers.getContractOrNull("AccessControlManager"))?.address || ADDRESS_ONE;
+  const oracleAddress = (await ethers.getContractOrNull("ResilientOracle"))?.address || ADDRESS_ONE;
 
   const singleTokenConverterImp: DeployResult = await deploy("SingleTokenConverterImp", {
     contract: "SingleTokenConverter",
@@ -49,12 +47,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const SingleTokenConverter = await ethers.getContractFactory("SingleTokenConverter");
 
   for (const singleTokenConverterName in baseAssets) {
-    const baseAsset = baseAssets[singleTokenConverterName];
+    const baseAsset: string = baseAssets[singleTokenConverterName];
 
-    let destinationAddress = (await ethers.getContract("PrimeLiquidityProvider")).address;
-    if (baseAsset == (await ethers.getContract("XVS")).address) {
-      destinationAddress = (await ethers.getContract("XVSVaultTreasury")).address;
+    let destinationAddress = (await ethers.getContractOrNull("PrimeLiquidityProvider"))?.address || ADDRESS_ONE;
+
+    if (baseAsset == ((await ethers.getContractOrNull("XVS"))?.address || ADDRESS_TWO)) {
+      destinationAddress = (await ethers.getContractOrNull("XVSVaultTreasury"))?.address || ADDRESS_ONE;
     }
+
     const args: string[] = [acmAddress, oracleAddress, destinationAddress, baseAsset, MIN_AMOUNT_TO_CONVERT];
 
     await deploy(singleTokenConverterName, {
@@ -66,5 +66,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     });
   }
 };
+
 func.tags = ["SingleTokenConverter"];
+
 export default func;

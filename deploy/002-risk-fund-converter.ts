@@ -3,33 +3,38 @@ import { ethers, network } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
+import { ADDRESS_ONE, multisigs } from "../helpers/utils";
+
 const MIN_AMOUNT_TO_CONVERT = parseUnits("10", 18);
 
-const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const { deployments, getNamedAccounts } = hre;
+const func: DeployFunction = async ({
+  network: { live, name },
+  getNamedAccounts,
+  deployments,
+}: HardhatRuntimeEnvironment) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const acmAddress = (await ethers.getContract("AccessControlManager")).address;
-  const oracleAddress = (await ethers.getContract("ResilientOracle")).address;
-  const usdtAddress = (await ethers.getContract("USDT")).address;
-  const corePoolAddress = (await ethers.getContract("Unitroller")).address;
-  const btcbAddress = (await ethers.getContract("BTCB")).address;
-  const ethAddress = (await ethers.getContract("ETH")).address;
-  const vBNBAddress = (await ethers.getContract("vBNB")).address;
-  const wBNBAddress = (await ethers.getContract("WBNB")).address;
-  const riskFundAddress = (await ethers.getContract("RiskFund")).address;
-  const poolRegistryAddress = (await ethers.getContract("PoolRegistry")).address;
-  const poolDeFiAddress = (await ethers.getContract("Comptroller_DeFi")).address;
-  const poolGameFiAddress = (await ethers.getContract("Comptroller_GameFi")).address;
-  const poolTronAddress = (await ethers.getContract("Comptroller_Tron")).address;
-  const timelockAddress = (await ethers.getContract("NormalTimelock")).address;
+  const acmAddress = (await ethers.getContractOrNull("AccessControlManager"))?.address || ADDRESS_ONE;
+  const oracleAddress = (await ethers.getContractOrNull("ResilientOracle"))?.address || ADDRESS_ONE;
+  const usdtAddress = (await ethers.getContractOrNull("USDT"))?.address || ADDRESS_ONE;
+  const corePoolAddress = (await ethers.getContractOrNull("Unitroller"))?.address || ADDRESS_ONE;
+  const btcbAddress = (await ethers.getContractOrNull("BTCB"))?.address || ADDRESS_ONE;
+  const ethAddress = (await ethers.getContractOrNull("ETH"))?.address || ADDRESS_ONE;
+  const vBNBAddress = (await ethers.getContractOrNull("vBNB"))?.address || ADDRESS_ONE;
+  const wBNBAddress = (await ethers.getContractOrNull("WBNB"))?.address || ADDRESS_ONE;
+  const riskFundAddress = (await ethers.getContractOrNull("RiskFund"))?.address || ADDRESS_ONE;
+  const poolRegistryAddress = (await ethers.getContractOrNull("PoolRegistry"))?.address || ADDRESS_ONE;
+  const poolDeFiAddress = (await ethers.getContractOrNull("Comptroller_DeFi"))?.address || ADDRESS_ONE;
+  const poolGameFiAddress = (await ethers.getContractOrNull("Comptroller_GameFi"))?.address || ADDRESS_ONE;
+  const poolTronAddress = (await ethers.getContractOrNull("Comptroller_Tron"))?.address || ADDRESS_ONE;
+  const timelockAddress = (await ethers.getContractOrNull("NormalTimelock"))?.address || multisigs[name];
 
   let poolStableCoinAddress;
   if (network.name === "bscmainnet") {
-    poolStableCoinAddress = (await ethers.getContract("Comptroller_Stablecoins")).address;
+    poolStableCoinAddress = (await ethers.getContractOrNull("Comptroller_Stablecoins"))?.address || ADDRESS_ONE;
   } else {
-    poolStableCoinAddress = (await ethers.getContract("Comptroller_StableCoins")).address;
+    poolStableCoinAddress = (await ethers.getContractOrNull("Comptroller_StableCoins"))?.address || ADDRESS_ONE;
   }
 
   const comptrollers = [corePoolAddress, poolStableCoinAddress, poolDeFiAddress, poolGameFiAddress, poolTronAddress];
@@ -41,7 +46,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     contract: "RiskFundConverter",
     args: [corePoolAddress, vBNBAddress, wBNBAddress],
     proxy: {
-      owner: timelockAddress,
+      owner: live ? timelockAddress : deployer,
       proxyContract: "OpenZeppelinTransparentProxy",
       execute: {
         methodName: "initialize",
@@ -63,13 +68,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   const converter = await ethers.getContract("RiskFundConverter");
-  const converterOwner = await converter.owner();
-  if (converterOwner === deployer) {
+
+  if (live) {
     const tx = await converter.transferOwnership(timelockAddress);
     await tx.wait();
     console.log(`Transferred ownership of RiskFundConverter to Timelock`);
   }
 };
+
 func.tags = ["RiskFundConverter"];
 
 export default func;
