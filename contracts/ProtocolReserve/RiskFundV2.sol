@@ -4,12 +4,10 @@ pragma solidity 0.8.13;
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { ensureNonzeroAddress, ensureNonzeroValue } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
 import { IRiskFundConverter } from "../Interfaces/IRiskFundConverter.sol";
-
-import { ensureNonzeroAddress, ensureNonzeroValue } from "../Utils/Validators.sol";
-
 import { RiskFundV2Storage } from "./RiskFundStorage.sol";
 
 /// @title RiskFundV2

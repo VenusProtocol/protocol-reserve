@@ -4,9 +4,9 @@ pragma solidity 0.8.13;
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
+import { ensureNonzeroAddress } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 
 import { AbstractTokenConverter } from "./AbstractTokenConverter.sol";
-import { ensureNonzeroAddress } from "../Utils/Validators.sol";
 
 /// @title SingleTokenConverter
 /// @author Venus
