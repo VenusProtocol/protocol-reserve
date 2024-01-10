@@ -604,16 +604,15 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
             revert ConversionEnabledOnlyForPrivateConversions();
         }
 
-        amountConvertedMantissa = amountOutMantissa;
-        uint256 tokenInToOutConversion;
-        (amountInMantissa, tokenInToOutConversion) = _getAmountIn(amountOutMantissa, tokenAddressIn, tokenAddressOut);
         uint256 maxTokenOutReserve = balanceOf(tokenAddressOut);
 
         /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountOutMantissa) {
-            amountInMantissa = ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
-            amountConvertedMantissa = maxTokenOutReserve;
+            amountOutMantissa = maxTokenOutReserve;
         }
+
+        amountConvertedMantissa = amountOutMantissa;
+        (amountInMantissa, ) = _getAmountIn(amountOutMantissa, tokenAddressIn, tokenAddressOut);
     }
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
