@@ -3,7 +3,7 @@
   "chainId": "97",
   "contracts": {
     "BTCBPrimeConverter": {
-      "address": "0x357eD75C02A26C44fB84527B5d64B80D6222C5a1",
+      "address": "0x989A1993C023a45DA141928921C0dE8fD123b7d1",
       "abi": [
         {
           "inputs": [
@@ -77,7 +77,7 @@
       ]
     },
     "ConverterNetwork": {
-      "address": "0x650B1C775E737c439129611f068AFA3763b57Ff5",
+      "address": "0xC8f2B705d5A2474B390f735A5aFb570e1ce0b2cf",
       "abi": [
         {
           "anonymous": false,
@@ -667,7 +667,7 @@
       ]
     },
     "ConverterNetwork_Implementation": {
-      "address": "0x39b1432442AfeA0b37d23aAe7Da30e92Df96c0Df",
+      "address": "0xC204E0493782cC562e450537d26e67Effb89A0C3",
       "abi": [
         {
           "inputs": [],
@@ -1118,7 +1118,7 @@
       ]
     },
     "ConverterNetwork_Proxy": {
-      "address": "0x650B1C775E737c439129611f068AFA3763b57Ff5",
+      "address": "0xC8f2B705d5A2474B390f735A5aFb570e1ce0b2cf",
       "abi": [
         {
           "inputs": [
@@ -1432,7 +1432,7 @@
       ]
     },
     "ETHPrimeConverter": {
-      "address": "0x9084aFAaa6b06171B59Ce629295c86c8974CcEF8",
+      "address": "0xf358650A007aa12ecC8dac08CF8929Be7f72A4D9",
       "abi": [
         {
           "inputs": [
@@ -2427,7 +2427,7 @@
       ]
     },
     "ProtocolShareReserve_Implementation": {
-      "address": "0x194777360f9DFAA147F462349E9bC9002F72b0EE",
+      "address": "0x91B67df8B13a1B53a3828EAAD3f4233B55FEc26d",
       "abi": [
         {
           "inputs": [
@@ -2495,6 +2495,11 @@
             }
           ],
           "name": "Unauthorized",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "ZeroAddressNotAllowed",
           "type": "error"
         },
         {
@@ -3374,7 +3379,7 @@
       ]
     },
     "RiskFundConverter": {
-      "address": "0x07c10cd93d7ACE4c1EfAE0248393e96c072A69F3",
+      "address": "0x32Fbf7bBbd79355B86741E3181ef8c1D9bD309Bb",
       "abi": [
         {
           "anonymous": false,
@@ -5122,7 +5127,7 @@
       ]
     },
     "RiskFundConverter_Implementation": {
-      "address": "0xDCE951479649C8b99ea09a157f2dC136C2b31b82",
+      "address": "0xbF732B12f87963dF5d7c729E84E5CF3698F8d349",
       "abi": [
         {
           "inputs": [
@@ -6747,7 +6752,7 @@
       ]
     },
     "RiskFundConverter_Proxy": {
-      "address": "0x07c10cd93d7ACE4c1EfAE0248393e96c072A69F3",
+      "address": "0x32Fbf7bBbd79355B86741E3181ef8c1D9bD309Bb",
       "abi": [
         {
           "inputs": [
@@ -6895,8 +6900,8 @@
         }
       ]
     },
-    "RiskFundV2_Implementation": {
-      "address": "0x217a907B0c6a7Dc67a21F769a915722B98136F82",
+    "RiskFundV2": {
+      "address": "0xcA2A023FBe3be30b7187E88D7FDE1A9a4358B509",
       "abi": [
         {
           "inputs": [],
@@ -7472,7 +7477,7 @@
       ]
     },
     "SingleTokenConverterBeacon": {
-      "address": "0xbB518461E11b622820684e99Bc0a957f7517a29E",
+      "address": "0xD2410D8B581D37c5B474CD9Ee0C15F02138AC028",
       "abi": [
         {
           "inputs": [
@@ -7579,7 +7584,7 @@
       ]
     },
     "SingleTokenConverterImp": {
-      "address": "0xa7c352e5eb243eF8711a620E7694A88DA5Eca3E7",
+      "address": "0xf014C86b6071cfFB8fE39306F802770C70733a23",
       "abi": [
         {
           "inputs": [],
@@ -8963,7 +8968,7 @@
       ]
     },
     "USDCPrimeConverter": {
-      "address": "0x18F2543DCCD09dEb0e28575008CD24c0700e964B",
+      "address": "0x2ecEdE6989d8646c992344fF6C97c72a3f811A13",
       "abi": [
         {
           "inputs": [
@@ -9037,7 +9042,7 @@
       ]
     },
     "USDTPrimeConverter": {
-      "address": "0x8B7F7176176c4eF5BeDCC5BC5958dFBD8DD9a740",
+      "address": "0xf1FA230D25fC5D6CAfe87C5A6F9e1B17Bc6F194E",
       "abi": [
         {
           "inputs": [
@@ -9111,7 +9116,7 @@
       ]
     },
     "XVSVaultConverter": {
-      "address": "0x354B807373a9D07A08b0F6a4064B9Ef80fAD7DBf",
+      "address": "0x258f49254C758a0E37DAb148ADDAEA851F4b02a2",
       "abi": [
         {
           "inputs": [
@@ -9185,7 +9190,7 @@
       ]
     },
     "XVSVaultTreasury": {
-      "address": "0x128E0Ef5139D7758C6Bec20FD8Ee96DA65535b53",
+      "address": "0x317c6C4c9AA7F87170754DB08b4804dD689B68bF",
       "abi": [
         {
           "anonymous": false,
@@ -9627,7 +9632,7 @@
       ]
     },
     "XVSVaultTreasury_Implementation": {
-      "address": "0x8858eacc7235F2672143A4279ac3F6f258fA9054",
+      "address": "0x5369D9b7ABB78FE9De0Db0310D83159029f0d291",
       "abi": [
         {
           "inputs": [
@@ -9936,7 +9941,7 @@
       ]
     },
     "XVSVaultTreasury_Proxy": {
-      "address": "0x128E0Ef5139D7758C6Bec20FD8Ee96DA65535b53",
+      "address": "0x317c6C4c9AA7F87170754DB08b4804dD689B68bF",
       "abi": [
         {
           "inputs": [

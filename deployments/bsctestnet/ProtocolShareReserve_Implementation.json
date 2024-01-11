@@ -816,9 +816,7 @@
         "blockNumber": 36750886,
         "transactionHash": "0x3a8a863fd3f164f31b6a03bde1681390093bf9cfbd5831e1da79166b92b891a9",
         "address": "0x91B67df8B13a1B53a3828EAAD3f4233B55FEc26d",
-        "topics": [
-          "0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498"
-        ],
+        "topics": ["0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498"],
         "data": "0x00000000000000000000000000000000000000000000000000000000000000ff",
         "logIndex": 0,
         "blockHash": "0xe6900a527621e037baf770f6bff2906c5c4f4638d66ccc5b4c038dda769c1c00"
