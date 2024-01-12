@@ -18,6 +18,9 @@ dotenv.config();
 
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
 
+// The order of dependencies should be kept in order such that it does not overwrite the deployments in the current repository such that:
+// if we define the Oracle deployments at last then DefaultProxyAdmin of current repository will be overwritten by DefaultProxyAdmin of Oracle
+// when the export deployment command executes independently for each network.
 const externalDeployments = {
   bsctestnet: [
     "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
