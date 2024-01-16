@@ -1,3 +1,10 @@
+## [1.3.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v1.3.0-dev.1...v1.3.0-dev.2) (2024-01-16)
+
+
+### Features
+
+* add PSR deployments of opbnbtestnet ([ea28049](https://github.com/VenusProtocol/protocol-reserve/commit/ea2804990da19e5c200a40cf590d03d1bf9d4bbb))
+
 ## [1.3.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v1.2.0...v1.3.0-dev.1) (2024-01-03)
 
 
