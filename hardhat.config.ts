@@ -121,6 +121,18 @@ const config: HardhatUserConfig = {
       live: true,
       timeout: 1200000, // 20 minutes
     },
+    opbnbtestnet: {
+      url: process.env.ARCHIVE_NODE_opbnbtestnet || "https://opbnb-testnet-rpc.bnbchain.org",
+      chainId: 5611,
+      live: true,
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    opbnbmainnet: {
+      url: process.env.ARCHIVE_NODE_opbnbmainnet || "https://opbnb-mainnet-rpc.bnbchain.org",
+      chainId: 204,
+      live: true,
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
+    },
   },
   etherscan: {
     apiKey: {
@@ -128,6 +140,8 @@ const config: HardhatUserConfig = {
       bsctestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       sepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       ethereum: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      opbnbtestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      opbnbmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
     customChains: [
       {
@@ -160,6 +174,22 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api.etherscan.io/api",
           browserURL: "https://etherscan.io",
+        },
+      },
+      {
+        network: "opbnbtestnet",
+        chainId: 5611,
+        urls: {
+          apiURL: `https://open-platform.nodereal.io/${process.env.ETHERSCAN_API_KEY}/op-bnb-testnet/contract/`,
+          browserURL: "https://testnet.opbnbscan.com/",
+        },
+      },
+      {
+        network: "opbnbmainnet",
+        chainId: 204,
+        urls: {
+          apiURL: `https://open-platform.nodereal.io/${process.env.ETHERSCAN_API_KEY}/op-bnb-mainnet/contract/`,
+          browserURL: "https://opbnbscan.com/",
         },
       },
     ],
