@@ -39,6 +39,9 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @notice Event emitted when tokens are swept
     event SweepToken(address indexed token, address indexed to, uint256 amount);
 
+    /// @notice Event emitted when tokens are swept and transferred to pool
+    event SweepTokenToPool(address indexed token, address indexed comptroller, uint256 amount);
+
     /// @notice Error is thrown when updatePoolState is not called by riskFundConverter
     error InvalidRiskFundConverter();
 
@@ -139,6 +142,38 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
         token.safeTransfer(to, amount);
 
         emit SweepToken(tokenAddress, to, amount);
+    }
+
+    /// @notice Function to sweep baseAsset to pool
+    /// @param tokenAddress Address of the asset(token)
+    /// @param comptroller Pool address to which assets will be transferred
+    /// @param amount Amount need to sweep for the pool
+    /// @custom:event Emits SweepTokenToPool event on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/comptroller address is zero
+    /// @custom:error ZeroValueNotAllowed is thrown when amount is zero
+    /// @custom:access Only Governance
+    function sweepTokenToPool(
+        address tokenAddress,
+        address comptroller,
+        uint256 amount
+    ) external onlyOwner nonReentrant {
+        ensureNonzeroAddress(tokenAddress);
+        ensureNonzeroAddress(comptroller);
+        ensureNonzeroValue(amount);
+
+        uint256 poolReserve = poolAssetsFunds[comptroller][tokenAddress];
+
+        if (amount > poolReserve) {
+            revert InsufficientPoolReserve(comptroller, amount, poolReserve);
+        }
+
+        unchecked {
+            poolAssetsFunds[comptroller][tokenAddress] = poolReserve - amount;
+        }
+
+        IERC20Upgradeable(tokenAddress).safeTransfer(comptroller, amount);
+
+        emit SweepTokenToPool(tokenAddress, comptroller, amount);
     }
 
     /**
