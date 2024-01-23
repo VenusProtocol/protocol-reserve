@@ -214,7 +214,7 @@ describe("Risk Fund: Tests", function () {
     });
   });
 
-  describe("sweepTokenToPool", () => {
+  describe("sweepTokenFromPool", () => {
     let riskFundConverterSigner: Signer;
     const COMPTROLLER_A_AMOUNT: string = convertToUnit(10, 18);
 
@@ -226,13 +226,13 @@ describe("Risk Fund: Tests", function () {
 
     it("Reverts on sweepToken() when token address is zero", async () => {
       await expect(
-        riskFund.sweepTokenToPool(constants.AddressZero, comptrollerA.address, parseUnits("1", 18)),
+        riskFund.sweepTokenFromPool(constants.AddressZero, comptrollerA.address, parseUnits("1", 18)),
       ).to.be.revertedWithCustomError(riskFund, "ZeroAddressNotAllowed");
     });
 
     it("Reverts on sweepToken() when comptroller address is zero", async () => {
       await expect(
-        riskFund.sweepTokenToPool(tokenA.address, constants.AddressZero, parseUnits("1", 18)),
+        riskFund.sweepTokenFromPool(tokenA.address, constants.AddressZero, parseUnits("1", 18)),
       ).to.be.revertedWithCustomError(riskFund, "ZeroAddressNotAllowed");
     });
 

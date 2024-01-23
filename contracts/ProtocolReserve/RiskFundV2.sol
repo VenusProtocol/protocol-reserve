@@ -40,7 +40,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     event SweepToken(address indexed token, address indexed to, uint256 amount);
 
     /// @notice Event emitted when tokens are swept and transferred to pool
-    event SweepTokenToPool(address indexed token, address indexed comptroller, uint256 amount);
+    event SweepTokenFromPool(address indexed token, address indexed comptroller, uint256 amount);
 
     /// @notice Error is thrown when updatePoolState is not called by riskFundConverter
     error InvalidRiskFundConverter();
@@ -148,11 +148,11 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @param tokenAddress Address of the asset(token)
     /// @param comptroller Pool address to which assets will be transferred
     /// @param amount Amount need to sweep for the pool
-    /// @custom:event Emits SweepTokenToPool event on success
+    /// @custom:event Emits sweepTokenFromPool event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/comptroller address is zero
     /// @custom:error ZeroValueNotAllowed is thrown when amount is zero
     /// @custom:access Only Governance
-    function sweepTokenToPool(
+    function sweepTokenFromPool(
         address tokenAddress,
         address comptroller,
         uint256 amount
@@ -173,7 +173,7 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
 
         IERC20Upgradeable(tokenAddress).safeTransfer(comptroller, amount);
 
-        emit SweepTokenToPool(tokenAddress, comptroller, amount);
+        emit SweepTokenFromPool(tokenAddress, comptroller, amount);
     }
 
     /**
