@@ -1,5 +1,10 @@
 {
   "name": "sepolia",
   "chainId": "11155111",
-  "addresses": {}
+  "addresses": {
+    "DefaultProxyAdmin": "0x01435866babd91311b1355cf3af488cca36db68e",
+    "ProtocolShareReserve": "0xbea70755cc3555708ca11219adB0db4C80F6721B",
+    "ProtocolShareReserve_Implementation": "0x5429e6ddc967c7f6a1e2c13bb812b6c6a57cbe19",
+    "ProtocolShareReserve_Proxy": "0xbea70755cc3555708ca11219adB0db4C80F6721B"
+  }
 }
