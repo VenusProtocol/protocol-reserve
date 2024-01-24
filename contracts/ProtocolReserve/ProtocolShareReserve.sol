@@ -5,10 +5,11 @@ import { SafeERC20Upgradeable, IERC20Upgradeable } from "@openzeppelin/contracts
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { MaxLoopsLimitHelper } from "@venusprotocol/solidity-utilities/contracts/MaxLoopsLimitHelper.sol";
+import { ensureNonzeroAddress } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 
 import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
-import { ComptrollerInterface } from "../Interfaces/ComptrollerInterface.sol";
-import { PoolRegistryInterface } from "../Interfaces/PoolRegistryInterface.sol";
+import { IComptroller } from "../Interfaces/IComptroller.sol";
+import { IPoolRegistry } from "../Interfaces/IPoolRegistry.sol";
 import { IVToken } from "../Interfaces/IVToken.sol";
 import { IIncomeDestination } from "../Interfaces/IIncomeDestination.sol";
 
@@ -69,7 +70,7 @@ contract ProtocolShareReserve is
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
 
-    /// @notice Event emitted after the updation of the assets reserves.
+    /// @notice Event emitted after updating of the assets reserves.
     event AssetsReservesUpdated(
         address indexed comptroller,
         address indexed asset,
@@ -122,9 +123,9 @@ contract ProtocolShareReserve is
         address _wbnb,
         address _vbnb
     ) {
-        if (_corePoolComptroller == address(0)) revert InvalidAddress();
-        if (_wbnb == address(0)) revert InvalidAddress();
-        if (_vbnb == address(0)) revert InvalidAddress();
+        ensureNonzeroAddress(_corePoolComptroller);
+        ensureNonzeroAddress(_wbnb);
+        ensureNonzeroAddress(_vbnb);
 
         CORE_POOL_COMPTROLLER = _corePoolComptroller;
         WBNB = _wbnb;
@@ -149,9 +150,10 @@ contract ProtocolShareReserve is
     /**
      * @dev Pool registry setter.
      * @param _poolRegistry Address of the pool registry
+     * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
      */
     function setPoolRegistry(address _poolRegistry) external onlyOwner {
-        if (_poolRegistry == address(0)) revert InvalidAddress();
+        ensureNonzeroAddress(_poolRegistry);
         emit PoolRegistryUpdated(poolRegistry, _poolRegistry);
         poolRegistry = _poolRegistry;
     }
@@ -165,7 +167,7 @@ contract ProtocolShareReserve is
 
         for (uint256 i = 0; i < configs.length; ) {
             DistributionConfig memory _config = configs[i];
-            if (_config.destination == address(0)) revert InvalidAddress();
+            ensureNonzeroAddress(_config.destination);
 
             bool updated = false;
             uint256 distributionTargetsLength = distributionTargets.length;
@@ -313,7 +315,7 @@ contract ProtocolShareReserve is
 
     /**
      * @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
-     * @param comptroller  Comptroller address(pool)
+     * @param comptroller Comptroller address (pool)
      * @param asset Asset address.
      * @param incomeType type of income
      */
@@ -322,11 +324,12 @@ contract ProtocolShareReserve is
         address asset,
         IncomeType incomeType
     ) public override(IProtocolShareReserve) nonReentrant {
-        if (!ComptrollerInterface(comptroller).isComptroller()) revert InvalidAddress();
-        if (asset == address(0)) revert InvalidAddress();
+        if (!IComptroller(comptroller).isComptroller()) revert InvalidAddress();
+        ensureNonzeroAddress(asset);
+
         if (
             comptroller != CORE_POOL_COMPTROLLER &&
-            PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) == address(0)
+            IPoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) == address(0)
         ) revert InvalidAddress();
 
         Schema schema = _getSchema(incomeType);
