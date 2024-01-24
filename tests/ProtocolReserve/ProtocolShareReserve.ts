@@ -4,15 +4,15 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 
-import { convertToUnit } from "../helpers/utils";
+import { convertToUnit } from "../../helpers/utils";
 import {
-  ComptrollerInterface,
   IAccessControlManagerV8,
+  IComptroller,
   IIncomeDestination,
+  IPoolRegistry,
   MockToken,
-  PoolRegistryInterface,
   ProtocolShareReserve,
-} from "../typechain";
+} from "../../typechain";
 
 const SCHEMA_PROTOCOL_RESERVE = 0;
 const SCHEMA_ADDITIONAL_REVENUE = 1;
@@ -28,11 +28,11 @@ type SetupProtocolShareReserveFixture = {
   mockUSDT: MockToken;
   riskFundSwapper: FakeContract<IIncomeDestination>;
   dao: FakeContract<IIncomeDestination>;
-  poolRegistry: FakeContract<PoolRegistryInterface>;
+  poolRegistry: FakeContract<IPoolRegistry>;
   protocolShareReserve: ProtocolShareReserve;
   xvsVaultSwapper: FakeContract<IIncomeDestination>;
-  corePoolComptroller: FakeContract<ComptrollerInterface>;
-  isolatedPoolComptroller: FakeContract<ComptrollerInterface>;
+  corePoolComptroller: FakeContract<IComptroller>;
+  isolatedPoolComptroller: FakeContract<IComptroller>;
 };
 
 const fixture = async (): Promise<SetupProtocolShareReserveFixture> => {
@@ -56,12 +56,12 @@ const fixture = async (): Promise<SetupProtocolShareReserveFixture> => {
   const mockVBNB = await MockVBNB.deploy("vBNB Market", "vBNB", 18);
   await mockVBNB.faucet(convertToUnit(1000, 18));
 
-  const corePoolComptroller = await smock.fake<ComptrollerInterface>("ComptrollerInterface");
-  const isolatedPoolComptroller = await smock.fake<ComptrollerInterface>("ComptrollerInterface");
+  const corePoolComptroller = await smock.fake<IComptroller>("IComptroller");
+  const isolatedPoolComptroller = await smock.fake<IComptroller>("IComptroller");
   const riskFundSwapper = await smock.fake<IIncomeDestination>("IIncomeDestination");
   const dao = await smock.fake<IIncomeDestination>("IIncomeDestination");
   const xvsVaultSwapper = await smock.fake<IIncomeDestination>("IIncomeDestination");
-  const poolRegistry = await smock.fake<PoolRegistryInterface>("PoolRegistryInterface");
+  const poolRegistry = await smock.fake<IPoolRegistry>("IPoolRegistry");
 
   await corePoolComptroller.isComptroller.returns(true);
   await isolatedPoolComptroller.isComptroller.returns(true);
