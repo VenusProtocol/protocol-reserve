@@ -238,11 +238,11 @@ describe("Risk Fund: Tests", function () {
 
     it("Reverts on sweepToken() when amount entered is higher than balance", async () => {
       await expect(
-        riskFund.sweepToken(tokenA.address, comptrollerA.address, parseUnits("1000", 18)),
-      ).to.be.revertedWithCustomError(riskFund, "InsufficientBalance");
+        riskFund.sweepTokenFromPool(tokenA.address, comptrollerA.address, parseUnits("1000", 18)),
+      ).to.be.revertedWithCustomError(riskFund, "InsufficientPoolReserve");
     });
 
-    it("Sweep tokens to comptroller address", async () => {
+    it("Sweep tokens from comptroller address", async () => {
       await impersonateAccount(riskFundConverter.address);
       riskFundConverterSigner = await ethers.getSigner(riskFundConverter.address);
       await admin.sendTransaction({ to: riskFundConverter.address, value: ethers.utils.parseEther("10") });
@@ -251,17 +251,9 @@ describe("Risk Fund: Tests", function () {
         .connect(riskFundConverterSigner)
         .updatePoolState(comptrollerA.address, tokenA.address, COMPTROLLER_A_AMOUNT);
 
-      await expect(riskFund.sweepToken(tokenA.address, comptrollerA.address, 1000)).to.changeTokenBalances(
+      await expect(riskFund.sweepTokenFromPool(tokenA.address, comptrollerA.address, 1000)).to.changeTokenBalances(
         tokenA,
         [comptrollerA.address, riskFund.address],
-        [1000, -1000],
-      );
-    });
-
-    it("Transfer untracked token to (to) address", async () => {
-      await expect(riskFund.sweepToken(tokenA.address, await admin.getAddress(), 1000)).to.changeTokenBalances(
-        tokenA,
-        [await riskFund.owner(), riskFund.address],
         [1000, -1000],
       );
     });
