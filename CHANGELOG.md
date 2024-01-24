@@ -1,3 +1,11 @@
+## [1.4.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v1.4.0-dev.1...v1.4.0-dev.2) (2024-01-24)
+
+
+### Bug Fixes
+
+* update yarn.lock ([fd5a56d](https://github.com/VenusProtocol/protocol-reserve/commit/fd5a56d2dbc2be4944c9037e4846a6fe7a4c6243))
+* use ex6 modules ([0293c92](https://github.com/VenusProtocol/protocol-reserve/commit/0293c92ce81b1faf360703cf350203569f4bfd21))
+
 ## [1.4.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v1.3.0...v1.4.0-dev.1) (2024-01-24)
 
 
