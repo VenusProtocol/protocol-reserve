@@ -1,3 +1,29 @@
+## [1.3.0](https://github.com/VenusProtocol/protocol-reserve/compare/v1.2.0...v1.3.0) (2024-01-23)
+
+
+### Features
+
+* add PSR deployments of opbnbtestnet ([ea28049](https://github.com/VenusProtocol/protocol-reserve/commit/ea2804990da19e5c200a40cf590d03d1bf9d4bbb))
+* update dependencies ([5462ca9](https://github.com/VenusProtocol/protocol-reserve/commit/5462ca98577100cf6c0f286c36b29db63ddf7c3b))
+* update deps to the stable versions ([7afc729](https://github.com/VenusProtocol/protocol-reserve/commit/7afc7298c994d89a8178a7fb11f69054c0670cba))
+* updating deployment files ([e6348b7](https://github.com/VenusProtocol/protocol-reserve/commit/e6348b72a8c9b2ff81b10a17660d8ce49e34ef08))
+* updating deployment files ([b28f9ca](https://github.com/VenusProtocol/protocol-reserve/commit/b28f9ca99f626a7d09fe93255f8d906ad29264db))
+* updating deployment files ([80226d8](https://github.com/VenusProtocol/protocol-reserve/commit/80226d8b95d03b1ee3c925718fd8666afa29790a))
+
+## [1.3.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v1.3.0-dev.2...v1.3.0-dev.3) (2024-01-23)
+
+
+### Features
+
+* update deps to the stable versions ([7afc729](https://github.com/VenusProtocol/protocol-reserve/commit/7afc7298c994d89a8178a7fb11f69054c0670cba))
+
+## [1.3.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v1.3.0-dev.1...v1.3.0-dev.2) (2024-01-16)
+
+
+### Features
+
+* add PSR deployments of opbnbtestnet ([ea28049](https://github.com/VenusProtocol/protocol-reserve/commit/ea2804990da19e5c200a40cf590d03d1bf9d4bbb))
+
 ## [1.3.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v1.2.0...v1.3.0-dev.1) (2024-01-03)
 
 
