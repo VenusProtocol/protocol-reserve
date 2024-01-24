@@ -5,7 +5,7 @@ import { ADDRESS_ONE, multisigs } from "../helpers/utils";
 
 const MAX_LOOPS_LIMIT = 20;
 
-module.exports = async ({ network: { live, name }, getNamedAccounts, deployments }: HardhatRuntimeEnvironment) => {
+const func = async ({ network: { live, name }, getNamedAccounts, deployments }: HardhatRuntimeEnvironment) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
@@ -35,4 +35,6 @@ module.exports = async ({ network: { live, name }, getNamedAccounts, deployments
   }
 };
 
-module.exports.tags = ["ConverterNetwork"];
+func.tags = ["ConverterNetwork"];
+
+export default func;
