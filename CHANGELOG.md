@@ -1,3 +1,11 @@
+## [1.4.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v1.4.0-dev.2...v1.4.0-dev.3) (2024-01-25)
+
+
+### Features
+
+* deployment files for riskFundV2 ([9aa4058](https://github.com/VenusProtocol/protocol-reserve/commit/9aa4058f4e369c86d8b2aa232ab97d4c2e67297b))
+* updating deployment files ([6d6ef46](https://github.com/VenusProtocol/protocol-reserve/commit/6d6ef46924918558534c5c09aded1184cbda6bae))
+
 ## [1.4.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v1.4.0-dev.1...v1.4.0-dev.2) (2024-01-24)
 
 
