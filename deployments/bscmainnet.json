@@ -6901,7 +6901,7 @@
       ]
     },
     "RiskFundV2": {
-      "address": "0x5FA4E699eAFcf277d2Ed968bb9bc78F2fE9d04A3",
+      "address": "0x2F377545Fd095fA59A56Cb1fD7456A2a0B781Cb6",
       "abi": [
         {
           "inputs": [],
@@ -7178,6 +7178,31 @@
             {
               "indexed": true,
               "internalType": "address",
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "comptroller",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "SweepTokenFromPool",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
               "name": "comptroller",
               "type": "address"
             },
@@ -7410,6 +7435,29 @@
             }
           ],
           "name": "sweepToken",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "comptroller",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "sweepTokenFromPool",
           "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function"
