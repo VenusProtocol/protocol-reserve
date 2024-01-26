@@ -130,6 +130,14 @@
 * VPB-13 ([b8e3e7b](https://github.com/VenusProtocol/protocol-reserve/commit/b8e3e7b5069103c005a7215598cd0ec04f306a51))
 * VPB-14 ([e991342](https://github.com/VenusProtocol/protocol-reserve/commit/e99134211022180b0ca7c2f4b317ddb03d159487))
 
+## [1.4.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v1.4.0-dev.2...v1.4.0-dev.3) (2024-01-25)
+
+
+### Features
+
+* deployment files for riskFundV2 ([9aa4058](https://github.com/VenusProtocol/protocol-reserve/commit/9aa4058f4e369c86d8b2aa232ab97d4c2e67297b))
+* updating deployment files ([6d6ef46](https://github.com/VenusProtocol/protocol-reserve/commit/6d6ef46924918558534c5c09aded1184cbda6bae))
+
 ## [1.4.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v1.4.0-dev.1...v1.4.0-dev.2) (2024-01-24)
 
 
