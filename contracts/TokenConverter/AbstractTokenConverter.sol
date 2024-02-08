@@ -574,9 +574,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountOutMantissa) {
-            amountConvertedMantissa =
-                ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) /
-                tokenInToOutConversion; //round-up
+            amountConvertedMantissa = (maxTokenOutReserve * EXP_SCALE) / tokenInToOutConversion;
             amountOutMantissa = maxTokenOutReserve;
         }
     }
@@ -1135,7 +1133,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
 
         /// amount of tokenAddressIn after considering incentive(i.e. amountInMantissa will be less than actual amountInMantissa if incentive > 0)
-        amountInMantissa = ((amountOutMantissa * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
+        amountInMantissa = (amountOutMantissa * EXP_SCALE) / tokenInToOutConversion;
     }
 
     /// @dev Check if msg.sender is allowed to convert as per onlyForPrivateConversions flag
