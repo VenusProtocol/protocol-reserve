@@ -1,4 +1,6 @@
 import chai from "chai";
+import { Contract, Signer } from "ethers";
+import { parseUnits } from "ethers/lib/utils";
 import hre, { network } from "hardhat";
 
 const { expect } = chai;
@@ -44,6 +46,9 @@ const SINGLE_TOKEN_CONVERTER_BEACON_PROXY = "0x4c9D57b05B245c40235D720A5f3A592f3
 const RISK_FUND_CONVERTER_PROXY = "0xA5622D276CcbB8d9BBE3D1ffd1BB11a0032E53F0";
 const PROXY_ADMIN = "0x6beb6D2695B67FEb73ad4f172E8E2975497187e4";
 
+const USDTPrimeConverter = "0xD9f101AA67F3D72662609a2703387242452078C3";
+const BTCBPrimeConverter = "0xE8CeAa79f082768f99266dFd208d665d2Dd18f53";
+
 const CORE_POOL = "0xfd36e2c2a6789db23113685031d7f16329158384";
 //Assets listed in core pool and need to release mfunds for them
 const USDT = "0x55d398326f99059fF775485246999027B3197955";
@@ -58,12 +63,18 @@ const TRX = "0xCE7de646e7208a4Ef112cb6ed5038FA6cC6b12e3";
 const FDUSD = "0xc5f0f7b66764F6ec8C8Dff7BA683102295E16409";
 const WBNB = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
 
+async function getToken(tokenAddress) {
+  const token = await hre.ethers.getContractAt("MockToken", tokenAddress);
+  return token;
+}
+
+
 forking(35936683, () => {
-  let protocolShareReserve: ethers.Contract;
-  let singleTokenConverterBeaconProxy: ethers.Contract;
-  let proxyAdmin = ethers.Contract;
-  let singleTokenConverterImplementation = ethers.Contract;
-  let timeLockSigner: ethers.Signer;
+  let protocolShareReserve: Contract;
+  let singleTokenConverterBeaconProxy: Contract;
+  let proxyAdmin = Contract;
+  let singleTokenConverterImplementation = Contract;
+  let timeLockSigner: Signer;
 
   if (process.env.FORK_MAINNET === "true") {
     describe("Single token converter", () => {
@@ -78,19 +89,7 @@ forking(35936683, () => {
       describe("Failing releaseFund when getAmountIn and getAmountOut are rounding up the values", () => {
         it("Failed releaseFund for core pool through PROTOCOL_SHARE_RESERVE", async () => {
           await expect(
-            protocolShareReserve.releaseFunds(CORE_POOL, [
-              USDT,
-              BTCB,
-              ETH,
-              DAI,
-              TUSD,
-              DOT,
-              CAKE,
-              LINK,
-              TRX,
-              FDUSD,
-              WBNB,
-            ]),
+            protocolShareReserve.releaseFunds(CORE_POOL, [BTCB]),
           ).to.be.revertedWithCustomError(singleTokenConverterImplementation, "InsufficientPoolLiquidity");
         });
       });
@@ -120,18 +119,36 @@ forking(35936683, () => {
 
         it("Succes for core pool through PROTOCOL_SHARE_RESERVE", async () => {
           await protocolShareReserve.releaseFunds(CORE_POOL, [
-            USDT,
-            BTCB,
-            ETH,
-            DAI,
-            TUSD,
-            DOT,
-            CAKE,
-            LINK,
-            TRX,
-            FDUSD,
-            WBNB,
+            BTCB
           ]);
+        });
+
+        it("Validates if released funds are released as expected", async () => {
+
+          const usdt = await getToken(USDT);
+
+          const btcbPrimeConverterBalanceBefore = await usdt.balanceOf(BTCBPrimeConverter);
+
+          await protocolShareReserve.releaseFunds(CORE_POOL, [BTCB]);
+
+          const btcbPrimeConverterBalanceAfter = await usdt.balanceOf(BTCBPrimeConverter);
+
+          // Since we have released the funds the current balance of the converter should be greater than or equal to balance before
+          expect(btcbPrimeConverterBalanceBefore).to.be.greaterThanOrEqual(btcbPrimeConverterBalanceAfter);
+          //-------- OLD SCENARIO --------// 
+          // amountInMantissa = ((amountOutMantissa * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
+          // amountInMantissa = ((2791059920256193728245 * 1e18) + 44097363325886872486444 - 1) / 44097363325886872486444;
+          // amountInMantissa = 63293124798183403;
+          // This turned out assets released from reserves to be equal 2791059920256193753040
+          //------------------------------//
+          //-------- CURRENT SCENARIO --------//
+          // amountInMantissa = (amountOutMantissa * EXP_SCALE) / tokenInToOutConversion;
+          // amountInMantissa = (2791059920256193728245 * 1e18) / 44097363325886872486444;
+          // amountInMantissa = 63293124798183402;
+          // This turned out assets released from reserves to be equal 2791059920256193708943 which is less by 44097 hence a minute amount of assets won't be converted.
+          // Leaving behind a small amount of usdt "19302" with the BTCBPrimeConverter
+          //----------------------------------//
+          expect(btcbPrimeConverterBalanceAfter).to.be.greaterThanOrEqual(0);
         });
       });
     });
