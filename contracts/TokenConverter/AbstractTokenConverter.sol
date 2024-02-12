@@ -545,6 +545,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn.
     /// This function does not account for potential token transfer fees(in case of deflationary tokens)
+    /// @notice The amountInMantissa might be adjusted if amountOutMantissa is greater than the balance of the contract for tokenAddressOut
     /// @dev This function retrieves values without altering token prices
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param tokenAddressIn Address of the token to convert
@@ -574,7 +575,9 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountOutMantissa) {
-            amountConvertedMantissa = (maxTokenOutReserve * EXP_SCALE) / tokenInToOutConversion;
+            amountConvertedMantissa =
+                ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) /
+                tokenInToOutConversion; //round-up
             amountOutMantissa = maxTokenOutReserve;
         }
     }
@@ -806,6 +809,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
     /// @dev Converts tokens for tokenAddressIn for the amount of tokenAddressOut used for deflationary tokens
     /// it is called by convertForExactTokensSupportingFeeOnTransferTokens function
+    /// @notice Advising users to input a smaller amountOutMantissa to avoid potential transaction revert
     /// @param amountInMaxMantissa Max amount of tokenAddressIn
     /// @param amountOutMantissa Amount of tokenAddressOut required as output
     /// @param tokenAddressIn Address of the token to convert
@@ -1124,7 +1128,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 tokenOutUnderlyingPrice = priceOracle.getPrice(tokenAddressOut);
 
         uint256 incentive = configuration.incentive;
-        if ((address(converterNetwork) != address(0)) && (converterNetwork.isTokenConverter(msg.sender))) {
+
+        bool isPrivateConversion = address(converterNetwork) != address(0) &&
+            converterNetwork.isTokenConverter(msg.sender);
+        if (isPrivateConversion) {
             incentive = 0;
         }
 
@@ -1132,8 +1139,13 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 conversionWithIncentive = MANTISSA_ONE + incentive;
         tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
 
-        /// amount of tokenAddressIn after considering incentive(i.e. amountInMantissa will be less than actual amountInMantissa if incentive > 0)
-        amountInMantissa = (amountOutMantissa * EXP_SCALE) / tokenInToOutConversion;
+        if (isPrivateConversion) {
+            /// amount of tokenAddressIn after considering incentive(i.e. amountInMantissa will be less than actual amountInMantissa if incentive > 0)
+            amountInMantissa = (amountOutMantissa * EXP_SCALE) / tokenInToOutConversion;
+        } else {
+            /// amount of tokenAddressIn after considering incentive(i.e. amountInMantissa will be less than actual amountInMantissa if incentive > 0)
+            amountInMantissa = ((amountOutMantissa * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
+        }
     }
 
     /// @dev Check if msg.sender is allowed to convert as per onlyForPrivateConversions flag

@@ -2974,7 +2974,25 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/protocol-reserve@^1.1.0, @venusprotocol/protocol-reserve@^1.2.0, @venusprotocol/protocol-reserve@workspace:.":
+"@venusprotocol/protocol-reserve@npm:^1.1.0, @venusprotocol/protocol-reserve@npm:^1.2.0":
+  version: 1.4.0
+  resolution: "@venusprotocol/protocol-reserve@npm:1.4.0"
+  dependencies:
+    "@nomiclabs/hardhat-ethers": ^2.2.3
+    "@openzeppelin/contracts": ^4.8.3
+    "@openzeppelin/contracts-upgradeable": ^4.8.3
+    "@openzeppelin/hardhat-upgrades": ^1.21.0
+    "@solidity-parser/parser": ^0.13.2
+    "@venusprotocol/isolated-pools": ^2.3.0
+    "@venusprotocol/solidity-utilities": ^1.3.0
+    ethers: ^5.7.0
+    hardhat-deploy: ^0.11.14
+    module-alias: ^2.2.2
+  checksum: 6b9bc35ac7cdb2d828312c9ebcba1c55e3b63d6d8d237affa7b5baf94b5c2a86e296552c153a5c077f9b6178cc73c7fd20804126509a8a8670c5b50eeae41d2d
+  languageName: node
+  linkType: hard
+
+"@venusprotocol/protocol-reserve@workspace:.":
   version: 0.0.0-use.local
   resolution: "@venusprotocol/protocol-reserve@workspace:."
   dependencies:
