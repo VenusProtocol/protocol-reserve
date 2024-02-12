@@ -1,5 +1,6 @@
 import chai from "chai";
 import { Contract, Signer } from "ethers";
+import { parseUnits } from "ethers/lib/utils";
 import hre, { network } from "hardhat";
 
 const { expect } = chai;
@@ -44,11 +45,15 @@ const PROTOCOL_SHARE_RESERVE = "0xCa01D5A9A248a830E9D93231e791B1afFed7c446";
 const SINGLE_TOKEN_CONVERTER_BEACON_PROXY = "0x4c9D57b05B245c40235D720A5f3A592f3DfF11ca";
 const RISK_FUND_CONVERTER_PROXY = "0xA5622D276CcbB8d9BBE3D1ffd1BB11a0032E53F0";
 const PROXY_ADMIN = "0x6beb6D2695B67FEb73ad4f172E8E2975497187e4";
-const BTCBPrimeConverter = "0xE8CeAa79f082768f99266dFd208d665d2Dd18f53";
+const BTCB_PRIME_CONVERTER = "0xE8CeAa79f082768f99266dFd208d665d2Dd18f53";
 const CORE_POOL = "0xfd36e2c2a6789db23113685031d7f16329158384";
+
 //Assets listed in core pool and need to release mfunds for them
 const USDT = "0x55d398326f99059fF775485246999027B3197955";
 const BTCB = "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c";
+
+const USDT_HOLDER = "0xf89d7b9c864f589bbF53a82105107622B35EaA40";
+
 async function getToken(tokenAddress) {
   const token = await hre.ethers.getContractAt("MockToken", tokenAddress);
   return token;
@@ -110,11 +115,11 @@ forking(35936683, () => {
         it("Validates if released funds are released as expected", async () => {
           const usdt = await getToken(USDT);
 
-          const btcbPrimeConverterBalanceBefore = await usdt.balanceOf(BTCBPrimeConverter);
+          const btcbPrimeConverterBalanceBefore = await usdt.balanceOf(BTCB_PRIME_CONVERTER);
 
           await protocolShareReserve.releaseFunds(CORE_POOL, [BTCB]);
 
-          const btcbPrimeConverterBalanceAfter = await usdt.balanceOf(BTCBPrimeConverter);
+          const btcbPrimeConverterBalanceAfter = await usdt.balanceOf(BTCB_PRIME_CONVERTER);
 
           // Since we have released the funds the current balance of the converter should be greater than or equal to balance before
           expect(btcbPrimeConverterBalanceBefore).to.be.greaterThanOrEqual(btcbPrimeConverterBalanceAfter);
@@ -132,6 +137,33 @@ forking(35936683, () => {
           // Leaving behind a small amount of usdt "19302" with the BTCBPrimeConverter
           //----------------------------------//
           expect(btcbPrimeConverterBalanceAfter).to.be.greaterThanOrEqual(0);
+        });
+
+        describe("getAmountIn", () => {
+          let btcbPrimeConverter: Contract;
+          let riskFundSigner: Signer;
+
+          beforeEach(async () => {
+            await protocolShareReserve.releaseFunds(CORE_POOL, [BTCB]);
+
+            btcbPrimeConverter = await hre.ethers.getContractAt("SingleTokenConverter", BTCB_PRIME_CONVERTER);
+            riskFundSigner = await initMainnetUser(RISK_FUND_CONVERTER_PROXY);
+          });
+
+          it("return values should differ for same amountOut given as input during private and user conversion", async () => {
+            const [, amountInMantissaForUser] = await btcbPrimeConverter.callStatic.getUpdatedAmountIn(
+              parseUnits("100", 18),
+              BTCB,
+              USDT,
+            );
+            const [, amountInMantissaForPrivate] = await btcbPrimeConverter
+              .connect(riskFundSigner)
+              .callStatic.getUpdatedAmountIn(parseUnits("100", 18), BTCB, USDT);
+
+            // The amountIn as output by function called when conversion is done by normal user
+            // should be 1 greater than the amountIn as output received when called as private conversion
+            expect(amountInMantissaForPrivate).to.equal(amountInMantissaForUser - 1);
+          });
         });
       });
     });
