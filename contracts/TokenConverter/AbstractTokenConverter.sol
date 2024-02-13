@@ -1102,6 +1102,8 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
     /// @dev To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
     /// @dev This function retrieves values without altering token prices.
+    /// @dev For user conversions, the function returns an amountInMantissa that is rounded up, ensuring that the equivalent amountInMantissa
+    /// is obtained from users for corresponding amountOutMantissa, preventing any losses to the protocol. However, no rounding up is required for private conversions
     /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after conversion
@@ -1139,11 +1141,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 conversionWithIncentive = MANTISSA_ONE + incentive;
         tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
 
+        /// amount of tokenAddressIn after considering incentive(i.e. amountInMantissa will be less than actual amountInMantissa if incentive > 0)
         if (isPrivateConversion) {
-            /// amount of tokenAddressIn after considering incentive(i.e. amountInMantissa will be less than actual amountInMantissa if incentive > 0)
             amountInMantissa = (amountOutMantissa * EXP_SCALE) / tokenInToOutConversion;
         } else {
-            /// amount of tokenAddressIn after considering incentive(i.e. amountInMantissa will be less than actual amountInMantissa if incentive > 0)
             amountInMantissa = ((amountOutMantissa * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
         }
     }
