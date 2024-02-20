@@ -52,8 +52,6 @@ const CORE_POOL = "0xfd36e2c2a6789db23113685031d7f16329158384";
 const USDT = "0x55d398326f99059fF775485246999027B3197955";
 const BTCB = "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c";
 
-const USDT_HOLDER = "0xf89d7b9c864f589bbF53a82105107622B35EaA40";
-
 async function getToken(tokenAddress) {
   const token = await hre.ethers.getContractAt("MockToken", tokenAddress);
   return token;
@@ -108,7 +106,7 @@ forking(35936683, () => {
             .upgrade(RISK_FUND_CONVERTER_PROXY, riskFundConverterImplementation.address);
         });
 
-        it("Succes for core pool through PROTOCOL_SHARE_RESERVE", async () => {
+        it("Success for core pool through PROTOCOL_SHARE_RESERVE", async () => {
           await protocolShareReserve.releaseFunds(CORE_POOL, [BTCB]);
         });
 
