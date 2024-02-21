@@ -1091,13 +1091,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         /// conversion rate after considering incentive(conversionWithIncentive)
         uint256 conversionWithIncentive = MANTISSA_ONE + incentive;
 
+        tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
+
         /// amount of tokenAddressOut after including incentive as amountOutMantissa will be greater than actual as it gets
         /// multiplied by conversionWithIncentive which will be >= 1
-        amountOutMantissa =
-            (amountInMantissa * tokenInUnderlyingPrice * conversionWithIncentive) /
-            (tokenOutUnderlyingPrice * EXP_SCALE);
-
-        tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
+        amountOutMantissa = (amountInMantissa * tokenInToOutConversion) / EXP_SCALE;
     }
 
     /// @dev To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
