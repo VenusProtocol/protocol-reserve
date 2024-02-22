@@ -1091,11 +1091,13 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         /// conversion rate after considering incentive(conversionWithIncentive)
         uint256 conversionWithIncentive = MANTISSA_ONE + incentive;
 
-        tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
-
         /// amount of tokenAddressOut after including incentive as amountOutMantissa will be greater than actual as it gets
         /// multiplied by conversionWithIncentive which will be >= 1
-        amountOutMantissa = (amountInMantissa * tokenInToOutConversion) / EXP_SCALE;
+        amountOutMantissa =
+            (amountInMantissa * tokenInUnderlyingPrice * conversionWithIncentive) /
+            (tokenOutUnderlyingPrice * EXP_SCALE);
+
+        tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
     }
 
     /// @dev To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
@@ -1137,14 +1139,21 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         /// conversion rate after considering incentive(conversionWithIncentive)
         uint256 conversionWithIncentive = MANTISSA_ONE + incentive;
-        tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
 
         /// amount of tokenAddressIn after considering incentive(i.e. amountInMantissa will be less than actual amountInMantissa if incentive > 0)
         if (isPrivateConversion) {
-            amountInMantissa = (amountOutMantissa * EXP_SCALE) / tokenInToOutConversion;
+            amountInMantissa =
+                (amountOutMantissa * tokenOutUnderlyingPrice * EXP_SCALE) /
+                (tokenInUnderlyingPrice * conversionWithIncentive);
         } else {
-            amountInMantissa = ((amountOutMantissa * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
+            amountInMantissa =
+                ((amountOutMantissa * tokenOutUnderlyingPrice * EXP_SCALE) +
+                    (tokenInUnderlyingPrice * conversionWithIncentive) -
+                    tokenOutUnderlyingPrice) /
+                (tokenInUnderlyingPrice * conversionWithIncentive); //round-up
         }
+
+        tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
     }
 
     /// @dev Check if msg.sender is allowed to convert as per onlyForPrivateConversions flag

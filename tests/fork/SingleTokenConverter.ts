@@ -112,8 +112,9 @@ forking(35936683, () => {
         });
 
         it("Validates successful execution of releaseFunds", async () => {
-          for await (const asset of ASSETS) {
+          for (const asset of ASSETS) {
             await protocolShareReserve.releaseFunds(CORE_POOL, [asset.address]);
+            console.log("Released Funds for ", asset.name);
           }
         });
 
