@@ -1,44 +1,11 @@
 import chai from "chai";
 import { Contract, Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
-import hre, { network } from "hardhat";
+import hre from "hardhat";
+
+import { forking, initMainnetUser } from "../utils";
 
 const { expect } = chai;
-
-const initMainnetUser = async (user: string) => {
-  await impersonateAccount(user);
-  return ethers.getSigner(user);
-};
-
-export async function setForkBlock(blockNumber: number) {
-  await network.provider.request({
-    method: "hardhat_reset",
-    params: [
-      {
-        forking: {
-          jsonRpcUrl: process.env.BSC_ARCHIVE_NODE,
-          blockNumber: blockNumber,
-        },
-      },
-    ],
-  });
-}
-
-const forking = (blockNumber: number, fn: () => void) => {
-  describe(`riskFundConverter #${blockNumber}`, () => {
-    before(async () => {
-      await setForkBlock(blockNumber);
-    });
-    fn();
-  });
-};
-
-async function impersonateAccount(accountAddress) {
-  await hre.network.provider.request({
-    method: "hardhat_impersonateAccount",
-    params: [accountAddress],
-  });
-}
 
 const NORMAL_TIMELOCK = "0x939bD8d64c0A9583A7Dcea9933f7b21697ab6396";
 const PROTOCOL_SHARE_RESERVE = "0xCa01D5A9A248a830E9D93231e791B1afFed7c446";
@@ -48,7 +15,7 @@ const PROXY_ADMIN = "0x6beb6D2695B67FEb73ad4f172E8E2975497187e4";
 const BTCB_PRIME_CONVERTER = "0xE8CeAa79f082768f99266dFd208d665d2Dd18f53";
 const CORE_POOL = "0xfd36e2c2a6789db23113685031d7f16329158384";
 
-//Assets listed in core pool and need to release mfunds for them
+//Assets listed in core pool and need to release funds for them
 const USDT = "0x55d398326f99059fF775485246999027B3197955";
 const BTCB = "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c";
 
@@ -144,7 +111,7 @@ forking(35936683, () => {
           await protocolShareReserve.releaseFunds(CORE_POOL, [BTCB]);
         });
 
-        it("Validates successfull execution of releaseFunds", async () => {
+        it("Validates successful execution of releaseFunds", async () => {
           for await (const asset of ASSETS) {
             await protocolShareReserve.releaseFunds(CORE_POOL, [asset.address]);
           }
