@@ -1,3 +1,10 @@
+## [1.5.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.1...v1.5.0-dev.2) (2024-02-26)
+
+
+### Bug Fixes
+
+* compile typechain for distribution ([f029174](https://github.com/VenusProtocol/protocol-reserve/commit/f029174bc59d71fab87d22bc429287e2aaba738b))
+
 ## [1.5.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v1.4.0...v1.5.0-dev.1) (2024-01-26)
 
 
