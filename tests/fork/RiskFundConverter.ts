@@ -2,46 +2,12 @@ import { smock } from "@defi-wonderland/smock";
 import chai from "chai";
 import { BigNumber } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
-import hre, { network } from "hardhat";
+import hre from "hardhat";
 
 import { ResilientOracleInterface } from "../../typechain";
+import { forking, initMainnetUser } from "../utils";
 
 const { expect } = chai;
-
-const initMainnetUser = async (user: string) => {
-  await impersonateAccount(user);
-  return ethers.getSigner(user);
-};
-
-export async function setForkBlock(blockNumber: number) {
-  await network.provider.request({
-    method: "hardhat_reset",
-    params: [
-      {
-        forking: {
-          jsonRpcUrl: process.env.BSC_ARCHIVE_NODE,
-          blockNumber: blockNumber,
-        },
-      },
-    ],
-  });
-}
-
-const forking = (blockNumber: number, fn: () => void) => {
-  describe(`riskFundConverter #${blockNumber}`, () => {
-    before(async () => {
-      await setForkBlock(blockNumber);
-    });
-    fn();
-  });
-};
-
-async function impersonateAccount(accountAddress) {
-  await hre.network.provider.request({
-    method: "hardhat_impersonateAccount",
-    params: [accountAddress],
-  });
-}
 
 async function getToken(tokenAddress) {
   const token = await hre.ethers.getContractAt("MockToken", tokenAddress);
@@ -76,8 +42,9 @@ forking(33039953, () => {
   let converterTokenData: object;
   let amountIn: BigNumber;
   let amountOutExpected: BigNumber;
+  const FORK_TESTNET = process.env.FORK === "true" && process.env.FORKED_NETWORK === "bsctestnet";
 
-  if (process.env.FORK_TESTNET === "true") {
+  if (FORK_TESTNET) {
     describe("riskFundConverter", () => {
       beforeEach(async () => {
         accessController = await hre.ethers.getContractAt("MockACM", ACM);

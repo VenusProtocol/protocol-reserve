@@ -57,8 +57,9 @@ forking(36468100, () => {
   let proxyAdmin: Contract;
   let singleTokenConverterImplementation = Contract;
   let timeLockSigner: Signer;
+  const FORK_MAINNET = process.env.FORK === "true" && process.env.FORKED_NETWORK === "bscmainnet";
 
-  if (process.env.FORK_MAINNET === "true") {
+  if (FORK_MAINNET) {
     describe("Single token converter", () => {
       before(async () => {
         const singleTokenConverterFactory = await hre.ethers.getContractFactory("SingleTokenConverter");
