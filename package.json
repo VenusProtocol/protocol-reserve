@@ -10,8 +10,7 @@
     "artifacts",
     "dist",
     "deployments",
-    "contracts",
-    "typechain"
+    "contracts"
   ],
   "keywords": [
     "blockchain",
