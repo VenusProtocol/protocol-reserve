@@ -1148,8 +1148,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         } else {
             amountInMantissa =
                 ((amountOutMantissa * tokenOutUnderlyingPrice * EXP_SCALE) +
-                    (tokenInUnderlyingPrice * conversionWithIncentive) -
-                    tokenOutUnderlyingPrice) /
+                    (tokenInUnderlyingPrice * conversionWithIncentive) -1) /
                 (tokenInUnderlyingPrice * conversionWithIncentive); //round-up
         }
 
