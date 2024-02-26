@@ -30,8 +30,7 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
-    "build": "rm -rf dist && tsc --declaration && hardhat compile",
-    "publish:dist": "yarn build && cd dist && yarn publish --access public",
+    "build": "rm -rf dist && hardhat compile && tsc --declaration",
     "lint": "yarn lint:ts && yarn lint:sol && yarn prettier:check",
     "lint:ts": "eslint --ignore-path ./.eslintignore --ext .js,.ts .",
     "lint:sol": "solhint \"contracts/**/*.sol\"",
