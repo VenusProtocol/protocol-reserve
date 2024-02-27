@@ -1,3 +1,10 @@
+## [1.5.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.2...v1.5.0-dev.3) (2024-02-27)
+
+
+### Bug Fixes
+
+* compile before deploy ([c345ad5](https://github.com/VenusProtocol/protocol-reserve/commit/c345ad536b84787bee3528b396cb0fdf7ef3e96d))
+
 ## [1.5.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.1...v1.5.0-dev.2) (2024-02-26)
 
 
