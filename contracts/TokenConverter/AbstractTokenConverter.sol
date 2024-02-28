@@ -575,9 +575,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountOutMantissa) {
-            amountConvertedMantissa =
-                ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) /
-                tokenInToOutConversion; //round-up
+            amountConvertedMantissa = _divRoundingUp(maxTokenOutReserve * EXP_SCALE, tokenInToOutConversion);
             amountOutMantissa = maxTokenOutReserve;
         }
     }
@@ -1143,11 +1141,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
                 (amountOutMantissa * tokenOutUnderlyingPrice * EXP_SCALE) /
                 (tokenInUnderlyingPrice * conversionWithIncentive);
         } else {
-            amountInMantissa =
-                ((amountOutMantissa * tokenOutUnderlyingPrice * EXP_SCALE) +
-                    (tokenInUnderlyingPrice * conversionWithIncentive) -
-                    1) /
-                (tokenInUnderlyingPrice * conversionWithIncentive); //round-up
+            amountInMantissa = _divRoundingUp(
+                amountOutMantissa * tokenOutUnderlyingPrice * EXP_SCALE,
+                tokenInUnderlyingPrice * conversionWithIncentive
+            );
         }
 
         tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
@@ -1179,4 +1176,12 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @dev Get base asset address of the destination contract
     /// @return Address of the base asset
     function _getDestinationBaseAsset() internal view virtual returns (address) {}
+
+    /// @dev Performs division where the result is rounded up
+    /// @param numerator The numerator of the division operation
+    /// @param denominator The denominator of the division operation. Must be non-zero
+    /// @return The result of the division, rounded up
+    function _divRoundingUp(uint256 numerator, uint256 denominator) internal pure returns (uint256) {
+        return (numerator + denominator - 1) / denominator;
+    }
 }
