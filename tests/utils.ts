@@ -33,5 +33,3 @@ export const forking = (blockNumber: number, fn: () => void) => {
     fn();
   });
 };
-
-export { initMainnetUser, forking };
