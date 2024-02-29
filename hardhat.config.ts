@@ -37,6 +37,12 @@ const externalDeployments = {
     "node_modules/@venusprotocol/oracle/deployments/bscmainnet",
     "node_modules/@venusprotocol/isolated-pools/deployments/bscmainnet",
   ],
+  opbnbmainnet: [
+    "node_modules/@venusprotocol/venus-protocol/deployments/opbnbmainnet",
+    "node_modules/@venusprotocol/governance-contracts/deployments/opbnbmainnet",
+    "node_modules/@venusprotocol/oracle/deployments/opbnbmainnet",
+    "node_modules/@venusprotocol/isolated-pools/deployments/opbnbmainnet",
+  ],
 };
 
 extendConfig((config: HardhatConfig) => {
