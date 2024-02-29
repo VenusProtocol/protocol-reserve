@@ -32,10 +32,22 @@ const externalDeployments = {
     "node_modules/@venusprotocol/oracle/deployments/sepolia",
     "node_modules/@venusprotocol/isolated-pools/deployments/sepolia",
   ],
+  opbnbtestnet: [
+    "node_modules/@venusprotocol/venus-protocol/deployments/opbnbtestnet",
+    "node_modules/@venusprotocol/governance-contracts/deployments/opbnbtestnet",
+    "node_modules/@venusprotocol/oracle/deployments/opbnbtestnet",
+    "node_modules/@venusprotocol/isolated-pools/deployments/opbnbtestnet",
+  ],
   bscmainnet: [
     "node_modules/@venusprotocol/governance-contracts/deployments/bscmainnet",
     "node_modules/@venusprotocol/oracle/deployments/bscmainnet",
     "node_modules/@venusprotocol/isolated-pools/deployments/bscmainnet",
+  ],
+  ethereum: [
+    "node_modules/@venusprotocol/venus-protocol/deployments/ethereum",
+    "node_modules/@venusprotocol/governance-contracts/deployments/ethereum",
+    "node_modules/@venusprotocol/oracle/deployments/ethereum",
+    "node_modules/@venusprotocol/isolated-pools/deployments/ethereum",
   ],
   opbnbmainnet: [
     "node_modules/@venusprotocol/venus-protocol/deployments/opbnbmainnet",
