@@ -1,3 +1,25 @@
+## [1.5.0-dev.4](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.3...v1.5.0-dev.4) (2024-03-05)
+
+
+### Features
+
+* update converter implementation deployment files ([9590f0a](https://github.com/VenusProtocol/protocol-reserve/commit/9590f0a51d61b9a33d59e7350667662950922fed))
+* update converters deployment files for bscmainnet ([8dc80e9](https://github.com/VenusProtocol/protocol-reserve/commit/8dc80e99923419147b85021a19733820e16e5ddb))
+* update converters deployment files for bsctestnet ([65da556](https://github.com/VenusProtocol/protocol-reserve/commit/65da55607d26bd43689e4fa5467f6fa7d7904ea1))
+* updating deployment files ([eed49a2](https://github.com/VenusProtocol/protocol-reserve/commit/eed49a2bb43964ad431dd296dabbcf83aa348a6a))
+* updating deployment files ([dced648](https://github.com/VenusProtocol/protocol-reserve/commit/dced648d3085d324b5f27012a1de4f3cfc9630c2))
+* updating deployment files ([987a287](https://github.com/VenusProtocol/protocol-reserve/commit/987a2874e487076318e0f4f8d5e173ab9111e2a4))
+
+
+### Bug Fixes
+
+* _getAmountOut normalisation ([20d9df9](https://github.com/VenusProtocol/protocol-reserve/commit/20d9df919005adf5de618edd7377cebf271d58af))
+* amountOutMantissa in _getAmountOut() ([6c74d7b](https://github.com/VenusProtocol/protocol-reserve/commit/6c74d7b4bd63c69bc931a238e2f46ed4a6e797ef))
+* lint ([09885c0](https://github.com/VenusProtocol/protocol-reserve/commit/09885c04d73f4d858f23a68962cdcc72e899d260))
+* round up for _getAmountIn ([498441f](https://github.com/VenusProtocol/protocol-reserve/commit/498441f21f92d38cb68bb76f3269cb38758e5ce1))
+* round-up condition suggested by certik ([5486b99](https://github.com/VenusProtocol/protocol-reserve/commit/5486b9909b5d1a2257b8ac7287509e4cd697cd2b))
+* spelling ([a3bd0b8](https://github.com/VenusProtocol/protocol-reserve/commit/a3bd0b8e5073410adbc426034cd6cf42a6043e5e))
+
 ## [1.5.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.2...v1.5.0-dev.3) (2024-02-27)
 
 
