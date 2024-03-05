@@ -545,6 +545,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn.
     /// This function does not account for potential token transfer fees(in case of deflationary tokens)
+    /// @notice The amountInMantissa might be adjusted if amountOutMantissa is greater than the balance of the contract for tokenAddressOut
     /// @dev This function retrieves values without altering token prices
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param tokenAddressIn Address of the token to convert
@@ -574,9 +575,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
         if (maxTokenOutReserve < amountOutMantissa) {
-            amountConvertedMantissa =
-                ((maxTokenOutReserve * EXP_SCALE) + tokenInToOutConversion - 1) /
-                tokenInToOutConversion; //round-up
+            amountConvertedMantissa = _divRoundingUp(maxTokenOutReserve * EXP_SCALE, tokenInToOutConversion);
             amountOutMantissa = maxTokenOutReserve;
         }
     }
@@ -808,6 +807,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
     /// @dev Converts tokens for tokenAddressIn for the amount of tokenAddressOut used for deflationary tokens
     /// it is called by convertForExactTokensSupportingFeeOnTransferTokens function
+    /// @notice Advising users to input a smaller amountOutMantissa to avoid potential transaction revert
     /// @param amountInMaxMantissa Max amount of tokenAddressIn
     /// @param amountOutMantissa Amount of tokenAddressOut required as output
     /// @param tokenAddressIn Address of the token to convert
@@ -1089,17 +1089,16 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         /// conversion rate after considering incentive(conversionWithIncentive)
         uint256 conversionWithIncentive = MANTISSA_ONE + incentive;
 
+        tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
         /// amount of tokenAddressOut after including incentive as amountOutMantissa will be greater than actual as it gets
         /// multiplied by conversionWithIncentive which will be >= 1
-        amountOutMantissa =
-            (amountInMantissa * tokenInUnderlyingPrice * conversionWithIncentive) /
-            (tokenOutUnderlyingPrice * EXP_SCALE);
-
-        tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
+        amountOutMantissa = (amountInMantissa * tokenInToOutConversion) / (EXP_SCALE);
     }
 
     /// @dev To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
     /// @dev This function retrieves values without altering token prices.
+    /// @dev For user conversions, the function returns an amountInMantissa that is rounded up, ensuring that the equivalent amountInMantissa
+    /// is obtained from users for corresponding amountOutMantissa, preventing any losses to the protocol. However, no rounding up is required for private conversions
     /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
     /// @param tokenAddressIn Address of the token to convert
     /// @param tokenAddressOut Address of the token to get after conversion
@@ -1126,16 +1125,29 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
         uint256 tokenOutUnderlyingPrice = priceOracle.getPrice(tokenAddressOut);
 
         uint256 incentive = configuration.incentive;
-        if ((address(converterNetwork) != address(0)) && (converterNetwork.isTokenConverter(msg.sender))) {
+
+        bool isPrivateConversion = address(converterNetwork) != address(0) &&
+            converterNetwork.isTokenConverter(msg.sender);
+        if (isPrivateConversion) {
             incentive = 0;
         }
 
         /// conversion rate after considering incentive(conversionWithIncentive)
         uint256 conversionWithIncentive = MANTISSA_ONE + incentive;
-        tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
 
         /// amount of tokenAddressIn after considering incentive(i.e. amountInMantissa will be less than actual amountInMantissa if incentive > 0)
-        amountInMantissa = ((amountOutMantissa * EXP_SCALE) + tokenInToOutConversion - 1) / tokenInToOutConversion; //round-up
+        if (isPrivateConversion) {
+            amountInMantissa =
+                (amountOutMantissa * tokenOutUnderlyingPrice * EXP_SCALE) /
+                (tokenInUnderlyingPrice * conversionWithIncentive);
+        } else {
+            amountInMantissa = _divRoundingUp(
+                amountOutMantissa * tokenOutUnderlyingPrice * EXP_SCALE,
+                tokenInUnderlyingPrice * conversionWithIncentive
+            );
+        }
+
+        tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
     }
 
     /// @dev Check if msg.sender is allowed to convert as per onlyForPrivateConversions flag
@@ -1164,4 +1176,12 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @dev Get base asset address of the destination contract
     /// @return Address of the base asset
     function _getDestinationBaseAsset() internal view virtual returns (address) {}
+
+    /// @dev Performs division where the result is rounded up
+    /// @param numerator The numerator of the division operation
+    /// @param denominator The denominator of the division operation. Must be non-zero
+    /// @return The result of the division, rounded up
+    function _divRoundingUp(uint256 numerator, uint256 denominator) internal pure returns (uint256) {
+        return (numerator + denominator - 1) / denominator;
+    }
 }
