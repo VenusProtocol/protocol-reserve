@@ -1,3 +1,11 @@
+## [1.5.0-dev.5](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.4...v1.5.0-dev.5) (2024-03-05)
+
+
+### Features
+
+* psr deployments on ethereum ([9591482](https://github.com/VenusProtocol/protocol-reserve/commit/9591482b639fc6be0b61cfc19877cefb4da376e4))
+* updating deployment files ([9068f88](https://github.com/VenusProtocol/protocol-reserve/commit/9068f8846b583885136bf7ce251261219b12e13f))
+
 ## [1.5.0-dev.4](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.3...v1.5.0-dev.4) (2024-03-05)
 
 
