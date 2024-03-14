@@ -5,7 +5,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { multisigs } from "../helpers/utils";
 
 const func: DeployFunction = async ({
-  network: { name },
+  network: { name, live },
   getNamedAccounts,
   deployments,
 }: HardhatRuntimeEnvironment) => {
@@ -27,13 +27,15 @@ const func: DeployFunction = async ({
     log: true,
   });
 
-  const targetOwner = (await ethers.getContractOrNull("NormalTimelock"))?.address || multisigs[name];
+  if (live) {
+    const targetOwner = (await ethers.getContractOrNull("NormalTimelock"))?.address || multisigs[name];
 
-  const contract = await ethers.getContract("RiskFundV2");
-  if ((await contract.owner()) !== targetOwner && (await contract.pendingOwner()) !== targetOwner) {
-    console.log(`Transferring ownership of RiskFundV2 to ${targetOwner}`);
-    const tx = await contract.transferOwnership(targetOwner);
-    await tx.wait();
+    const contract = await ethers.getContract("RiskFundV2");
+    if ((await contract.owner()) !== targetOwner && (await contract.pendingOwner()) !== targetOwner) {
+      console.log(`Transferring ownership of RiskFundV2 to ${targetOwner}`);
+      const tx = await contract.transferOwnership(targetOwner);
+      await tx.wait();
+    }
   }
 };
 
