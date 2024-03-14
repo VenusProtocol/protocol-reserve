@@ -1,3 +1,17 @@
+## [1.5.0-dev.6](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.5...v1.5.0-dev.6) (2024-03-14)
+
+
+### Features
+
+* updating deployment files ([84d13e4](https://github.com/VenusProtocol/protocol-reserve/commit/84d13e4b709451d22948748c02c95d977d69b68c))
+* upgrade dependencies and export opbnbmainnet addresses ([eab12a8](https://github.com/VenusProtocol/protocol-reserve/commit/eab12a84929160b7bf7994347f81b68bfa078d96))
+
+
+### Bug Fixes
+
+* CI ([7f355dd](https://github.com/VenusProtocol/protocol-reserve/commit/7f355ddff366c22cbe166139843eb55c60d29867))
+* remove unneeded dependency ([4969d8e](https://github.com/VenusProtocol/protocol-reserve/commit/4969d8e8673ac26a1802a3a2ba5fe17dbd4fbae1))
+
 ## [1.5.0-dev.5](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.4...v1.5.0-dev.5) (2024-03-05)
 
 
