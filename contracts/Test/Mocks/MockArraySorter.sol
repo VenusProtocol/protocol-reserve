@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity ^0.8.10;
+pragma solidity ^0.8.20;
 import { sort } from "../../Utils/ArrayHelpers.sol";
 
 contract MockArraySorter {
