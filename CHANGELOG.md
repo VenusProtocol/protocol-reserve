@@ -1,3 +1,15 @@
+## [1.5.0-dev.7](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.6...v1.5.0-dev.7) (2024-03-20)
+
+
+### Features
+
+* updating deployment files ([4e1f600](https://github.com/VenusProtocol/protocol-reserve/commit/4e1f600cc023c263332a02c211ad11fafc9a9990))
+
+
+### Bug Fixes
+
+* local deployment of RiskFund ([aa98e23](https://github.com/VenusProtocol/protocol-reserve/commit/aa98e235feb46a951265ab2af7e5ef9769e2866b))
+
 ## [1.5.0-dev.6](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.5...v1.5.0-dev.6) (2024-03-14)
 
 
