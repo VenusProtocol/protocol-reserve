@@ -1,3 +1,5 @@
+## [1.5.0-dev.8](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.7...v1.5.0-dev.8) (2024-03-20)
+
 ## [1.5.0-dev.7](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.6...v1.5.0-dev.7) (2024-03-20)
 
 
