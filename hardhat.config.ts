@@ -25,32 +25,26 @@ const externalDeployments = {
   bsctestnet: [
     "node_modules/@venusprotocol/governance-contracts/deployments/bsctestnet",
     "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
-    "node_modules/@venusprotocol/isolated-pools/deployments/bsctestnet",
   ],
   sepolia: [
     "node_modules/@venusprotocol/governance-contracts/deployments/sepolia",
     "node_modules/@venusprotocol/oracle/deployments/sepolia",
-    "node_modules/@venusprotocol/isolated-pools/deployments/sepolia",
   ],
   opbnbtestnet: [
     "node_modules/@venusprotocol/governance-contracts/deployments/opbnbtestnet",
     "node_modules/@venusprotocol/oracle/deployments/opbnbtestnet",
-    "node_modules/@venusprotocol/isolated-pools/deployments/opbnbtestnet",
   ],
   bscmainnet: [
     "node_modules/@venusprotocol/governance-contracts/deployments/bscmainnet",
     "node_modules/@venusprotocol/oracle/deployments/bscmainnet",
-    "node_modules/@venusprotocol/isolated-pools/deployments/bscmainnet",
   ],
   ethereum: [
     "node_modules/@venusprotocol/governance-contracts/deployments/ethereum",
     "node_modules/@venusprotocol/oracle/deployments/ethereum",
-    "node_modules/@venusprotocol/isolated-pools/deployments/ethereum",
   ],
   opbnbmainnet: [
     "node_modules/@venusprotocol/governance-contracts/deployments/opbnbmainnet",
     "node_modules/@venusprotocol/oracle/deployments/opbnbmainnet",
-    "node_modules/@venusprotocol/isolated-pools/deployments/opbnbmainnet",
   ],
 };
 
