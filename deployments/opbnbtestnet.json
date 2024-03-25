@@ -1,9 +1,9 @@
 {
-  "name": "ethereum",
-  "chainId": "1",
+  "name": "opbnbtestnet",
+  "chainId": "5611",
   "contracts": {
     "DefaultProxyAdmin": {
-      "address": "0x567e4cc5e085d09f66f836fa8279f38b4e5866b9",
+      "address": "0xB1281ADC816fba7df64B798D7A0BC4bd2a6d42f4",
       "abi": [
         {
           "inputs": [
@@ -168,7 +168,7 @@
       ]
     },
     "ProtocolShareReserve": {
-      "address": "0x8c8c8530464f7D95552A11eC31Adbd4dC4AC4d3E",
+      "address": "0xc355dEb1A9289f8C58CFAa076EEdBf51F3A8Da7F",
       "abi": [
         {
           "anonymous": false,
@@ -338,11 +338,6 @@
             }
           ],
           "name": "Unauthorized",
-          "type": "error"
-        },
-        {
-          "inputs": [],
-          "name": "ZeroAddressNotAllowed",
           "type": "error"
         },
         {
@@ -1094,7 +1089,7 @@
       ]
     },
     "ProtocolShareReserve_Implementation": {
-      "address": "0xee934792431B4Ebd91591a86c884A8b49Ed494C2",
+      "address": "0xD91a8d928413daEc12028800cb934562138b8b36",
       "abi": [
         {
           "inputs": [
@@ -1162,11 +1157,6 @@
             }
           ],
           "name": "Unauthorized",
-          "type": "error"
-        },
-        {
-          "inputs": [],
-          "name": "ZeroAddressNotAllowed",
           "type": "error"
         },
         {
@@ -1897,7 +1887,7 @@
       ]
     },
     "ProtocolShareReserve_Proxy": {
-      "address": "0x8c8c8530464f7D95552A11eC31Adbd4dC4AC4d3E",
+      "address": "0xc355dEb1A9289f8C58CFAa076EEdBf51F3A8Da7F",
       "abi": [
         {
           "inputs": [

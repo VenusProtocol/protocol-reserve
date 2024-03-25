@@ -1,5 +1,10 @@
 {
   "name": "ethereum",
   "chainId": "1",
-  "addresses": {}
+  "addresses": {
+    "DefaultProxyAdmin": "0x567e4cc5e085d09f66f836fa8279f38b4e5866b9",
+    "ProtocolShareReserve": "0x8c8c8530464f7D95552A11eC31Adbd4dC4AC4d3E",
+    "ProtocolShareReserve_Implementation": "0xee934792431B4Ebd91591a86c884A8b49Ed494C2",
+    "ProtocolShareReserve_Proxy": "0x8c8c8530464f7D95552A11eC31Adbd4dC4AC4d3E"
+  }
 }
