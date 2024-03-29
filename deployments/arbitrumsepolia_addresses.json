@@ -1,0 +1,10 @@
+{
+  "name": "arbitrumsepolia",
+  "chainId": "421614",
+  "addresses": {
+    "DefaultProxyAdmin": "0xA78A1Df376c3CEeBC5Fab574fe6EdDbbF76fd03e",
+    "ProtocolShareReserve": "0x26C3dc654091D940CB5015591F40DAE85Eb47D4B",
+    "ProtocolShareReserve_Implementation": "0x1F408F955AA38c363c991DB3b2A2627bDCd4725F",
+    "ProtocolShareReserve_Proxy": "0x26C3dc654091D940CB5015591F40DAE85Eb47D4B"
+  }
+}
