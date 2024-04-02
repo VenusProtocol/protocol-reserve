@@ -1,3 +1,10 @@
+## [1.6.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0...v1.6.0-dev.1) (2024-04-02)
+
+
+### Features
+
+* distrubute typechain contract types ([3ab7d80](https://github.com/VenusProtocol/protocol-reserve/commit/3ab7d80350767f4fa812be56f81656f87a03b6d1))
+
 ## [1.5.0](https://github.com/VenusProtocol/protocol-reserve/compare/v1.4.0...v1.5.0) (2024-04-02)
 
 
