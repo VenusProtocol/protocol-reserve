@@ -1,9 +1,9 @@
 {
-  "name": "ethereum",
-  "chainId": "1",
+  "name": "opbnbmainnet",
+  "chainId": "204",
   "contracts": {
     "DefaultProxyAdmin": {
-      "address": "0x567e4cc5e085d09f66f836fa8279f38b4e5866b9",
+      "address": "0xF77bD1D893F67b3EB2Cd256239c98Ba3F238fb52",
       "abi": [
         {
           "inputs": [
@@ -168,7 +168,7 @@
       ]
     },
     "ProtocolShareReserve": {
-      "address": "0x8c8c8530464f7D95552A11eC31Adbd4dC4AC4d3E",
+      "address": "0xA2EDD515B75aBD009161B15909C19959484B0C1e",
       "abi": [
         {
           "anonymous": false,
@@ -1094,7 +1094,7 @@
       ]
     },
     "ProtocolShareReserve_Implementation": {
-      "address": "0xee934792431B4Ebd91591a86c884A8b49Ed494C2",
+      "address": "0xdA1675801de412da298Dc380CA530E1BeDe02fd0",
       "abi": [
         {
           "inputs": [
@@ -1897,7 +1897,7 @@
       ]
     },
     "ProtocolShareReserve_Proxy": {
-      "address": "0x8c8c8530464f7D95552A11eC31Adbd4dC4AC4d3E",
+      "address": "0xA2EDD515B75aBD009161B15909C19959484B0C1e",
       "abi": [
         {
           "inputs": [

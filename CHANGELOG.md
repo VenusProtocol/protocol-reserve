@@ -1,3 +1,83 @@
+## [1.5.0-dev.8](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.7...v1.5.0-dev.8) (2024-03-20)
+
+## [1.5.0-dev.7](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.6...v1.5.0-dev.7) (2024-03-20)
+
+
+### Features
+
+* updating deployment files ([4e1f600](https://github.com/VenusProtocol/protocol-reserve/commit/4e1f600cc023c263332a02c211ad11fafc9a9990))
+
+
+### Bug Fixes
+
+* local deployment of RiskFund ([aa98e23](https://github.com/VenusProtocol/protocol-reserve/commit/aa98e235feb46a951265ab2af7e5ef9769e2866b))
+
+## [1.5.0-dev.6](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.5...v1.5.0-dev.6) (2024-03-14)
+
+
+### Features
+
+* updating deployment files ([84d13e4](https://github.com/VenusProtocol/protocol-reserve/commit/84d13e4b709451d22948748c02c95d977d69b68c))
+* upgrade dependencies and export opbnbmainnet addresses ([eab12a8](https://github.com/VenusProtocol/protocol-reserve/commit/eab12a84929160b7bf7994347f81b68bfa078d96))
+
+
+### Bug Fixes
+
+* CI ([7f355dd](https://github.com/VenusProtocol/protocol-reserve/commit/7f355ddff366c22cbe166139843eb55c60d29867))
+* remove unneeded dependency ([4969d8e](https://github.com/VenusProtocol/protocol-reserve/commit/4969d8e8673ac26a1802a3a2ba5fe17dbd4fbae1))
+
+## [1.5.0-dev.5](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.4...v1.5.0-dev.5) (2024-03-05)
+
+
+### Features
+
+* psr deployments on ethereum ([9591482](https://github.com/VenusProtocol/protocol-reserve/commit/9591482b639fc6be0b61cfc19877cefb4da376e4))
+* updating deployment files ([9068f88](https://github.com/VenusProtocol/protocol-reserve/commit/9068f8846b583885136bf7ce251261219b12e13f))
+
+## [1.5.0-dev.4](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.3...v1.5.0-dev.4) (2024-03-05)
+
+
+### Features
+
+* update converter implementation deployment files ([9590f0a](https://github.com/VenusProtocol/protocol-reserve/commit/9590f0a51d61b9a33d59e7350667662950922fed))
+* update converters deployment files for bscmainnet ([8dc80e9](https://github.com/VenusProtocol/protocol-reserve/commit/8dc80e99923419147b85021a19733820e16e5ddb))
+* update converters deployment files for bsctestnet ([65da556](https://github.com/VenusProtocol/protocol-reserve/commit/65da55607d26bd43689e4fa5467f6fa7d7904ea1))
+* updating deployment files ([eed49a2](https://github.com/VenusProtocol/protocol-reserve/commit/eed49a2bb43964ad431dd296dabbcf83aa348a6a))
+* updating deployment files ([dced648](https://github.com/VenusProtocol/protocol-reserve/commit/dced648d3085d324b5f27012a1de4f3cfc9630c2))
+* updating deployment files ([987a287](https://github.com/VenusProtocol/protocol-reserve/commit/987a2874e487076318e0f4f8d5e173ab9111e2a4))
+
+
+### Bug Fixes
+
+* _getAmountOut normalisation ([20d9df9](https://github.com/VenusProtocol/protocol-reserve/commit/20d9df919005adf5de618edd7377cebf271d58af))
+* amountOutMantissa in _getAmountOut() ([6c74d7b](https://github.com/VenusProtocol/protocol-reserve/commit/6c74d7b4bd63c69bc931a238e2f46ed4a6e797ef))
+* lint ([09885c0](https://github.com/VenusProtocol/protocol-reserve/commit/09885c04d73f4d858f23a68962cdcc72e899d260))
+* round up for _getAmountIn ([498441f](https://github.com/VenusProtocol/protocol-reserve/commit/498441f21f92d38cb68bb76f3269cb38758e5ce1))
+* round-up condition suggested by certik ([5486b99](https://github.com/VenusProtocol/protocol-reserve/commit/5486b9909b5d1a2257b8ac7287509e4cd697cd2b))
+* spelling ([a3bd0b8](https://github.com/VenusProtocol/protocol-reserve/commit/a3bd0b8e5073410adbc426034cd6cf42a6043e5e))
+
+## [1.5.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.2...v1.5.0-dev.3) (2024-02-27)
+
+
+### Bug Fixes
+
+* compile before deploy ([c345ad5](https://github.com/VenusProtocol/protocol-reserve/commit/c345ad536b84787bee3528b396cb0fdf7ef3e96d))
+
+## [1.5.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0-dev.1...v1.5.0-dev.2) (2024-02-26)
+
+
+### Bug Fixes
+
+* compile typechain for distribution ([f029174](https://github.com/VenusProtocol/protocol-reserve/commit/f029174bc59d71fab87d22bc429287e2aaba738b))
+
+## [1.5.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v1.4.0...v1.5.0-dev.1) (2024-01-26)
+
+
+### Features
+
+* deployment files for riskFundV2 ([9aa4058](https://github.com/VenusProtocol/protocol-reserve/commit/9aa4058f4e369c86d8b2aa232ab97d4c2e67297b))
+* updating deployment files ([6d6ef46](https://github.com/VenusProtocol/protocol-reserve/commit/6d6ef46924918558534c5c09aded1184cbda6bae))
+
 ## [1.4.0](https://github.com/VenusProtocol/protocol-reserve/compare/v1.3.0...v1.4.0) (2024-01-24)
 
 
@@ -129,6 +209,14 @@
 * VPB-12 ([20cd1b1](https://github.com/VenusProtocol/protocol-reserve/commit/20cd1b15c8e0272b3d7c2d6433a6390ca98c368d))
 * VPB-13 ([b8e3e7b](https://github.com/VenusProtocol/protocol-reserve/commit/b8e3e7b5069103c005a7215598cd0ec04f306a51))
 * VPB-14 ([e991342](https://github.com/VenusProtocol/protocol-reserve/commit/e99134211022180b0ca7c2f4b317ddb03d159487))
+
+## [1.4.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v1.4.0-dev.2...v1.4.0-dev.3) (2024-01-25)
+
+
+### Features
+
+* deployment files for riskFundV2 ([9aa4058](https://github.com/VenusProtocol/protocol-reserve/commit/9aa4058f4e369c86d8b2aa232ab97d4c2e67297b))
+* updating deployment files ([6d6ef46](https://github.com/VenusProtocol/protocol-reserve/commit/6d6ef46924918558534c5c09aded1184cbda6bae))
 
 ## [1.4.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v1.4.0-dev.1...v1.4.0-dev.2) (2024-01-24)
 
