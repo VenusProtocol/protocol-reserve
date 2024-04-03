@@ -29,6 +29,9 @@ contract XVSVaultTreasury is AccessControlledV8, ReentrancyGuardUpgradeable {
     /// @notice Emitted when funds transferred to XVSStore address
     event FundsTransferredToXVSStore(address indexed xvsStore, uint256 amountMantissa);
 
+    /// @notice Event emitted when tokens are swept
+    event SweepToken(address indexed token, address indexed to, uint256 amount);
+
     /// @notice Thrown when given input amount is zero
     error InsufficientBalance();
 
@@ -81,6 +84,29 @@ contract XVSVaultTreasury is AccessControlledV8, ReentrancyGuardUpgradeable {
         IERC20Upgradeable(XVS_ADDRESS).safeTransfer(xvsStore, amountMantissa);
 
         emit FundsTransferredToXVSStore(xvsStore, amountMantissa);
+    }
+
+    /// @notice Function to sweep tokens from the contract
+    /// @param tokenAddress Address of the asset(token)
+    /// @param to Address to which assets will be transferred
+    /// @param amount Amount need to sweep for the contract
+    /// @custom:event Emits SweepToken event on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/to address is zero
+    /// @custom:error ZeroValueNotAllowed is thrown when amount is zero
+    /// @custom:access Only Governance
+    function sweepToken(
+        address tokenAddress,
+        address to,
+        uint256 amount
+    ) external onlyOwner nonReentrant {
+        ensureNonzeroAddress(tokenAddress);
+        ensureNonzeroAddress(to);
+        ensureNonzeroValue(amount);
+
+        IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
+        token.safeTransfer(to, amount);
+
+        emit SweepToken(tokenAddress, to, amount);
     }
 
     /// @dev XVS vault setter
