@@ -113,7 +113,7 @@ describe("XVS vault treasury: tests", () => {
     });
   });
 
-  describe.only("Sweep tokens", () => {
+  describe("Sweep tokens", () => {
     beforeEach(async () => {
       await xvs.transfer(xvsVaultTreasury.address, FUND_XVS_AMOUNT);
     });
