@@ -120,9 +120,7 @@ const config: HardhatUserConfig = {
     },
     bscmainnet: {
       url: process.env.ARCHIVE_NODE_bscmainnet || "https://bsc-dataseed.binance.org/",
-      accounts: {
-        mnemonic: process.env.MNEMONIC || "",
-      },
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
       live: true,
     },
     sepolia: {
