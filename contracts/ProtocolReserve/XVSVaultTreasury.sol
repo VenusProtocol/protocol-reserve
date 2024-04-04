@@ -89,7 +89,7 @@ contract XVSVaultTreasury is AccessControlledV8, ReentrancyGuardUpgradeable {
     /// @notice Function to sweep tokens from the contract
     /// @param tokenAddress Address of the asset(token)
     /// @param to Address to which assets will be transferred
-    /// @param amount Amount need to sweep for the contract
+    /// @param amount Amount need to sweep from the contract
     /// @custom:event Emits SweepToken event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/to address is zero
     /// @custom:error ZeroValueNotAllowed is thrown when amount is zero
