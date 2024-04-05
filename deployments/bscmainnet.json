@@ -10597,7 +10597,7 @@
       ]
     },
     "XVSVaultTreasury_Implementation": {
-      "address": "0xCA59D9e8889Bc6034CCD749c4Ddd09c865432bA8",
+      "address": "0xA95a4F34337d8FaC283C3e3D2a605b95DA916cD6",
       "abi": [
         {
           "inputs": [
@@ -10741,6 +10741,31 @@
             {
               "indexed": true,
               "internalType": "address",
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "SweepToken",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
               "name": "oldXVSVault",
               "type": "address"
             },
@@ -10873,6 +10898,29 @@
             }
           ],
           "name": "setXVSVault",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "sweepToken",
           "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function"
