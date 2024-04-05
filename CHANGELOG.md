@@ -1,3 +1,27 @@
+## [1.6.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v1.6.0-dev.1...v1.6.0-dev.2) (2024-04-05)
+
+
+### Features
+
+* added sweep function ([b4a075c](https://github.com/VenusProtocol/protocol-reserve/commit/b4a075c37c11ed8f343f1a390bd615e3a87348d0))
+* updating deployment files ([a5b0ca5](https://github.com/VenusProtocol/protocol-reserve/commit/a5b0ca57669c66eba592751dcea3c80a6e5df5f3))
+* updating deployment files ([977305e](https://github.com/VenusProtocol/protocol-reserve/commit/977305e8d5469402fff68c817c85754b50453ee2))
+* updating deployment files ([a6d6f8a](https://github.com/VenusProtocol/protocol-reserve/commit/a6d6f8a6589b6c2718e38bd992ca1d667a78a954))
+
+
+### Bug Fixes
+
+* deployed new implemented with correct xvs addr ([b1c39a8](https://github.com/VenusProtocol/protocol-reserve/commit/b1c39a8141c4f5326220e7db0b6016726f32344a))
+* deployed on testnet ([ac8e7a1](https://github.com/VenusProtocol/protocol-reserve/commit/ac8e7a1bce118c1c7fabfdb391d9a844fd05ae06))
+* deployed XVSVaultTreasury Implementation ([ac61caf](https://github.com/VenusProtocol/protocol-reserve/commit/ac61cafb8ef888650af1211b1e55a1a78026bfac))
+* fixed external deployment ([686cb1c](https://github.com/VenusProtocol/protocol-reserve/commit/686cb1c802ae05dff8e99bd27db6ee03dfc7e2fe))
+* fixed netspec ([9d3947e](https://github.com/VenusProtocol/protocol-reserve/commit/9d3947e040d7dfd50838b1d3166f2f80c110d843))
+* import venus-protocol deployments ([7798ab8](https://github.com/VenusProtocol/protocol-reserve/commit/7798ab882ae77d4d3c1f9af5893704fb2a516e3b))
+* removed external deployment for bsctestnet ([176902d](https://github.com/VenusProtocol/protocol-reserve/commit/176902defa320c7a624b33e8dcf431b738861805))
+* removed only ([47cd2b4](https://github.com/VenusProtocol/protocol-reserve/commit/47cd2b48cc4bea05deee282e2ad6a2d5bb32f4e1))
+* reverted deployment ([8c2e5d9](https://github.com/VenusProtocol/protocol-reserve/commit/8c2e5d911d20fa9bde4ccb83aec1d6d909df1891))
+* verified  contract ([1f0e95b](https://github.com/VenusProtocol/protocol-reserve/commit/1f0e95be8e3987ca0b758ae7f81cb241fc0f6ff9))
+
 ## [1.6.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0...v1.6.0-dev.1) (2024-04-02)
 
 
