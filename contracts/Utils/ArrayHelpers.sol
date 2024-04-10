@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity 0.8.13;
+pragma solidity 0.8.25;
 
 /// @notice Used to sort addresses array based on their token balances
 /// @param arr Array of token balances of different addresses
