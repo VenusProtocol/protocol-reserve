@@ -1,3 +1,14 @@
+## [2.0.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v1.6.0-dev.2...v2.0.0-dev.1) (2024-04-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* migrate to Solidity 0.8.25
+
+### Features
+
+* migrate to Solidity 0.8.25 ([3f3de1e](https://github.com/VenusProtocol/protocol-reserve/commit/3f3de1ec9ca3e7320a4bc554cadc9e315c640c68))
+
 ## [1.6.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v1.6.0-dev.1...v1.6.0-dev.2) (2024-04-05)
 
 
