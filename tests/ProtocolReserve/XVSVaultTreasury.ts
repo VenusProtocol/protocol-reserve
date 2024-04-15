@@ -1,7 +1,7 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
-import { Signer, constants } from "ethers";
+import { BigNumber, Signer, constants } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
@@ -110,6 +110,49 @@ describe("XVS vault treasury: tests", () => {
       );
 
       await expect(tx).to.emit(xvsVaultTreasury, "FundsTransferredToXVSStore");
+    });
+  });
+
+  describe("Sweep tokens", () => {
+    beforeEach(async () => {
+      await xvs.transfer(xvsVaultTreasury.address, FUND_XVS_AMOUNT);
+    });
+
+    it("fail if called by non-owner", async () => {
+      await expect(
+        xvsVaultTreasury.connect(nonAdmin).sweepToken(xvs.address, xvsVault.address, FUND_XVS_AMOUNT),
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it("fail if token address is zero", async () => {
+      await expect(
+        xvsVaultTreasury.sweepToken(constants.AddressZero, xvsVault.address, FUND_XVS_AMOUNT),
+      ).to.be.revertedWithCustomError(xvsVaultTreasury, "ZeroAddressNotAllowed");
+    });
+
+    it("fail if vault address is zero", async () => {
+      await expect(
+        xvsVaultTreasury.sweepToken(xvs.address, constants.AddressZero, FUND_XVS_AMOUNT),
+      ).to.be.revertedWithCustomError(xvsVaultTreasury, "ZeroAddressNotAllowed");
+    });
+
+    it("fail if amount is zero", async () => {
+      await expect(xvsVaultTreasury.sweepToken(xvs.address, xvsVault.address, 0)).to.be.revertedWithCustomError(
+        xvsVaultTreasury,
+        "ZeroValueNotAllowed",
+      );
+    });
+
+    it("fail if insufficient balance", async () => {
+      await expect(
+        xvsVaultTreasury.sweepToken(xvs.address, xvsVault.address, BigNumber.from(FUND_XVS_AMOUNT).add(1)),
+      ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+    });
+
+    it("success if sufficient balance", async () => {
+      const previousBalance = await xvs.balanceOf(xvsVault.address);
+      await expect(xvsVaultTreasury.sweepToken(xvs.address, xvsVault.address, FUND_XVS_AMOUNT)).to.be.not.reverted;
+      expect(await xvs.balanceOf(xvsVault.address)).to.be.equal(previousBalance.add(FUND_XVS_AMOUNT));
     });
   });
 });

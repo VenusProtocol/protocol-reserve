@@ -35,6 +35,7 @@ const externalDeployments = {
     "node_modules/@venusprotocol/oracle/deployments/opbnbtestnet",
   ],
   bscmainnet: [
+    "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
     "node_modules/@venusprotocol/governance-contracts/deployments/bscmainnet",
     "node_modules/@venusprotocol/oracle/deployments/bscmainnet",
   ],
@@ -90,7 +91,7 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: "0.8.13",
+        version: "0.8.25",
         settings: {
           optimizer: {
             enabled: true,
