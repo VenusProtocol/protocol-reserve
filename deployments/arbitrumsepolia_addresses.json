@@ -3,8 +3,8 @@
   "chainId": "421614",
   "addresses": {
     "DefaultProxyAdmin": "0xA78A1Df376c3CEeBC5Fab574fe6EdDbbF76fd03e",
-    "ProtocolShareReserve": "0x26C3dc654091D940CB5015591F40DAE85Eb47D4B",
-    "ProtocolShareReserve_Implementation": "0x1F408F955AA38c363c991DB3b2A2627bDCd4725F",
-    "ProtocolShareReserve_Proxy": "0x26C3dc654091D940CB5015591F40DAE85Eb47D4B"
+    "ProtocolShareReserve": "0x09267d30798B59c581ce54E861A084C6FC298666",
+    "ProtocolShareReserve_Implementation": "0xF5B07c27d213A2B838A3D155FFEC0d52B17E91fd",
+    "ProtocolShareReserve_Proxy": "0x09267d30798B59c581ce54E861A084C6FC298666"
   }
 }
