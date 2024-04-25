@@ -47,6 +47,7 @@ const externalDeployments = {
     "node_modules/@venusprotocol/governance-contracts/deployments/opbnbmainnet",
     "node_modules/@venusprotocol/oracle/deployments/opbnbmainnet",
   ],
+  arbitrumsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/arbitrumsepolia"],
 };
 
 extendConfig((config: HardhatConfig) => {
@@ -97,6 +98,7 @@ const config: HardhatUserConfig = {
             enabled: true,
             runs: 10000,
           },
+          evmVersion: "paris",
           outputSelection: {
             "*": {
               "*": ["storageLayout"],
@@ -149,6 +151,18 @@ const config: HardhatUserConfig = {
       live: true,
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
+    arbitrumsepolia: {
+      url: process.env.ARCHIVE_NODE_arbitrumsepolia || "https://sepolia-rollup.arbitrum.io/rpc",
+      chainId: 421614,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    arbitrumone: {
+      url: process.env.ARCHIVE_NODE_arbitrumone || "https://arb1.arbitrum.io/rpc",
+      chainId: 42161,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
   },
   etherscan: {
     apiKey: {
@@ -158,6 +172,8 @@ const config: HardhatUserConfig = {
       ethereum: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       opbnbtestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       opbnbmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      arbitrumsepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      arbitrumone: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
     customChains: [
       {
@@ -206,6 +222,22 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: `https://open-platform.nodereal.io/${process.env.ETHERSCAN_API_KEY}/op-bnb-mainnet/contract/`,
           browserURL: "https://opbnbscan.com/",
+        },
+      },
+      {
+        network: "arbitrumsepolia",
+        chainId: 421614,
+        urls: {
+          apiURL: `https://api-sepolia.arbiscan.io/api`,
+          browserURL: "https://sepolia.arbiscan.io/",
+        },
+      },
+      {
+        network: "arbitrumone",
+        chainId: 42161,
+        urls: {
+          apiURL: `https://api.arbiscan.io/api/`,
+          browserURL: "https://arbiscan.io/",
         },
       },
     ],

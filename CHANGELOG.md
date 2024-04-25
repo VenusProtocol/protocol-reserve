@@ -1,3 +1,12 @@
+## [2.1.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v2.0.0...v2.1.0-dev.1) (2024-04-25)
+
+
+### Features
+
+* add deployments for PSR on arbitrum sepolia ([2377df9](https://github.com/VenusProtocol/protocol-reserve/commit/2377df9f656cabe2e9c6acfec149acaf22b7f167))
+* updating deployment files ([5c101d3](https://github.com/VenusProtocol/protocol-reserve/commit/5c101d3e65dac4d37ecf80e237bbe97cebb86bea))
+* updating deployment files ([c1f4e04](https://github.com/VenusProtocol/protocol-reserve/commit/c1f4e041551c7eec9223dfefe39b1427e03a8c4c))
+
 ## [2.0.0](https://github.com/VenusProtocol/protocol-reserve/compare/v1.5.0...v2.0.0) (2024-04-10)
 
 
