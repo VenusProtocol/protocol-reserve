@@ -48,6 +48,7 @@ const externalDeployments = {
     "node_modules/@venusprotocol/oracle/deployments/opbnbmainnet",
   ],
   arbitrumsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/arbitrumsepolia"],
+  arbitrumone: ["node_modules/@venusprotocol/governance-contracts/deployments/arbitrumone"],
 };
 
 extendConfig((config: HardhatConfig) => {
