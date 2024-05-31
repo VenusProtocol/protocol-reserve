@@ -1,3 +1,10 @@
+## [2.2.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v2.1.0...v2.2.0-dev.1) (2024-05-31)
+
+
+### Features
+
+* updating deployment files ([68a4fb1](https://github.com/VenusProtocol/protocol-reserve/commit/68a4fb1d9d1bae03184147e791b86632f6e96c23))
+
 ## [2.1.0](https://github.com/VenusProtocol/protocol-reserve/compare/v2.0.0...v2.1.0) (2024-04-25)
 
 
