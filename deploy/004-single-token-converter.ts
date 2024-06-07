@@ -40,6 +40,7 @@ async function getBaseAssets(network: string): Promise<BaseAssets> {
       ETHPrimeConverter: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
       XVSVaultConverter: (await ethers.getContractOrNull("XVS"))?.address || ADDRESS_TWO,
     },
+    // add more networks
   };
   return networkBaseAssets[network];
 }
@@ -106,6 +107,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   }
 };
 
-func.tags = ["SingleTokenConverter"];
+func.tags = ["SingleTokenConverter", "Converters"];
 
 export default func;
