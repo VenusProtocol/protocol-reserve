@@ -9,7 +9,7 @@ const func = async ({ network: { live, name }, getNamedAccounts, deployments }: 
 
   const xvsAddress = (await ethers.getContractOrNull("XVS"))?.address || ADDRESS_ONE;
   const proxyOwnerAddress =
-    (await ethers.getContractOrNull("NormalTimelock"))?.address || ADDRESS_ONE || multisigs[name];
+    (await ethers.getContractOrNull("NormalTimelock"))?.address || multisigs[name] || ADDRESS_ONE;
   const acmAddress = (await ethers.getContractOrNull("AccessControlManager"))?.address || ADDRESS_ONE;
   const xvsVaultAddress = (await ethers.getContractOrNull("XVSVaultProxy"))?.address || ADDRESS_ONE;
 
