@@ -27,6 +27,9 @@ const externalDeployments = {
     "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
   ],
   sepolia: [
+    "node_modules/@venusprotocol/isolated-pools/deployments/sepolia",
+    "node_modules/@venusprotocol/token-bridge/deployments/sepolia",
+    "node_modules/@venusprotocol/venus-protocol/deployments/sepolia",
     "node_modules/@venusprotocol/governance-contracts/deployments/sepolia",
     "node_modules/@venusprotocol/oracle/deployments/sepolia",
   ],
@@ -40,6 +43,9 @@ const externalDeployments = {
     "node_modules/@venusprotocol/oracle/deployments/bscmainnet",
   ],
   ethereum: [
+    "node_modules/@venusprotocol/isolated-pools/deployments/ethereum",
+    "node_modules/@venusprotocol/token-bridge/deployments/ethereum",
+    "node_modules/@venusprotocol/venus-protocol/deployments/ethereum",
     "node_modules/@venusprotocol/governance-contracts/deployments/ethereum",
     "node_modules/@venusprotocol/oracle/deployments/ethereum",
   ],
@@ -131,7 +137,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_sepolia || "https://ethereum-sepolia.blockpi.network/v1/rpc/public",
       chainId: 11155111,
       live: true,
-      gasPrice: 20000000000, // 20 gwei
+      gasPrice: 40000000000, // 40 gwei
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
     ethereum: {
