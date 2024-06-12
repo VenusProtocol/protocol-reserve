@@ -30,7 +30,7 @@ async function getBaseAssets(network: string): Promise<BaseAssets> {
       USDTPrimeConverter: (await ethers.getContractOrNull("MockUSDT"))?.address || ADDRESS_ONE,
       USDCPrimeConverter: (await ethers.getContractOrNull("MockUSDC"))?.address || ADDRESS_ONE,
       WBTCPrimeConverter: (await ethers.getContractOrNull("MockWBTC"))?.address || ADDRESS_ONE,
-      WETHPrimeConverter: "0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9",
+      WETHPrimeConverter: "0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9", // WETH on Sepolia
       XVSVaultConverter: (await ethers.getContractOrNull("XVS"))?.address || ADDRESS_TWO,
     },
     ethereum: {
