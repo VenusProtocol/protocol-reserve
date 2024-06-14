@@ -1357,7 +1357,7 @@
         }
       ]
     },
-    "ETHPrimeConverter": {
+    "WETHPrimeConverter": {
       "address": "0xb8fD67f215117FADeF06447Af31590309750529D",
       "abi": [
         {
