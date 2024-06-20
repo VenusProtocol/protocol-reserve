@@ -1,3 +1,21 @@
+## [2.3.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v2.2.0...v2.3.0-dev.1) (2024-06-20)
+
+
+### Features
+
+* updating deployment files ([2331045](https://github.com/VenusProtocol/protocol-reserve/commit/233104539bc35d8ce99ed7d170c3a7b4f7f3b7fb))
+* updating deployment files ([a2ff8de](https://github.com/VenusProtocol/protocol-reserve/commit/a2ff8de3b1d26b91d25c64f8dba3f0d75a3f010e))
+* updating deployment files ([3df1a06](https://github.com/VenusProtocol/protocol-reserve/commit/3df1a063834266a75dac385b36600c097fb8eab6))
+* updating deployment files ([6cee196](https://github.com/VenusProtocol/protocol-reserve/commit/6cee196a414ea691a621f34100bffaece85fc73a))
+* updating deployment files ([8657319](https://github.com/VenusProtocol/protocol-reserve/commit/8657319650ba1bd6a7bacb9ce8ef565fd9538786))
+
+
+### Bug Fixes
+
+* deployment scripts ([c5aaf2b](https://github.com/VenusProtocol/protocol-reserve/commit/c5aaf2b0575d912ea22250e63913d2c286fa92ad))
+* typo in file name ([5e00e66](https://github.com/VenusProtocol/protocol-reserve/commit/5e00e66f3a3a17d276c5eaf86de62ffa768cdb36))
+* USDT Etherum approval ([5a04ca7](https://github.com/VenusProtocol/protocol-reserve/commit/5a04ca70ff4eac37bdc28013271274b5b88d8e5c))
+
 ## [2.2.0](https://github.com/VenusProtocol/protocol-reserve/compare/v2.1.0...v2.2.0) (2024-05-31)
 
 
