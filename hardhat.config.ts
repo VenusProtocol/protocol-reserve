@@ -17,6 +17,7 @@ import "solidity-docgen";
 dotenv.config();
 
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
 
 // The order of dependencies should be kept in order such that it does not overwrite the deployments in the current repository such that:
 // if we define the Oracle deployments at last then DefaultProxyAdmin of current repository will be overwritten by DefaultProxyAdmin of Oracle
@@ -27,6 +28,9 @@ const externalDeployments = {
     "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
   ],
   sepolia: [
+    "node_modules/@venusprotocol/isolated-pools/deployments/sepolia",
+    "node_modules/@venusprotocol/token-bridge/deployments/sepolia",
+    "node_modules/@venusprotocol/venus-protocol/deployments/sepolia",
     "node_modules/@venusprotocol/governance-contracts/deployments/sepolia",
     "node_modules/@venusprotocol/oracle/deployments/sepolia",
   ],
@@ -40,6 +44,9 @@ const externalDeployments = {
     "node_modules/@venusprotocol/oracle/deployments/bscmainnet",
   ],
   ethereum: [
+    "node_modules/@venusprotocol/isolated-pools/deployments/ethereum",
+    "node_modules/@venusprotocol/token-bridge/deployments/ethereum",
+    "node_modules/@venusprotocol/venus-protocol/deployments/ethereum",
     "node_modules/@venusprotocol/governance-contracts/deployments/ethereum",
     "node_modules/@venusprotocol/oracle/deployments/ethereum",
   ],
@@ -139,18 +146,19 @@ const config: HardhatUserConfig = {
       chainId: 1,
       live: true,
       timeout: 1200000, // 20 minutes
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
     opbnbtestnet: {
       url: process.env.ARCHIVE_NODE_opbnbtestnet || "https://opbnb-testnet-rpc.bnbchain.org",
       chainId: 5611,
       live: true,
-      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
     opbnbmainnet: {
       url: process.env.ARCHIVE_NODE_opbnbmainnet || "https://opbnb-mainnet-rpc.bnbchain.org",
       chainId: 204,
       live: true,
-      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
     arbitrumsepolia: {
       url: process.env.ARCHIVE_NODE_arbitrumsepolia || "https://sepolia-rollup.arbitrum.io/rpc",
@@ -167,14 +175,14 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: {
-      bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      bsctestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      sepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      ethereum: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      opbnbtestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      opbnbmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      arbitrumsepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      arbitrumone: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      bscmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      bsctestnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      sepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      ethereum: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      opbnbtestnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      opbnbmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      arbitrumsepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      arbitrumone: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
     customChains: [
       {
@@ -213,7 +221,7 @@ const config: HardhatUserConfig = {
         network: "opbnbtestnet",
         chainId: 5611,
         urls: {
-          apiURL: `https://open-platform.nodereal.io/${process.env.ETHERSCAN_API_KEY}/op-bnb-testnet/contract/`,
+          apiURL: `https://open-platform.nodereal.io/${ETHERSCAN_API_KEY}/op-bnb-testnet/contract/`,
           browserURL: "https://testnet.opbnbscan.com/",
         },
       },
@@ -221,7 +229,7 @@ const config: HardhatUserConfig = {
         network: "opbnbmainnet",
         chainId: 204,
         urls: {
-          apiURL: `https://open-platform.nodereal.io/${process.env.ETHERSCAN_API_KEY}/op-bnb-mainnet/contract/`,
+          apiURL: `https://open-platform.nodereal.io/${ETHERSCAN_API_KEY}/op-bnb-mainnet/contract/`,
           browserURL: "https://opbnbscan.com/",
         },
       },

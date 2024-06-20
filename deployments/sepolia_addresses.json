@@ -2,9 +2,22 @@
   "name": "sepolia",
   "chainId": "11155111",
   "addresses": {
+    "ConverterNetwork": "0xB5A4208bFC4cC2C4670744849B8fC35B21A690Fa",
+    "ConverterNetwork_Implementation": "0x859a5a7ab834F812ADdd884113D6f1820ddC30A2",
+    "ConverterNetwork_Proxy": "0xB5A4208bFC4cC2C4670744849B8fC35B21A690Fa",
     "DefaultProxyAdmin": "0x01435866babd91311b1355cf3af488cca36db68e",
     "ProtocolShareReserve": "0xbea70755cc3555708ca11219adB0db4C80F6721B",
     "ProtocolShareReserve_Implementation": "0x5429e6ddc967c7f6a1e2c13bb812b6c6a57cbe19",
-    "ProtocolShareReserve_Proxy": "0xbea70755cc3555708ca11219adB0db4C80F6721B"
+    "ProtocolShareReserve_Proxy": "0xbea70755cc3555708ca11219adB0db4C80F6721B",
+    "SingleTokenConverterBeacon": "0xb86e532a5333d413A1c35d86cCdF1484B40219eF",
+    "SingleTokenConverterImp": "0xb13409Cbf2b3420856DD577AE2FcC4a4Cd6d9F1e",
+    "USDCPrimeConverter": "0x511a559a699cBd665546a1F75908f7E9454Bfc67",
+    "USDTPrimeConverter": "0x3716C24EA86A67cAf890d7C9e4C4505cDDC2F8A2",
+    "WBTCPrimeConverter": "0x8a3937F27921e859db3FDA05729CbCea8cfd82AE",
+    "WETHPrimeConverter": "0x274a834eFFA8D5479502dD6e78925Bc04ae82B46",
+    "XVSVaultConverter": "0xc203bfA9dCB0B5fEC510Db644A494Ff7f4968ed2",
+    "XVSVaultTreasury": "0xCCB08e5107b406E67Ad8356023dd489CEbc79B40",
+    "XVSVaultTreasury_Implementation": "0xCFcC918275c35b21227405ec41fcD2D2643DF534",
+    "XVSVaultTreasury_Proxy": "0xCCB08e5107b406E67Ad8356023dd489CEbc79B40"
   }
 }
