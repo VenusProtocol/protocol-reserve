@@ -47,7 +47,7 @@
     "@openzeppelin/hardhat-upgrades": "^1.21.0",
     "@solidity-parser/parser": "^0.13.2",
     "@venusprotocol/solidity-utilities": "^2.0.3",
-    "@venusprotocol/venus-protocol": "^9.1.0",
+    "@venusprotocol/venus-protocol": "https://github.com/VenusProtocol/venus-protocol#880d57785edab22661976f60ad1f0f6fe5b2698e",
     "ethers": "^5.7.0",
     "hardhat-deploy": "^0.11.14",
     "module-alias": "^2.2.2"
@@ -72,7 +72,7 @@
     "@typescript-eslint/eslint-plugin": "^5.44.0",
     "@typescript-eslint/parser": "^5.44.0",
     "@venusprotocol/governance-contracts": "^2.1.0",
-    "@venusprotocol/isolated-pools": "^3.3.0",
+    "@venusprotocol/isolated-pools": "https://github.com/VenusProtocol/isolated-pools#0672878e54c762978bb2d9d5ad04b2b86782f371",
     "@venusprotocol/oracle": "https://github.com/VenusProtocol/oracle#e80102610bbf3beac2d4c1c09f37e7aca1388d10",
     "bignumber.js": "^9.1.1",
     "chai": "^4.3.7",
@@ -102,6 +102,7 @@
     "typescript": "^4.6.3"
   },
   "peerDependencies": {
+    "@venusprotocol/isolated-pools": "*",
     "@venusprotocol/oracle": "*",
     "@venusprotocol/venus-protocol": "*"
   },
