@@ -1,0 +1,10 @@
+{
+  "name": "zksyncsepolia",
+  "chainId": "300",
+  "addresses": {
+    "DefaultProxyAdmin": "0x18E44f588a4DcF2F7145d35A5C226e129040b6D3",
+    "ProtocolShareReserve": "0x5722B43BD91fAaDC4E7f384F4d6Fb32456Ec5ffB",
+    "ProtocolShareReserve_Implementation": "0x817F19DC65bBe7f87b6941aa11637A1744E4fdD6",
+    "ProtocolShareReserve_Proxy": "0x5722B43BD91fAaDC4E7f384F4d6Fb32456Ec5ffB"
+  }
+}
