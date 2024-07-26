@@ -19,19 +19,29 @@ const func: DeployFunction = async ({
   const acmAddress = (await ethers.getContractOrNull("AccessControlManager"))?.address || ADDRESS_ONE;
   const loopsLimit = 20;
 
+  const defaultProxyAdmin = await hre.artifacts.readArtifact(
+    "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
+  );
+
   await deploy("ProtocolShareReserve", {
     from: deployer,
     log: true,
     deterministicDeployment: false,
     args: [comptrollerAddress, WBNBAddress, vBNBAddress],
+    skipIfAlreadyDeployed: true,
     proxy: {
       owner: live ? timelockAddress : deployer,
-      proxyContract: "OpenZeppelinTransparentProxy",
+      proxyContract: "OptimizedTransparentUpgradeableProxy",
       execute: {
         methodName: "initialize",
         args: [acmAddress, loopsLimit],
       },
+      viaAdminContract: {
+        name: "DefaultProxyAdmin",
+        artifact: defaultProxyAdmin,
+      },
     },
+    // maxFeePerGas: "200000000"  // Needed for zksync
   });
 
   const psr = await hre.ethers.getContract("ProtocolShareReserve");
