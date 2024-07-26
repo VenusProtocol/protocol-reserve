@@ -15,10 +15,7 @@ require("dotenv").config();
 
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
 const externalDeployments = {
-  zksyncsepolia: [
-    "node_modules/@venusprotocol/governance-contracts/deployments/zksyncsepolia",
-    "node_modules/@venusprotocol/isolated-pools/deployments/zksyncsepolia",
-  ],
+  zksyncsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/zksyncsepolia"],
 };
 extendConfig((config: HardhatConfig) => {
   if (process.env.EXPORT !== "true") {
