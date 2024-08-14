@@ -283,7 +283,6 @@ const config: HardhatUserConfig = {
     paths: [
       "hardhat-deploy/solc_0.8/proxy/OptimizedTransparentUpgradeableProxy.sol",
       "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol",
-      "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
     ],
   },
 };
