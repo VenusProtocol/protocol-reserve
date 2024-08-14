@@ -1,5 +1,6 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { impersonateAccount, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { Signer, constants } from "ethers";
 import { parseUnits } from "ethers/lib/utils.js";
@@ -7,6 +8,7 @@ import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../helpers/utils";
 import {
+  IAccessControlManagerV8,
   IComptroller,
   IShortfall,
   MockToken,
@@ -20,7 +22,7 @@ let riskFundConverter: FakeContract<RiskFundConverter>;
 let shortfall: FakeContract<IShortfall>;
 let riskFund: MockContract<RiskFundV2>;
 let tokenA: MockContract<MockToken>;
-let admin: Signer;
+let admin: SignerWithAddress;
 let nonAdmin: Signer;
 let comptrollerA: FakeContract<IComptroller>;
 
@@ -216,33 +218,50 @@ describe("Risk Fund: Tests", function () {
 
   describe("sweepTokenFromPool", () => {
     let riskFundConverterSigner: Signer;
+    let acm: FakeContract<IAccessControlManagerV8>;
     const COMPTROLLER_A_AMOUNT: string = convertToUnit(10, 18);
 
     beforeEach(async () => {
       await riskFund.connect(admin).setConvertibleBaseAsset(tokenA.address);
+      acm = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
+      acm.isAllowedToCall.returns(true);
+      await riskFund.connect(admin).setAccessControlManager(acm.address);
 
       await tokenA.transfer(riskFund.address, COMPTROLLER_A_AMOUNT);
     });
 
-    it("Reverts on sweepToken() when token address is zero", async () => {
+    it("Reverts when token address is zero", async () => {
       await expect(
-        riskFund.sweepTokenFromPool(constants.AddressZero, comptrollerA.address, parseUnits("1", 18)),
+        riskFund.sweepTokenFromPool(constants.AddressZero, comptrollerA.address, admin.address, parseUnits("1", 18)),
       ).to.be.revertedWithCustomError(riskFund, "ZeroAddressNotAllowed");
     });
 
-    it("Reverts on sweepToken() when comptroller address is zero", async () => {
+    it("Reverts when comptroller address is zero", async () => {
       await expect(
-        riskFund.sweepTokenFromPool(tokenA.address, constants.AddressZero, parseUnits("1", 18)),
+        riskFund.sweepTokenFromPool(tokenA.address, constants.AddressZero, admin.address, parseUnits("1", 18)),
       ).to.be.revertedWithCustomError(riskFund, "ZeroAddressNotAllowed");
     });
 
-    it("Reverts on sweepToken() when amount entered is higher than balance", async () => {
+    it("Reverts when receiver address is zero", async () => {
       await expect(
-        riskFund.sweepTokenFromPool(tokenA.address, comptrollerA.address, parseUnits("1000", 18)),
+        riskFund.sweepTokenFromPool(tokenA.address, comptrollerA.address, constants.AddressZero, parseUnits("1", 18)),
+      ).to.be.revertedWithCustomError(riskFund, "ZeroAddressNotAllowed");
+    });
+
+    it("Reverts when access control manager does not allow the call", async () => {
+      acm.isAllowedToCall.returns(false);
+      await expect(
+        riskFund.sweepTokenFromPool(tokenA.address, comptrollerA.address, admin.address, parseUnits("1", 18)),
+      ).to.be.revertedWithCustomError(riskFund, "Unauthorized");
+    });
+
+    it("Reverts when amount entered is higher than balance", async () => {
+      await expect(
+        riskFund.sweepTokenFromPool(tokenA.address, comptrollerA.address, admin.address, parseUnits("1000", 18)),
       ).to.be.revertedWithCustomError(riskFund, "InsufficientPoolReserve");
     });
 
-    it("Sweep tokens from comptroller address", async () => {
+    it("Sweeps tokens from comptroller address", async () => {
       await impersonateAccount(riskFundConverter.address);
       riskFundConverterSigner = await ethers.getSigner(riskFundConverter.address);
       await admin.sendTransaction({ to: riskFundConverter.address, value: ethers.utils.parseEther("10") });
@@ -251,11 +270,9 @@ describe("Risk Fund: Tests", function () {
         .connect(riskFundConverterSigner)
         .updatePoolState(comptrollerA.address, tokenA.address, COMPTROLLER_A_AMOUNT);
 
-      await expect(riskFund.sweepTokenFromPool(tokenA.address, comptrollerA.address, 1000)).to.changeTokenBalances(
-        tokenA,
-        [comptrollerA.address, riskFund.address],
-        [1000, -1000],
-      );
+      await expect(
+        riskFund.sweepTokenFromPool(tokenA.address, comptrollerA.address, admin.address, 1000),
+      ).to.changeTokenBalances(tokenA, [admin.address, riskFund.address], [1000, -1000]);
     });
   });
 });
