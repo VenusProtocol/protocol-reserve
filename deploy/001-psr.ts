@@ -41,7 +41,6 @@ const func: DeployFunction = async ({
         artifact: defaultProxyAdmin,
       },
     },
-    // maxFeePerGas: "200000000"  // Needed for zksync
   });
 
   const psr = await hre.ethers.getContract("ProtocolShareReserve");
