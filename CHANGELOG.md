@@ -1,3 +1,18 @@
+## [2.3.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v2.3.0-dev.1...v2.3.0-dev.2) (2024-08-14)
+
+
+### Features
+
+* PSR deployment on zksync sepolia ([88197ea](https://github.com/VenusProtocol/protocol-reserve/commit/88197ea1a2b37b538e0006e70a3d4d0fa0bacd50))
+* updating deployment files ([5fd48dd](https://github.com/VenusProtocol/protocol-reserve/commit/5fd48dd1685f9f12d7df121df77ada7bcd27e822))
+
+
+### Bug Fixes
+
+* remove unnecessary comment ([ac7f495](https://github.com/VenusProtocol/protocol-reserve/commit/ac7f49592b2d1795e464806534693510f940af0b))
+* remove unnecessary external dependency from hardhat config ([fddb63d](https://github.com/VenusProtocol/protocol-reserve/commit/fddb63d606dd11c7c59aae50808a74616541acb5))
+* remove unused dependency ([1f44f5c](https://github.com/VenusProtocol/protocol-reserve/commit/1f44f5c495a7adf1d14ebd938a8aa83d348573f9))
+
 ## [2.3.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v2.2.0...v2.3.0-dev.1) (2024-06-20)
 
 
