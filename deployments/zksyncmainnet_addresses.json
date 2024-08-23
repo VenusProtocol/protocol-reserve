@@ -1,0 +1,10 @@
+{
+  "name": "zksyncmainnet",
+  "chainId": "324",
+  "addresses": {
+    "DefaultProxyAdmin": "0x8Ea1A989B036f7Ef21bb95CE4E7961522Ca00287",
+    "ProtocolShareReserve": "0x149899eb8e8A51157D605e687DbD939dFb5F390e",
+    "ProtocolShareReserve_Implementation": "0x5F167FAd85c08eE0887953FA1E141C6364346ED0",
+    "ProtocolShareReserve_Proxy": "0x149899eb8e8A51157D605e687DbD939dFb5F390e"
+  }
+}
