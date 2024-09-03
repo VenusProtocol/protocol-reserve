@@ -57,6 +57,8 @@ const externalDeployments = {
   ],
   arbitrumsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/arbitrumsepolia"],
   arbitrumone: ["node_modules/@venusprotocol/governance-contracts/deployments/arbitrumone"],
+  opsepolia: [],
+  opmainnet: [],
 };
 
 extendConfig((config: HardhatConfig) => {
@@ -173,6 +175,18 @@ const config: HardhatUserConfig = {
       live: true,
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
+    opsepolia: {
+      url: process.env.ARCHIVE_NODE_opsepolia || "https://sepolia.optimism.io",
+      chainId: 11155420,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    opmainnet: {
+      url: process.env.ARCHIVE_NODE_opmainnet || "https://mainnet.optimism.io",
+      chainId: 10,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
   },
   etherscan: {
     apiKey: {
@@ -184,6 +198,8 @@ const config: HardhatUserConfig = {
       opbnbmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       arbitrumsepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       arbitrumone: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      opsepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      opmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
     customChains: [
       {
@@ -248,6 +264,22 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: `https://api.arbiscan.io/api/`,
           browserURL: "https://arbiscan.io/",
+        },
+      },
+      {
+        network: "opsepolia",
+        chainId: 11155420,
+        urls: {
+          apiURL: "https://api-sepolia-optimistic.etherscan.io/api/",
+          browserURL: "https://sepolia-optimistic.etherscan.io/",
+        },
+      },
+      {
+        network: "opmainnet",
+        chainId: 10,
+        urls: {
+          apiURL: "https://api-optimistic.etherscan.io/api",
+          browserURL: "https://optimistic.etherscan.io/",
         },
       },
     ],
