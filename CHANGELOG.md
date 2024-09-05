@@ -1,3 +1,11 @@
+## [2.3.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v2.3.0-dev.2...v2.3.0-dev.3) (2024-09-05)
+
+
+### Features
+
+* add access controls and receiver to sweepTokenFromPool ([d34bf38](https://github.com/VenusProtocol/protocol-reserve/commit/d34bf3859b9eea8b06c29a568bcf19f705c93975))
+* updating deployment files ([285b27e](https://github.com/VenusProtocol/protocol-reserve/commit/285b27ee2ba0bac2fb34b87a74852532376a7814))
+
 ## [2.3.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v2.3.0-dev.1...v2.3.0-dev.2) (2024-08-14)
 
 
