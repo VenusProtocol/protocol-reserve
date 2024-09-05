@@ -40,7 +40,12 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     event SweepToken(address indexed token, address indexed to, uint256 amount);
 
     /// @notice Event emitted when tokens are swept and transferred from pool
-    event SweepTokenFromPool(address indexed token, address indexed comptroller, uint256 amount);
+    event SweepTokenFromPool(
+        address indexed token,
+        address indexed comptroller,
+        address indexed receiver,
+        uint256 amount
+    );
 
     /// @notice Error is thrown when updatePoolState is not called by riskFundConverter
     error InvalidRiskFundConverter();
@@ -146,19 +151,23 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
 
     /// @notice Function to sweep token from pool
     /// @param tokenAddress Address of the asset(token)
-    /// @param comptroller Pool address to which assets will be transferred
+    /// @param comptroller Pool address that the assets belong to
+    /// @param receiver The receiver of the funds
     /// @param amount Amount need to sweep from the pool
-    /// @custom:event Emits sweepTokenFromPool event on success
-    /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/comptroller address is zero
+    /// @custom:event Emits SweepTokenFromPool event on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress, comptroller, or receiver address is zero
     /// @custom:error ZeroValueNotAllowed is thrown when amount is zero
-    /// @custom:access Only Governance
+    /// @custom:access Controlled by AccessControlManager
     function sweepTokenFromPool(
         address tokenAddress,
         address comptroller,
+        address receiver,
         uint256 amount
-    ) external onlyOwner nonReentrant {
+    ) external nonReentrant {
+        _checkAccessAllowed("sweepTokenFromPool(address,address,address,uint256)");
         ensureNonzeroAddress(tokenAddress);
         ensureNonzeroAddress(comptroller);
+        ensureNonzeroAddress(receiver);
         ensureNonzeroValue(amount);
 
         uint256 poolReserve = poolAssetsFunds[comptroller][tokenAddress];
@@ -171,9 +180,9 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
             poolAssetsFunds[comptroller][tokenAddress] = poolReserve - amount;
         }
 
-        IERC20Upgradeable(tokenAddress).safeTransfer(comptroller, amount);
+        IERC20Upgradeable(tokenAddress).safeTransfer(receiver, amount);
 
-        emit SweepTokenFromPool(tokenAddress, comptroller, amount);
+        emit SweepTokenFromPool(tokenAddress, comptroller, receiver, amount);
     }
 
     /**
