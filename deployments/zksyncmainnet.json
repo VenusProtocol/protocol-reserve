@@ -168,7 +168,7 @@
       ]
     },
     "ProtocolShareReserve": {
-      "address": "0x149899eb8e8A51157D605e687DbD939dFb5F390e",
+      "address": "0xA1193e941BDf34E858f7F276221B4886EfdD040b",
       "abi": [
         {
           "anonymous": false,
@@ -1081,7 +1081,7 @@
       ]
     },
     "ProtocolShareReserve_Implementation": {
-      "address": "0x5F167FAd85c08eE0887953FA1E141C6364346ED0",
+      "address": "0x72FdEC477A5652E4a012CEE2e50A4150459Ec296",
       "abi": [
         {
           "inputs": [
@@ -1884,7 +1884,7 @@
       ]
     },
     "ProtocolShareReserve_Proxy": {
-      "address": "0x149899eb8e8A51157D605e687DbD939dFb5F390e",
+      "address": "0xA1193e941BDf34E858f7F276221B4886EfdD040b",
       "abi": [
         {
           "inputs": [
