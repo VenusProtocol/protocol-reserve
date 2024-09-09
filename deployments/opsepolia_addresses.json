@@ -2,9 +2,9 @@
   "name": "opsepolia",
   "chainId": "11155420",
   "addresses": {
-    "DefaultProxyAdmin": "0x30AaF5dC2407aa6661e68EdeBaD9821fEe2B1b41",
-    "ProtocolShareReserve": "0xdEF9793c6C4f99A8D0F4B61f9CBB52e0749E026F",
-    "ProtocolShareReserve_Implementation": "0xb6b1dd15E6aF955503b48b95685E9dbeCB5A38fD",
-    "ProtocolShareReserve_Proxy": "0xdEF9793c6C4f99A8D0F4B61f9CBB52e0749E026F"
+    "DefaultProxyAdmin": "0xa9aaf2A1cCf2C3a87997942abaA740887cC89241",
+    "ProtocolShareReserve": "0x4d3785aD3767b93231C19543AA7c9BcD098F1f15",
+    "ProtocolShareReserve_Implementation": "0x950BE957adB29C30C215b85622B157179c3dc9B7",
+    "ProtocolShareReserve_Proxy": "0x4d3785aD3767b93231C19543AA7c9BcD098F1f15"
   }
 }
