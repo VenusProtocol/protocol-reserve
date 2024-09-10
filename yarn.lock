@@ -3495,9 +3495,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/isolated-pools@npm:^3.3.0":
-  version: 3.3.0
-  resolution: "@venusprotocol/isolated-pools@npm:3.3.0"
+"@venusprotocol/governance-contracts@npm:^2.3.0":
+  version: 2.3.0
+  resolution: "@venusprotocol/governance-contracts@npm:2.3.0"
+  dependencies:
+    "@venusprotocol/solidity-utilities": 2.0.0
+    hardhat-deploy-ethers: ^0.3.0-beta.13
+    module-alias: ^2.2.2
+  checksum: b7c6054d36f435e6360acbe5ef31816901377bffb119147a519c7aa93f8ad4205dfbb85deb706a5fbc37ab144dfdb42284f18c8e95bc729a780303c828221891
+  languageName: node
+  linkType: hard
+
+"@venusprotocol/isolated-pools@npm:^3.4.0":
+  version: 3.4.0
+  resolution: "@venusprotocol/isolated-pools@npm:3.4.0"
   dependencies:
     "@nomiclabs/hardhat-ethers": ^2.2.3
     "@openzeppelin/contracts": ^4.8.3
@@ -3508,13 +3519,13 @@ __metadata:
     ethers: ^5.7.0
     hardhat-deploy: ^0.11.14
     module-alias: ^2.2.2
-  checksum: e6d92426500eaa6874fc57d532bd4dfbb57263810dbf1f863308f4c9faa1372839b003657c9a1945f074acaac55712caad41e0f920d7765e6c6e85712fb6eca1
+  checksum: e9ad6e06bfda7248a8d080bc73b3b985ac71d84463dbc233459a6a96208dd37985376b0c7d1dc83e22cec6bf37ad00f956277d46a8466689f5ef104c386ee6c6
   languageName: node
   linkType: hard
 
-"@venusprotocol/oracle@npm:^2.3.0":
-  version: 2.3.0
-  resolution: "@venusprotocol/oracle@npm:2.3.0"
+"@venusprotocol/oracle@npm:^2.4.0":
+  version: 2.4.0
+  resolution: "@venusprotocol/oracle@npm:2.4.0"
   dependencies:
     "@chainlink/contracts": ^0.5.1
     "@defi-wonderland/smock": ^2.3.4
@@ -3529,7 +3540,7 @@ __metadata:
     hardhat-deploy: ^0.11.14
     module-alias: ^2.2.2
     solidity-docgen: ^0.6.0-beta.29
-  checksum: 6ba484f72eef7701a92be1673ec5c3d7d180c79aa17c7b7ef0c3848fbf15b456e5cc7633bf0a1fbb4ff36ba05524b3f70f966e40c4f32f8b8cff551c6605878b
+  checksum: 8fbe113f6925526f06ca6ba76b9d524b869e650463783f44c7c2975f84a087575c19868a421caccfa6d2610af45b5265656cfbec99cfbf6a7ce9783837ffc6cf
   languageName: node
   linkType: hard
 
@@ -3599,9 +3610,9 @@ __metadata:
     "@types/node": ^18.16.3
     "@typescript-eslint/eslint-plugin": ^5.44.0
     "@typescript-eslint/parser": ^5.44.0
-    "@venusprotocol/governance-contracts": ^2.1.0
-    "@venusprotocol/isolated-pools": ^3.3.0
-    "@venusprotocol/oracle": ^2.3.0
+    "@venusprotocol/governance-contracts": ^2.3.0
+    "@venusprotocol/isolated-pools": ^3.4.0
+    "@venusprotocol/oracle": ^2.4.0
     "@venusprotocol/solidity-utilities": ^2.0.3
     "@venusprotocol/venus-protocol": ^9.1.0
     bignumber.js: ^9.1.1
