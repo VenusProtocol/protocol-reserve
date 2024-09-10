@@ -1,3 +1,10 @@
+## [2.3.0-dev.5](https://github.com/VenusProtocol/protocol-reserve/compare/v2.3.0-dev.4...v2.3.0-dev.5) (2024-09-10)
+
+
+### Features
+
+* bump dependencies with venus packages ([8f22d7f](https://github.com/VenusProtocol/protocol-reserve/commit/8f22d7f24f0146edbe074407e35ff7aee162f4c5))
+
 ## [2.3.0-dev.4](https://github.com/VenusProtocol/protocol-reserve/compare/v2.3.0-dev.3...v2.3.0-dev.4) (2024-09-10)
 
 
