@@ -1,3 +1,13 @@
+## [2.3.0-dev.4](https://github.com/VenusProtocol/protocol-reserve/compare/v2.3.0-dev.3...v2.3.0-dev.4) (2024-09-10)
+
+
+### Features
+
+* add PSR deployments on zksync ([6fece9e](https://github.com/VenusProtocol/protocol-reserve/commit/6fece9ec81ec9c4fda12e3b1a511e8aa8666528e))
+* redeploy PSR with updated zksolc version ([16945a3](https://github.com/VenusProtocol/protocol-reserve/commit/16945a31dbc33ed59cff8b6acc2d779683d643c4))
+* updating deployment files ([bf31aba](https://github.com/VenusProtocol/protocol-reserve/commit/bf31aba8e6083f82a27c5788acb6cc115ba8f313))
+* updating deployment files ([7e92b8e](https://github.com/VenusProtocol/protocol-reserve/commit/7e92b8ea9f075d68f3135addc6716c18f3458018))
+
 ## [2.3.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v2.3.0-dev.2...v2.3.0-dev.3) (2024-09-05)
 
 
