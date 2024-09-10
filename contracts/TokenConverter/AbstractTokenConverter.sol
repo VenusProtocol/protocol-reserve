@@ -993,7 +993,7 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
                 uint256 balanceBefore = IERC20Upgradeable(tokenAddressIn).balanceOf(_destinationAddress);
 
-                IERC20Upgradeable(tokenAddressOut).approve(converterAddresses[i], amountIn);
+                IERC20Upgradeable(tokenAddressOut).forceApprove(converterAddresses[i], amountIn);
                 IAbstractTokenConverter(converterAddresses[i]).convertExactTokens(
                     amountIn,
                     0,

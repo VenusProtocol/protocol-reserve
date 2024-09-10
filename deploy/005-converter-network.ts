@@ -35,6 +35,6 @@ const func = async ({ network: { live, name }, getNamedAccounts, deployments }: 
   }
 };
 
-func.tags = ["ConverterNetwork"];
+func.tags = ["ConverterNetwork", "Converters"];
 
 export default func;
