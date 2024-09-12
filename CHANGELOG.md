@@ -1,3 +1,58 @@
+## [2.3.0](https://github.com/VenusProtocol/protocol-reserve/compare/v2.2.0...v2.3.0) (2024-09-10)
+
+
+### Features
+
+* add access controls and receiver to sweepTokenFromPool ([d34bf38](https://github.com/VenusProtocol/protocol-reserve/commit/d34bf3859b9eea8b06c29a568bcf19f705c93975))
+* add PSR deployments on zksync ([6fece9e](https://github.com/VenusProtocol/protocol-reserve/commit/6fece9ec81ec9c4fda12e3b1a511e8aa8666528e))
+* bump dependencies with venus packages ([8f22d7f](https://github.com/VenusProtocol/protocol-reserve/commit/8f22d7f24f0146edbe074407e35ff7aee162f4c5))
+* PSR deployment on zksync sepolia ([88197ea](https://github.com/VenusProtocol/protocol-reserve/commit/88197ea1a2b37b538e0006e70a3d4d0fa0bacd50))
+* redeploy PSR with updated zksolc version ([16945a3](https://github.com/VenusProtocol/protocol-reserve/commit/16945a31dbc33ed59cff8b6acc2d779683d643c4))
+* updating deployment files ([bf31aba](https://github.com/VenusProtocol/protocol-reserve/commit/bf31aba8e6083f82a27c5788acb6cc115ba8f313))
+* updating deployment files ([285b27e](https://github.com/VenusProtocol/protocol-reserve/commit/285b27ee2ba0bac2fb34b87a74852532376a7814))
+* updating deployment files ([7e92b8e](https://github.com/VenusProtocol/protocol-reserve/commit/7e92b8ea9f075d68f3135addc6716c18f3458018))
+* updating deployment files ([5fd48dd](https://github.com/VenusProtocol/protocol-reserve/commit/5fd48dd1685f9f12d7df121df77ada7bcd27e822))
+* updating deployment files ([2331045](https://github.com/VenusProtocol/protocol-reserve/commit/233104539bc35d8ce99ed7d170c3a7b4f7f3b7fb))
+* updating deployment files ([a2ff8de](https://github.com/VenusProtocol/protocol-reserve/commit/a2ff8de3b1d26b91d25c64f8dba3f0d75a3f010e))
+* updating deployment files ([3df1a06](https://github.com/VenusProtocol/protocol-reserve/commit/3df1a063834266a75dac385b36600c097fb8eab6))
+* updating deployment files ([6cee196](https://github.com/VenusProtocol/protocol-reserve/commit/6cee196a414ea691a621f34100bffaece85fc73a))
+* updating deployment files ([8657319](https://github.com/VenusProtocol/protocol-reserve/commit/8657319650ba1bd6a7bacb9ce8ef565fd9538786))
+
+
+### Bug Fixes
+
+* deployment scripts ([c5aaf2b](https://github.com/VenusProtocol/protocol-reserve/commit/c5aaf2b0575d912ea22250e63913d2c286fa92ad))
+* remove unnecessary comment ([ac7f495](https://github.com/VenusProtocol/protocol-reserve/commit/ac7f49592b2d1795e464806534693510f940af0b))
+* remove unnecessary external dependency from hardhat config ([fddb63d](https://github.com/VenusProtocol/protocol-reserve/commit/fddb63d606dd11c7c59aae50808a74616541acb5))
+* remove unused dependency ([1f44f5c](https://github.com/VenusProtocol/protocol-reserve/commit/1f44f5c495a7adf1d14ebd938a8aa83d348573f9))
+* typo in file name ([5e00e66](https://github.com/VenusProtocol/protocol-reserve/commit/5e00e66f3a3a17d276c5eaf86de62ffa768cdb36))
+* USDT Etherum approval ([5a04ca7](https://github.com/VenusProtocol/protocol-reserve/commit/5a04ca70ff4eac37bdc28013271274b5b88d8e5c))
+
+## [2.3.0-dev.5](https://github.com/VenusProtocol/protocol-reserve/compare/v2.3.0-dev.4...v2.3.0-dev.5) (2024-09-10)
+
+
+### Features
+
+* bump dependencies with venus packages ([8f22d7f](https://github.com/VenusProtocol/protocol-reserve/commit/8f22d7f24f0146edbe074407e35ff7aee162f4c5))
+
+## [2.3.0-dev.4](https://github.com/VenusProtocol/protocol-reserve/compare/v2.3.0-dev.3...v2.3.0-dev.4) (2024-09-10)
+
+
+### Features
+
+* add PSR deployments on zksync ([6fece9e](https://github.com/VenusProtocol/protocol-reserve/commit/6fece9ec81ec9c4fda12e3b1a511e8aa8666528e))
+* redeploy PSR with updated zksolc version ([16945a3](https://github.com/VenusProtocol/protocol-reserve/commit/16945a31dbc33ed59cff8b6acc2d779683d643c4))
+* updating deployment files ([bf31aba](https://github.com/VenusProtocol/protocol-reserve/commit/bf31aba8e6083f82a27c5788acb6cc115ba8f313))
+* updating deployment files ([7e92b8e](https://github.com/VenusProtocol/protocol-reserve/commit/7e92b8ea9f075d68f3135addc6716c18f3458018))
+
+## [2.3.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v2.3.0-dev.2...v2.3.0-dev.3) (2024-09-05)
+
+
+### Features
+
+* add access controls and receiver to sweepTokenFromPool ([d34bf38](https://github.com/VenusProtocol/protocol-reserve/commit/d34bf3859b9eea8b06c29a568bcf19f705c93975))
+* updating deployment files ([285b27e](https://github.com/VenusProtocol/protocol-reserve/commit/285b27ee2ba0bac2fb34b87a74852532376a7814))
+
 ## [2.3.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v2.3.0-dev.1...v2.3.0-dev.2) (2024-08-14)
 
 

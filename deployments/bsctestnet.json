@@ -7669,7 +7669,7 @@
       ]
     },
     "RiskFundV2_Implementation": {
-      "address": "0xcA2A023FBe3be30b7187E88D7FDE1A9a4358B509",
+      "address": "0x394C9a8cDbbFcAbEAb21fB105311B6B1f09b667a",
       "abi": [
         {
           "inputs": [],
@@ -7946,6 +7946,31 @@
             {
               "indexed": true,
               "internalType": "address",
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "comptroller",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "SweepTokenFromPool",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
               "name": "comptroller",
               "type": "address"
             },
@@ -8178,6 +8203,34 @@
             }
           ],
           "name": "sweepToken",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "comptroller",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "receiver",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "sweepTokenFromPool",
           "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function"
