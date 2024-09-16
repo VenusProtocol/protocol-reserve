@@ -1,3 +1,13 @@
+## [2.4.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v2.3.0...v2.4.0-dev.1) (2024-09-16)
+
+
+### Features
+
+* deployment files for PSR on opsepolia ([36e9c49](https://github.com/VenusProtocol/protocol-reserve/commit/36e9c4953fc9f4bdc0ac18006f0601137dcc2935))
+* updating deployment files ([861960c](https://github.com/VenusProtocol/protocol-reserve/commit/861960c14831e1fd758269056eda002c15e2cfc4))
+* updating deployment files ([f9eee85](https://github.com/VenusProtocol/protocol-reserve/commit/f9eee859f423ffaaa7f149b10e14024e08c47702))
+* updating deployment files ([2f5f982](https://github.com/VenusProtocol/protocol-reserve/commit/2f5f9828f72c9dbf8e28e653977b5cbf11ff7591))
+
 ## [2.3.0](https://github.com/VenusProtocol/protocol-reserve/compare/v2.2.0...v2.3.0) (2024-09-10)
 
 
