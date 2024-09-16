@@ -57,7 +57,7 @@ const externalDeployments = {
   ],
   arbitrumsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/arbitrumsepolia"],
   arbitrumone: ["node_modules/@venusprotocol/governance-contracts/deployments/arbitrumone"],
-  opsepolia: [],
+  opsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/opsepolia"],
   opmainnet: [],
 };
 
