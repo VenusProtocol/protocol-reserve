@@ -1,0 +1,10 @@
+{
+  "name": "opsepolia",
+  "chainId": "11155420",
+  "addresses": {
+    "DefaultProxyAdmin": "0xa9aaf2A1cCf2C3a87997942abaA740887cC89241",
+    "ProtocolShareReserve": "0x0F021c29283c47DF8237741dD5a0aA22952aFc88",
+    "ProtocolShareReserve_Implementation": "0x28A2Acd72be0CFdfeEEEa8E6c2556774b0B4f13c",
+    "ProtocolShareReserve_Proxy": "0x0F021c29283c47DF8237741dD5a0aA22952aFc88"
+  }
+}
