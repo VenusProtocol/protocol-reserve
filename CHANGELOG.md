@@ -1,3 +1,10 @@
+## [2.4.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v2.4.0-dev.2...v2.4.0-dev.3) (2024-10-10)
+
+
+### Features
+
+* use @venusprotocol/governance-contracts that includes the Optimism deployment ([c5ee9fe](https://github.com/VenusProtocol/protocol-reserve/commit/c5ee9fe5d87bf002f02c5ab284ec7e95708a528e))
+
 ## [2.4.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v2.4.0-dev.1...v2.4.0-dev.2) (2024-10-10)
 
 
