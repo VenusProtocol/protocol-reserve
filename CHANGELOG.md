@@ -1,3 +1,16 @@
+## [2.4.0](https://github.com/VenusProtocol/protocol-reserve/compare/v2.3.0...v2.4.0) (2024-10-10)
+
+
+### Features
+
+* deployment files for PSR on opsepolia ([36e9c49](https://github.com/VenusProtocol/protocol-reserve/commit/36e9c4953fc9f4bdc0ac18006f0601137dcc2935))
+* deployment files for the PSR on opmainnet ([8013b49](https://github.com/VenusProtocol/protocol-reserve/commit/8013b49e4359f0dacd97190c5b548a3f749c8f7c))
+* updating deployment files ([c24c1ff](https://github.com/VenusProtocol/protocol-reserve/commit/c24c1ffe475458a5f73cd3e8a98d1e3addf1a853))
+* updating deployment files ([861960c](https://github.com/VenusProtocol/protocol-reserve/commit/861960c14831e1fd758269056eda002c15e2cfc4))
+* updating deployment files ([f9eee85](https://github.com/VenusProtocol/protocol-reserve/commit/f9eee859f423ffaaa7f149b10e14024e08c47702))
+* updating deployment files ([2f5f982](https://github.com/VenusProtocol/protocol-reserve/commit/2f5f9828f72c9dbf8e28e653977b5cbf11ff7591))
+* use @venusprotocol/governance-contracts that includes the Optimism deployment ([c5ee9fe](https://github.com/VenusProtocol/protocol-reserve/commit/c5ee9fe5d87bf002f02c5ab284ec7e95708a528e))
+
 ## [2.4.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v2.4.0-dev.2...v2.4.0-dev.3) (2024-10-10)
 
 
