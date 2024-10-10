@@ -1,3 +1,11 @@
+## [2.4.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v2.4.0-dev.1...v2.4.0-dev.2) (2024-10-10)
+
+
+### Features
+
+* deployment files for the PSR on opmainnet ([8013b49](https://github.com/VenusProtocol/protocol-reserve/commit/8013b49e4359f0dacd97190c5b548a3f749c8f7c))
+* updating deployment files ([c24c1ff](https://github.com/VenusProtocol/protocol-reserve/commit/c24c1ffe475458a5f73cd3e8a98d1e3addf1a853))
+
 ## [2.4.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v2.3.0...v2.4.0-dev.1) (2024-09-16)
 
 
