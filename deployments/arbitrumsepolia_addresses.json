@@ -5,6 +5,9 @@
     "DefaultProxyAdmin": "0xA78A1Df376c3CEeBC5Fab574fe6EdDbbF76fd03e",
     "ProtocolShareReserve": "0x09267d30798B59c581ce54E861A084C6FC298666",
     "ProtocolShareReserve_Implementation": "0xF5B07c27d213A2B838A3D155FFEC0d52B17E91fd",
-    "ProtocolShareReserve_Proxy": "0x09267d30798B59c581ce54E861A084C6FC298666"
+    "ProtocolShareReserve_Proxy": "0x09267d30798B59c581ce54E861A084C6FC298666",
+    "XVSVaultTreasury": "0x309b71a417dA9CfA8aC47e6038000B1739d9A3A6",
+    "XVSVaultTreasury_Implementation": "0xe0481f604D9B127F3Bb93FA73cF3e48A9e47b82a",
+    "XVSVaultTreasury_Proxy": "0x309b71a417dA9CfA8aC47e6038000B1739d9A3A6"
   }
 }
