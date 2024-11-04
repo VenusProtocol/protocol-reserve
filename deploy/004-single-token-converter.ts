@@ -40,6 +40,13 @@ async function getBaseAssets(network: string): Promise<BaseAssets> {
       WETHPrimeConverter: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH on Ethereum
       XVSVaultConverter: (await ethers.getContractOrNull("XVS"))?.address || ADDRESS_TWO,
     },
+    arbitrumsepolia: {
+      USDTPrimeConverter: "0xf3118a17863996B9F2A073c9A66Faaa664355cf8", // USDT on arbitrum sepolia
+      USDCPrimeConverter: "0x86f096B1D970990091319835faF3Ee011708eAe8", // USDC on arbitrum sepolia
+      WBTCPrimeConverter: "0xFb8d93FD3Cf18386a5564bb5619cD1FdB130dF7D", // WBTC on arbitrum sepolia
+      WETHPrimeConverter: "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73", // WETH on arbitrum sepolia
+      XVSVaultConverter: "0x877Dc896e7b13096D3827872e396927BbE704407", // XVS on arbitrum sepolia
+    },
     // add more networks
   };
   return networkBaseAssets[network];
