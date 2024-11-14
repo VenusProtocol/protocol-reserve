@@ -16,7 +16,7 @@ const func: DeployFunction = async ({
   const comptrollerAddress = (await ethers.getContractOrNull("Unitroller"))?.address || ADDRESS_ONE;
   const WBNBAddress = (await ethers.getContractOrNull("WBNB"))?.address || ADDRESS_ONE;
   const timelockAddress = (await ethers.getContractOrNull("NormalTimelock"))?.address || multisigs[name];
-  const acmAddress = (await ethers.getContractOrNull("AccessControlManager"))?.address || ADDRESS_ONE;
+  const acmAddress = (await ethers.getContractOrNull("AccessControlManager"))?.address || "0x724138223D8F76b519fdE715f60124E7Ce51e051";
   const loopsLimit = 20;
 
   const defaultProxyAdmin = await hre.artifacts.readArtifact(
