@@ -9,13 +9,14 @@ import { ensureNonzeroAddress, ensureNonzeroValue } from "@venusprotocol/solidit
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
 import { IRiskFundConverter } from "../Interfaces/IRiskFundConverter.sol";
 import { RiskFundV2Storage } from "./RiskFundStorage.sol";
+import { ReentrancyGuardTransient } from "../Utils/ReentrancyGuardTransient.sol";
 
 /// @title RiskFundV2
 /// @author Venus
 /// @notice Contract with basic features to hold base asset for different Comptrollers
 /// @dev This contract does not support BNB
 /// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
-contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
+contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund, ReentrancyGuardTransient {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Emitted when convertible base asset address is updated

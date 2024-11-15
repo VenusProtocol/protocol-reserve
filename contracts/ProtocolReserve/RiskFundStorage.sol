@@ -2,7 +2,8 @@
 pragma solidity 0.8.25;
 
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+
+import { ReentrancyGuardUpgradeableStorage } from "../Utils/ReentrancyGuardUpgradeableStorage.sol";
 
 /// @title ReserveHelpersStorage
 /// @author Venus
@@ -61,7 +62,7 @@ contract RiskFundV1Storage is ReserveHelpersStorage, MaxLoopsLimitHelpersStorage
 /// @author Venus
 /// @dev Risk fund V2 storage
 /// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
-contract RiskFundV2Storage is RiskFundV1Storage, ReentrancyGuardUpgradeable {
+contract RiskFundV2Storage is RiskFundV1Storage, ReentrancyGuardUpgradeableStorage {
     /// @notice Risk fund converter address
     address public riskFundConverter;
 }

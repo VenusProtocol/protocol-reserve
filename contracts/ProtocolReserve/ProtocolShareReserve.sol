@@ -3,7 +3,6 @@ pragma solidity 0.8.25;
 
 import { SafeERC20Upgradeable, IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { MaxLoopsLimitHelper } from "@venusprotocol/solidity-utilities/contracts/MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 
@@ -12,6 +11,8 @@ import { IComptroller } from "../Interfaces/IComptroller.sol";
 import { IPoolRegistry } from "../Interfaces/IPoolRegistry.sol";
 import { IVToken } from "../Interfaces/IVToken.sol";
 import { IIncomeDestination } from "../Interfaces/IIncomeDestination.sol";
+import { ReentrancyGuardTransient } from "../Utils/ReentrancyGuardTransient.sol";
+import { ReentrancyGuardUpgradeableStorage } from "../Utils/ReentrancyGuardUpgradeableStorage.sol";
 
 error InvalidAddress();
 error UnsupportedAsset();
@@ -20,9 +21,10 @@ error InvalidMaxLoopsLimit();
 
 contract ProtocolShareReserve is
     AccessControlledV8,
-    ReentrancyGuardUpgradeable,
+    ReentrancyGuardUpgradeableStorage,
     MaxLoopsLimitHelper,
-    IProtocolShareReserve
+    IProtocolShareReserve,
+    ReentrancyGuardTransient
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 

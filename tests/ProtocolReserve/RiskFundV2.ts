@@ -1,5 +1,5 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
-import { impersonateAccount, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { impersonateAccount, loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { Signer, constants } from "ethers";
@@ -137,10 +137,7 @@ describe("Risk Fund: Tests", function () {
 
     it("Transfer funds to auction contact", async function () {
       const shortfallSinger = await ethers.getSigner(shortfall.address);
-      await admin.sendTransaction({
-        to: shortfall.address,
-        value: ethers.utils.parseEther("1.0"), // Sends exactly 1.0 ether
-      });
+      await setBalance(shortfall.address, ethers.utils.parseEther("1.0"));
 
       const COMPTROLLER_A_AMOUNT = convertToUnit(30, 18);
 
@@ -194,7 +191,7 @@ describe("Risk Fund: Tests", function () {
     it("Transfer sweep tokens to (to) address", async () => {
       await impersonateAccount(riskFundConverter.address);
       riskFundConverterSigner = await ethers.getSigner(riskFundConverter.address);
-      await admin.sendTransaction({ to: riskFundConverter.address, value: ethers.utils.parseEther("10") });
+      await setBalance(riskFundConverter.address, ethers.utils.parseEther("10.0"));
 
       await riskFund
         .connect(riskFundConverterSigner)
@@ -264,7 +261,7 @@ describe("Risk Fund: Tests", function () {
     it("Sweeps tokens from comptroller address", async () => {
       await impersonateAccount(riskFundConverter.address);
       riskFundConverterSigner = await ethers.getSigner(riskFundConverter.address);
-      await admin.sendTransaction({ to: riskFundConverter.address, value: ethers.utils.parseEther("10") });
+      await setBalance(riskFundConverter.address, ethers.utils.parseEther("10.0"));
 
       await riskFund
         .connect(riskFundConverterSigner)

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
@@ -11,6 +10,8 @@ import { MANTISSA_ONE, EXP_SCALE } from "@venusprotocol/solidity-utilities/contr
 
 import { IAbstractTokenConverter } from "./IAbstractTokenConverter.sol";
 import { IConverterNetwork } from "../Interfaces/IConverterNetwork.sol";
+import { ReentrancyGuardTransient } from "../Utils/ReentrancyGuardTransient.sol";
+import { ReentrancyGuardUpgradeableStorage } from "../Utils/ReentrancyGuardUpgradeableStorage.sol";
 
 /// @title AbstractTokenConverter
 /// @author Venus
@@ -95,7 +96,12 @@ import { IConverterNetwork } from "../Interfaces/IConverterNetwork.sol";
  */
 
 /// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
-abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenConverter, ReentrancyGuardUpgradeable {
+abstract contract AbstractTokenConverter is
+    AccessControlledV8,
+    IAbstractTokenConverter,
+    ReentrancyGuardUpgradeableStorage,
+    ReentrancyGuardTransient
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Maximum incentive could be
