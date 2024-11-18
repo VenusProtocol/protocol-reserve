@@ -1,3 +1,14 @@
+## [2.5.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v2.4.0...v2.5.0-dev.1) (2024-11-18)
+
+
+### Features
+
+* deployment files for the converter network on arbitrum sepolia ([ebaab0c](https://github.com/VenusProtocol/protocol-reserve/commit/ebaab0cba32baa04da18304861dc5c967341878d))
+* deployment files for the converters on the arbitrum sepolia ([3e3c04b](https://github.com/VenusProtocol/protocol-reserve/commit/3e3c04ba91946b66c75bb8915294d844997bd98a))
+* deployment files for the xvsvault treasury on arbitrum sepolia ([8ea6e4b](https://github.com/VenusProtocol/protocol-reserve/commit/8ea6e4bf5022f18ba0cd86a6320b52a76c6432a6))
+* updating deployment files ([2107500](https://github.com/VenusProtocol/protocol-reserve/commit/21075008d181a7d1d3934fd9f4d123a99067658c))
+* updating deployment files ([9054a09](https://github.com/VenusProtocol/protocol-reserve/commit/9054a09a9111b9b32b1f78849743fc762b70cac0))
+
 ## [2.4.0](https://github.com/VenusProtocol/protocol-reserve/compare/v2.3.0...v2.4.0) (2024-10-10)
 
 
