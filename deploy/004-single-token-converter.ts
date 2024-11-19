@@ -115,5 +115,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 func.tags = ["SingleTokenConverter", "Converters"];
+func.id = "xvs-and-prime-converters"; // id required to prevent re-execution
 
 export default func;
