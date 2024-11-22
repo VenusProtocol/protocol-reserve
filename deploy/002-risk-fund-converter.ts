@@ -1,5 +1,5 @@
 import { parseUnits } from "ethers/lib/utils";
-import { ethers, network } from "hardhat";
+import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
@@ -15,29 +15,31 @@ const func: DeployFunction = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const acmAddress = (await ethers.getContractOrNull("AccessControlManager"))?.address || ADDRESS_ONE;
-  const oracleAddress = (await ethers.getContractOrNull("ResilientOracle"))?.address || ADDRESS_ONE;
-  const usdtAddress = (await ethers.getContractOrNull("USDT"))?.address || ADDRESS_ONE;
-  const corePoolAddress = (await ethers.getContractOrNull("Unitroller"))?.address || ADDRESS_ONE;
-  const btcbAddress = (await ethers.getContractOrNull("BTCB"))?.address || ADDRESS_ONE;
-  const ethAddress = (await ethers.getContractOrNull("ETH"))?.address || ADDRESS_ONE;
+  const acmAddress = (await ethers.getContract("AccessControlManager"))?.address;
+  const oracleAddress = (await ethers.getContract("ResilientOracle"))?.address;
+  const usdtAddress = (await ethers.getContract("USDT"))?.address;
+  const corePoolAddress = (await ethers.getContract("Unitroller"))?.address;
+  const btcbAddress = (await ethers.getContract("BTCB"))?.address;
+
+  const ethAddress = (await ethers.getContract("ETH"))?.address;
   const vBNBAddress = (await ethers.getContractOrNull("vBNB"))?.address || ADDRESS_ONE;
   const wBNBAddress = (await ethers.getContractOrNull("WBNB"))?.address || ADDRESS_ONE;
-  const riskFundAddress = (await ethers.getContractOrNull("RiskFund"))?.address || ADDRESS_ONE;
-  const poolRegistryAddress = (await ethers.getContractOrNull("PoolRegistry"))?.address || ADDRESS_ONE;
-  const poolDeFiAddress = (await ethers.getContractOrNull("Comptroller_DeFi"))?.address || ADDRESS_ONE;
-  const poolGameFiAddress = (await ethers.getContractOrNull("Comptroller_GameFi"))?.address || ADDRESS_ONE;
-  const poolTronAddress = (await ethers.getContractOrNull("Comptroller_Tron"))?.address || ADDRESS_ONE;
-  const timelockAddress = (await ethers.getContractOrNull("NormalTimelock"))?.address || multisigs[name];
-
-  let poolStableCoinAddress;
-  if (network.name === "bscmainnet") {
-    poolStableCoinAddress = (await ethers.getContractOrNull("Comptroller_Stablecoins"))?.address || ADDRESS_ONE;
+  const riskFundAddress = (await ethers.getContract("RiskFundV2"))?.address;
+  const poolRegistryAddress = (await ethers.getContract("PoolRegistry"))?.address;
+  let comptrollers;
+  const timelockAddress = (await ethers.getContract("NormalTimelock"))?.address || multisigs[name];
+  if (live) {
+    const poolDeFiAddress = (await ethers.getContract("Comptroller_DeFi"))?.address;
+    const poolGameFiAddress = (await ethers.getContract("Comptroller_GameFi"))?.address;
+    const poolTronAddress = (await ethers.getContract("Comptroller_Tron"))?.address;
+    const poolStableCoinAddress = (await ethers.getContract("Comptroller_Stablecoins"))?.address;
+    comptrollers = [corePoolAddress, poolStableCoinAddress, poolDeFiAddress, poolGameFiAddress, poolTronAddress];
   } else {
-    poolStableCoinAddress = (await ethers.getContractOrNull("Comptroller_StableCoins"))?.address || ADDRESS_ONE;
+    const pool1Address = (await ethers.getContractOrNull("Comptroller_Pool1"))?.address || ADDRESS_ONE;
+    const pool2Address = (await ethers.getContractOrNull("Comptroller_Pool2"))?.address || ADDRESS_ONE;
+    comptrollers = [pool1Address, pool2Address];
   }
 
-  const comptrollers = [corePoolAddress, poolStableCoinAddress, poolDeFiAddress, poolGameFiAddress, poolTronAddress];
   const assets = [[usdtAddress, btcbAddress, ethAddress], [usdtAddress], [usdtAddress], [usdtAddress], [usdtAddress]];
   const values = [[true, true, true], [true], [true], [true], [true]];
 
@@ -45,24 +47,26 @@ const func: DeployFunction = async ({
     from: deployer,
     contract: "RiskFundConverter",
     args: [corePoolAddress, vBNBAddress, wBNBAddress],
-    proxy: {
-      owner: live ? timelockAddress : deployer,
-      proxyContract: "OpenZeppelinTransparentProxy",
-      execute: {
-        methodName: "initialize",
-        args: [
-          acmAddress,
-          oracleAddress,
-          riskFundAddress,
-          poolRegistryAddress,
-          MIN_AMOUNT_TO_CONVERT,
-          comptrollers,
-          assets,
-          values,
-        ],
-      },
-      upgradeIndex: 0,
-    },
+    proxy: live
+      ? {
+          owner: timelockAddress,
+          proxyContract: "OpenZeppelinTransparentProxy",
+          execute: {
+            methodName: "initialize",
+            args: [
+              acmAddress,
+              oracleAddress,
+              riskFundAddress,
+              poolRegistryAddress,
+              MIN_AMOUNT_TO_CONVERT,
+              comptrollers,
+              assets,
+              values,
+            ],
+          },
+          upgradeIndex: 0,
+        }
+      : undefined,
     autoMine: true,
     log: true,
   });

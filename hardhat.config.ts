@@ -24,6 +24,12 @@ const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
 // if we define the Oracle deployments at last then DefaultProxyAdmin of current repository will be overwritten by DefaultProxyAdmin of Oracle
 // when the export deployment command executes independently for each network.
 const externalDeployments = {
+  hardhat: [
+    "node_modules/@venusprotocol/isolated-pools/deployments/bscmainnet",
+    "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
+    "node_modules/@venusprotocol/governance-contracts/deployments/bscmainnet",
+    "node_modules/@venusprotocol/oracle/deployments/bscmainnet",
+  ],
   bsctestnet: [
     "node_modules/@venusprotocol/governance-contracts/deployments/bsctestnet",
     "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
