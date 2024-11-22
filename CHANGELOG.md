@@ -1,3 +1,14 @@
+## [3.0.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v2.5.0-dev.1...v3.0.0-dev.1) (2024-11-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* support project and full protocol hardhat deploy
+
+### Code Refactoring
+
+* support project and full protocol hardhat deploy ([1986c6a](https://github.com/VenusProtocol/protocol-reserve/commit/1986c6aabfb5b6e7483df9f8fce73957b49fc27d))
+
 ## [2.5.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v2.4.0...v2.5.0-dev.1) (2024-11-18)
 
 
