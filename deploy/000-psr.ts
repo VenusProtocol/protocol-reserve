@@ -13,10 +13,10 @@ const func: DeployFunction = async ({
   const { deployer } = await getNamedAccounts();
 
   const vBNBAddress = (await ethers.getContractOrNull("vBNB"))?.address || ADDRESS_ONE;
-  const comptrollerAddress = (await ethers.getContractOrNull("Unitroller"))?.address || ADDRESS_ONE;
+  const comptrollerAddress = (await ethers.getContract("Unitroller"))?.address;
   const WBNBAddress = (await ethers.getContractOrNull("WBNB"))?.address || ADDRESS_ONE;
-  const timelockAddress = (await ethers.getContractOrNull("NormalTimelock"))?.address || multisigs[name];
-  const acmAddress = (await ethers.getContractOrNull("AccessControlManager"))?.address || ADDRESS_ONE;
+  const timelockAddress = (await ethers.getContract("NormalTimelock"))?.address || multisigs[name];
+  const acmAddress = (await ethers.getContract("AccessControlManager"))?.address;
   const loopsLimit = 20;
 
   const defaultProxyAdmin = await hre.artifacts.readArtifact(
@@ -28,19 +28,20 @@ const func: DeployFunction = async ({
     log: true,
     deterministicDeployment: false,
     args: [comptrollerAddress, WBNBAddress, vBNBAddress],
-    skipIfAlreadyDeployed: true,
-    proxy: {
-      owner: live ? timelockAddress : deployer,
-      proxyContract: "OptimizedTransparentUpgradeableProxy",
-      execute: {
-        methodName: "initialize",
-        args: [acmAddress, loopsLimit],
-      },
-      viaAdminContract: {
-        name: "DefaultProxyAdmin",
-        artifact: defaultProxyAdmin,
-      },
-    },
+    proxy: live
+      ? {
+          owner: timelockAddress,
+          proxyContract: "OpenZeppelinTransparentProxy",
+          execute: {
+            methodName: "initialize",
+            args: [acmAddress, loopsLimit],
+          },
+          viaAdminContract: {
+            name: "DefaultProxyAdmin",
+            artifact: defaultProxyAdmin,
+          },
+        }
+      : undefined,
   });
 
   const psr = await hre.ethers.getContract("ProtocolShareReserve");
