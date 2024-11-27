@@ -56,6 +56,13 @@ async function getBaseAssets(network: NETWORK): Promise<BaseAssets> {
       WETHPrimeConverter: "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73", // WETH on arbitrum sepolia
       XVSVaultConverter: "0x877Dc896e7b13096D3827872e396927BbE704407", // XVS on arbitrum sepolia
     }),
+    arbitrumone: async () => ({
+      USDTPrimeConverter: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", // USDT on arbitrum one
+      USDCPrimeConverter: "0xaf88d065e77c8cc2239327c5edb3a432268e5831", // USDC on arbitrum one
+      WBTCPrimeConverter: "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f", // WBTC on arbitrum one
+      WETHPrimeConverter: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1", // WETH on arbitrum one
+      XVSVaultConverter: "0xc1Eb7689147C81aC840d4FF0D298489fc7986d52", // XVS on arbitrum one
+    }),
     // add more networks
   };
   return await networkBaseAssets[network]();

@@ -2,9 +2,22 @@
   "name": "arbitrumone",
   "chainId": "42161",
   "addresses": {
+    "ConverterNetwork": "0x2F6672C9A0988748b0172D97961BecfD9DC6D6d5",
+    "ConverterNetwork_Implementation": "0xf4b78771044D21F8289238Cad82bA5a13076aa4d",
+    "ConverterNetwork_Proxy": "0x2F6672C9A0988748b0172D97961BecfD9DC6D6d5",
     "DefaultProxyAdmin": "0xF6fF3e9459227f0cDE8B102b90bE25960317b216",
     "ProtocolShareReserve": "0xF9263eaF7eB50815194f26aCcAB6765820B13D41",
     "ProtocolShareReserve_Implementation": "0x6B2D272CD89585BCE8404006f366a77680324F7d",
-    "ProtocolShareReserve_Proxy": "0xF9263eaF7eB50815194f26aCcAB6765820B13D41"
+    "ProtocolShareReserve_Proxy": "0xF9263eaF7eB50815194f26aCcAB6765820B13D41",
+    "SingleTokenConverterBeacon": "0x993900Ab4ef4092e5B76d4781D09A2732086F0F0",
+    "SingleTokenConverterImp": "0x07801d54906Be49517DfDEd26c89A81fb94e504B",
+    "USDCPrimeConverter": "0x6553C9f9E131191d4fECb6F0E73bE13E229065C6",
+    "USDTPrimeConverter": "0x435Fac1B002d5D31f374E07c0177A1D709d5DC2D",
+    "WBTCPrimeConverter": "0xF91369009c37f029aa28AF89709a352375E5A162",
+    "WETHPrimeConverter": "0x4aCB90ddD6df24dC6b0D50df84C94e72012026d0",
+    "XVSVaultConverter": "0x9c5A7aB705EA40876c1B292630a3ff2e0c213DB1",
+    "XVSVaultTreasury": "0xb076D4f15c08D7A7B89466327Ba71bc7e1311b58",
+    "XVSVaultTreasury_Implementation": "0x1052B6eEe137074761fFE040a0357e6F8c80dB8D",
+    "XVSVaultTreasury_Proxy": "0xb076D4f15c08D7A7B89466327Ba71bc7e1311b58"
   }
 }
