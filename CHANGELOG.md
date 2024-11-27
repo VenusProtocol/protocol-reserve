@@ -1,3 +1,13 @@
+## [3.0.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v3.0.0-dev.1...v3.0.0-dev.2) (2024-11-27)
+
+
+### Features
+
+* converter network deployment files on arbitrum one ([c6c2f50](https://github.com/VenusProtocol/protocol-reserve/commit/c6c2f501d6711bd176c97c713d41fe20d2eefa92))
+* converters deployment files on arbitrum one ([e0397f0](https://github.com/VenusProtocol/protocol-reserve/commit/e0397f005b0f68afbe91b58518a34f06177f6fa9))
+* updating deployment files ([f0d55ad](https://github.com/VenusProtocol/protocol-reserve/commit/f0d55ad2ec076ebe45f2fe79c7ddeeb7784b5381))
+* xvs vault treasury on arbitrum one ([88c440a](https://github.com/VenusProtocol/protocol-reserve/commit/88c440ab84be079a7465f0a4cf16950e56f3073c))
+
 ## [3.0.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v2.5.0-dev.1...v3.0.0-dev.1) (2024-11-22)
 
 
