@@ -61,10 +61,26 @@ const externalDeployments = {
     "node_modules/@venusprotocol/governance-contracts/deployments/opbnbmainnet",
     "node_modules/@venusprotocol/oracle/deployments/opbnbmainnet",
   ],
-  arbitrumsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/arbitrumsepolia"],
-  arbitrumone: ["node_modules/@venusprotocol/governance-contracts/deployments/arbitrumone"],
-  opsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/opsepolia"],
-  opmainnet: [],
+  arbitrumsepolia: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/arbitrumsepolia",
+    "node_modules/@venusprotocol/oracle/deployments/arbitrumsepolia",
+  ],
+  arbitrumone: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/arbitrumone",
+    "node_modules/@venusprotocol/oracle/deployments/arbitrumone",
+  ],
+  opsepolia: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/opsepolia",
+    "node_modules/@venusprotocol/oracle/deployments/opsepolia",
+  ],
+  opmainnet: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/opmainnet",
+    "node_modules/@venusprotocol/oracle/deployments/opmainnet",
+  ],
+  basesepolia: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/basesepolia",
+    // TODO: "node_modules/@venusprotocol/oracle/deployments/basesepolia",
+  ],
 };
 
 extendConfig((config: HardhatConfig) => {
@@ -193,6 +209,12 @@ const config: HardhatUserConfig = {
       live: true,
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
+    basesepolia: {
+      url: process.env.ARCHIVE_NODE_basesepolia || "https://sepolia.base.org",
+      chainId: 84532,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
   },
   etherscan: {
     apiKey: {
@@ -206,6 +228,7 @@ const config: HardhatUserConfig = {
       arbitrumone: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       opsepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       opmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      basesepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
     customChains: [
       {
@@ -286,6 +309,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api-optimistic.etherscan.io/api",
           browserURL: "https://optimistic.etherscan.io/",
+        },
+      },
+      {
+        network: "basesepolia",
+        chainId: 84532,
+        urls: {
+          apiURL: "https://api-sepolia.basescan.org/api",
+          browserURL: "https://sepolia.basescan.org/",
         },
       },
     ],
