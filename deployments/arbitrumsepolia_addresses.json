@@ -2,9 +2,22 @@
   "name": "arbitrumsepolia",
   "chainId": "421614",
   "addresses": {
+    "ConverterNetwork": "0x9dD63dC8DADf90B67511939C00607484567B0D7A",
+    "ConverterNetwork_Implementation": "0xa5FD972D51aC9a74Bb02E9072CE8b3eC33BfB832",
+    "ConverterNetwork_Proxy": "0x9dD63dC8DADf90B67511939C00607484567B0D7A",
     "DefaultProxyAdmin": "0xA78A1Df376c3CEeBC5Fab574fe6EdDbbF76fd03e",
     "ProtocolShareReserve": "0x09267d30798B59c581ce54E861A084C6FC298666",
     "ProtocolShareReserve_Implementation": "0xF5B07c27d213A2B838A3D155FFEC0d52B17E91fd",
-    "ProtocolShareReserve_Proxy": "0x09267d30798B59c581ce54E861A084C6FC298666"
+    "ProtocolShareReserve_Proxy": "0x09267d30798B59c581ce54E861A084C6FC298666",
+    "SingleTokenConverterBeacon": "0xC77D0F75f1e4e3720DA1D2F5D809F439125a2Fd4",
+    "SingleTokenConverterImp": "0x4ea44b72e00e942b259a6a3720Cf1B8776b9fe93",
+    "USDCPrimeConverter": "0xE88ed530597bc8D50e8CfC0EecAAFf6A93248C74",
+    "USDTPrimeConverter": "0xFC0ec257d3ec4D673cB4e2CD3827C202e75fd0be",
+    "WBTCPrimeConverter": "0x3089F46caf6611806caA39Ffaf672097156b893a",
+    "WETHPrimeConverter": "0x0d1e90c1F86CD1c1dF514B493c5985B3FD9CD6C8",
+    "XVSVaultConverter": "0x99942a033454Cef6Ffb2843886C8b2E658E7D5fd",
+    "XVSVaultTreasury": "0x309b71a417dA9CfA8aC47e6038000B1739d9A3A6",
+    "XVSVaultTreasury_Implementation": "0xe0481f604D9B127F3Bb93FA73cF3e48A9e47b82a",
+    "XVSVaultTreasury_Proxy": "0x309b71a417dA9CfA8aC47e6038000B1739d9A3A6"
   }
 }
