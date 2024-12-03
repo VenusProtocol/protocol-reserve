@@ -55,10 +55,26 @@ const externalDeployments = {
     "node_modules/@venusprotocol/governance-contracts/deployments/opbnbmainnet",
     "node_modules/@venusprotocol/oracle/deployments/opbnbmainnet",
   ],
-  arbitrumsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/arbitrumsepolia"],
-  arbitrumone: ["node_modules/@venusprotocol/governance-contracts/deployments/arbitrumone"],
-  opsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/opsepolia"],
-  opmainnet: [],
+  arbitrumsepolia: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/arbitrumsepolia",
+    "node_modules/@venusprotocol/oracle/deployments/arbitrumsepolia",
+  ],
+  arbitrumone: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/arbitrumone",
+    "node_modules/@venusprotocol/oracle/deployments/arbitrumone",
+  ],
+  opsepolia: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/opsepolia",
+    "node_modules/@venusprotocol/oracle/deployments/opsepolia",
+  ],
+  opmainnet: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/opmainnet",
+    "node_modules/@venusprotocol/oracle/deployments/opmainnet",
+  ],
+  basesepolia: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/basesepolia",
+    // TODO: "node_modules/@venusprotocol/oracle/deployments/basesepolia",
+  ],
 };
 
 extendConfig((config: HardhatConfig) => {
