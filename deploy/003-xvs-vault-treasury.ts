@@ -1,31 +1,32 @@
 import { ethers } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { ADDRESS_ONE, multisigs } from "../helpers/utils";
+import { multisigs } from "../helpers/utils";
 
 const func = async ({ network: { live, name }, getNamedAccounts, deployments }: HardhatRuntimeEnvironment) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const xvsAddress = (await ethers.getContractOrNull("XVS"))?.address || ADDRESS_ONE;
-  const proxyOwnerAddress =
-    (await ethers.getContractOrNull("NormalTimelock"))?.address || multisigs[name] || ADDRESS_ONE;
-  const acmAddress = (await ethers.getContractOrNull("AccessControlManager"))?.address || ADDRESS_ONE;
-  const xvsVaultAddress = (await ethers.getContractOrNull("XVSVaultProxy"))?.address || ADDRESS_ONE;
+  const xvsAddress = (await ethers.getContract("XVS"))?.address;
+  const proxyOwnerAddress = (await ethers.getContractOrNull("NormalTimelock"))?.address || multisigs[name];
+  const acmAddress = (await ethers.getContract("AccessControlManager"))?.address;
+  const xvsVaultAddress = (await ethers.getContract("XVSVaultProxy"))?.address;
 
   await deploy("XVSVaultTreasury", {
     from: deployer,
     log: true,
     deterministicDeployment: false,
     args: [xvsAddress],
-    proxy: {
-      owner: live ? proxyOwnerAddress : deployer,
-      proxyContract: "OpenZeppelinTransparentProxy",
-      execute: {
-        methodName: "initialize",
-        args: [acmAddress, xvsVaultAddress],
-      },
-    },
+    proxy: live
+      ? {
+          owner: proxyOwnerAddress,
+          proxyContract: "OpenZeppelinTransparentProxy",
+          execute: {
+            methodName: "initialize",
+            args: [acmAddress, xvsVaultAddress],
+          },
+        }
+      : undefined,
   });
 
   const xvsVaultTreasury = await ethers.getContract("XVSVaultTreasury");

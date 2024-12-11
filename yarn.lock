@@ -3512,6 +3512,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@venusprotocol/governance-contracts@npm:^2.5.0":
+  version: 2.5.0
+  resolution: "@venusprotocol/governance-contracts@npm:2.5.0"
+  dependencies:
+    "@venusprotocol/solidity-utilities": 2.0.0
+    hardhat-deploy-ethers: ^0.3.0-beta.13
+    module-alias: ^2.2.2
+  checksum: 1dce18deb79df8dbde91ff3b68c35c31fb58bd7549bba86ee25fcf99a802e393612ac6f5460c95c1bc635c2334f8c967409cf380758cafc81f42a562ac8514c1
+  languageName: node
+  linkType: hard
+
 "@venusprotocol/isolated-pools@npm:^3.4.0":
   version: 3.6.0
   resolution: "@venusprotocol/isolated-pools@npm:3.6.0"
@@ -3529,7 +3540,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/oracle@npm:^2.4.0":
+"@venusprotocol/oracle@npm:^2.6.0":
   version: 2.6.0
   resolution: "@venusprotocol/oracle@npm:2.6.0"
   dependencies:
@@ -3550,7 +3561,25 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/protocol-reserve@^2.4.0, @venusprotocol/protocol-reserve@workspace:.":
+"@venusprotocol/protocol-reserve@npm:^2.4.0":
+  version: 2.4.0
+  resolution: "@venusprotocol/protocol-reserve@npm:2.4.0"
+  dependencies:
+    "@nomiclabs/hardhat-ethers": ^2.2.3
+    "@openzeppelin/contracts": ^4.8.3
+    "@openzeppelin/contracts-upgradeable": ^4.8.3
+    "@openzeppelin/hardhat-upgrades": ^1.21.0
+    "@solidity-parser/parser": ^0.13.2
+    "@venusprotocol/solidity-utilities": ^2.0.3
+    "@venusprotocol/venus-protocol": ^9.1.0
+    ethers: ^5.7.0
+    hardhat-deploy: ^0.11.14
+    module-alias: ^2.2.2
+  checksum: 6e5ffa1c458cff073f9b920ab6385d9db0c86ac11d0950fe421a853e709ee12ec0013c6d3e9cb4e50e94f749dcd33e7a515d57828c5aa6f925dee8324e896ee5
+  languageName: node
+  linkType: hard
+
+"@venusprotocol/protocol-reserve@workspace:.":
   version: 0.0.0-use.local
   resolution: "@venusprotocol/protocol-reserve@workspace:."
   dependencies:
@@ -3581,9 +3610,9 @@ __metadata:
     "@types/node": ^18.16.3
     "@typescript-eslint/eslint-plugin": ^5.44.0
     "@typescript-eslint/parser": ^5.44.0
-    "@venusprotocol/governance-contracts": ^2.4.0
+    "@venusprotocol/governance-contracts": ^2.5.0
     "@venusprotocol/isolated-pools": ^3.4.0
-    "@venusprotocol/oracle": ^2.4.0
+    "@venusprotocol/oracle": ^2.6.0
     "@venusprotocol/solidity-utilities": ^2.0.3
     "@venusprotocol/venus-protocol": ^9.1.0
     bignumber.js: ^9.1.1

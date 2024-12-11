@@ -18,7 +18,6 @@ export const convertToUnit = (amount: string | number, decimals: number) => {
 };
 
 export const ADDRESS_ONE = "0x0000000000000000000000000000000000000001";
-export const ADDRESS_TWO = "0x0000000000000000000000000000000000000002";
 
 interface ChainAddressesConfig {
   [key: string]: string;
@@ -36,4 +35,5 @@ export const multisigs: ChainAddressesConfig = {
   zksyncmainnet: "0x751Aa759cfBB6CE71A43b48e40e1cCcFC66Ba4aa",
   opsepolia: "0xd57365EE4E850e881229e2F8Aa405822f289e78d",
   opmainnet: "0x2e94dd14E81999CdBF5deDE31938beD7308354b3",
+  basesepolia: "0xdf3b635d2b535f906BB02abb22AED71346E36a00",
 };
