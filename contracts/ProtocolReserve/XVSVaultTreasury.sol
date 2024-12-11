@@ -4,16 +4,17 @@ pragma solidity 0.8.25;
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { ensureNonzeroAddress, ensureNonzeroValue } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 
 import { IXVSVault } from "../Interfaces/IXVSVault.sol";
+import { ReentrancyGuardTransient } from "../Utils/ReentrancyGuardTransient.sol";
+import { ReentrancyGuardUpgradeableStorage } from "../Utils/ReentrancyGuardUpgradeableStorage.sol";
 
 /// @title XVSVaultTreasury
 /// @author Venus
 /// @notice XVSVaultTreasury stores the tokens sent by SingleTokenConverter(XVS) and funds XVSVault
 /// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
-contract XVSVaultTreasury is AccessControlledV8, ReentrancyGuardUpgradeable {
+contract XVSVaultTreasury is AccessControlledV8, ReentrancyGuardUpgradeableStorage, ReentrancyGuardTransient {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice The xvs token address
