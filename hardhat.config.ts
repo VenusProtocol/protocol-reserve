@@ -79,7 +79,11 @@ const externalDeployments = {
   ],
   basesepolia: [
     "node_modules/@venusprotocol/governance-contracts/deployments/basesepolia",
-    // TODO: "node_modules/@venusprotocol/oracle/deployments/basesepolia",
+    "node_modules/@venusprotocol/oracle/deployments/basesepolia",
+  ],
+  basemainnet: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/basemainnet",
+    "node_modules/@venusprotocol/oracle/deployments/basemainnet",
   ],
 };
 
@@ -235,7 +239,7 @@ const config: HardhatUserConfig = {
       opsepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       opmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       basesepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      basemainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      basemainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
     customChains: [
       {
@@ -330,7 +334,7 @@ const config: HardhatUserConfig = {
         network: "basemainnet",
         chainId: 8453,
         urls: {
-          apiURL: "https://mainnet.base.org",
+          apiURL: "https://api.basescan.org/api",
           browserURL: "https://basescan.org/",
         },
       },
