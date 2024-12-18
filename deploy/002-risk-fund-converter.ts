@@ -7,6 +7,10 @@ import { ADDRESS_ONE, multisigs } from "../helpers/utils";
 
 const MIN_AMOUNT_TO_CONVERT = parseUnits("10", 18);
 
+const getTokenOrMockName = (name: string, live: boolean) => {
+  return `${live ? "" : "Mock"}${name}`;
+};
+
 const func: DeployFunction = async ({
   network: { live, name },
   getNamedAccounts,
@@ -19,7 +23,7 @@ const func: DeployFunction = async ({
   const oracleAddress = (await ethers.getContract("ResilientOracle"))?.address;
   const usdtAddress = (await ethers.getContract("USDT"))?.address;
   const corePoolAddress = (await ethers.getContract("Unitroller"))?.address;
-  const btcbAddress = (await ethers.getContract("BTCB"))?.address;
+  const btcbAddress = (await ethers.getContract(getTokenOrMockName("BTCB", live)))?.address;
 
   const ethAddress = (await ethers.getContract("ETH"))?.address;
   const vBNBAddress = (await ethers.getContractOrNull("vBNB"))?.address || ADDRESS_ONE;

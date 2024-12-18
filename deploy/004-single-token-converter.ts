@@ -17,7 +17,7 @@ async function getBaseAssets(network: NETWORK): Promise<BaseAssets> {
     hardhat: async () => ({
       USDTPrimeConverter: (await ethers.getContract("USDT"))?.address,
       USDCPrimeConverter: (await ethers.getContract("USDC"))?.address,
-      BTCBPrimeConverter: (await ethers.getContract("BTCB"))?.address,
+      BTCBPrimeConverter: (await ethers.getContract("MockBTCB"))?.address,
       ETHPrimeConverter: (await ethers.getContract("ETH"))?.address,
       XVSVaultConverter: (await ethers.getContract("XVS"))?.address,
     }),
