@@ -1,3 +1,11 @@
+## [3.0.0-dev.4](https://github.com/VenusProtocol/protocol-reserve/compare/v3.0.0-dev.3...v3.0.0-dev.4) (2024-12-18)
+
+
+### Features
+
+* deployed on base mainnet ([c7f7b64](https://github.com/VenusProtocol/protocol-reserve/commit/c7f7b649ca9e31f253150bc1bdd9d35451e7da20))
+* updating deployment files ([be43ca8](https://github.com/VenusProtocol/protocol-reserve/commit/be43ca82330299c8e413991ea96c2c66abbac3d8))
+
 ## [3.0.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v3.0.0-dev.2...v3.0.0-dev.3) (2024-12-03)
 
 
