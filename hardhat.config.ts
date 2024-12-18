@@ -24,6 +24,12 @@ const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
 // if we define the Oracle deployments at last then DefaultProxyAdmin of current repository will be overwritten by DefaultProxyAdmin of Oracle
 // when the export deployment command executes independently for each network.
 const externalDeployments = {
+  hardhat: [
+    "node_modules/@venusprotocol/isolated-pools/deployments/bscmainnet",
+    "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
+    "node_modules/@venusprotocol/governance-contracts/deployments/bscmainnet",
+    "node_modules/@venusprotocol/oracle/deployments/bscmainnet",
+  ],
   bsctestnet: [
     "node_modules/@venusprotocol/governance-contracts/deployments/bsctestnet",
     "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
@@ -55,10 +61,30 @@ const externalDeployments = {
     "node_modules/@venusprotocol/governance-contracts/deployments/opbnbmainnet",
     "node_modules/@venusprotocol/oracle/deployments/opbnbmainnet",
   ],
-  arbitrumsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/arbitrumsepolia"],
-  arbitrumone: ["node_modules/@venusprotocol/governance-contracts/deployments/arbitrumone"],
-  opsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/opsepolia"],
-  opmainnet: [],
+  arbitrumsepolia: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/arbitrumsepolia",
+    "node_modules/@venusprotocol/oracle/deployments/arbitrumsepolia",
+  ],
+  arbitrumone: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/arbitrumone",
+    "node_modules/@venusprotocol/oracle/deployments/arbitrumone",
+  ],
+  opsepolia: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/opsepolia",
+    "node_modules/@venusprotocol/oracle/deployments/opsepolia",
+  ],
+  opmainnet: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/opmainnet",
+    "node_modules/@venusprotocol/oracle/deployments/opmainnet",
+  ],
+  basesepolia: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/basesepolia",
+    "node_modules/@venusprotocol/oracle/deployments/basesepolia",
+  ],
+  basemainnet: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/basemainnet",
+    "node_modules/@venusprotocol/oracle/deployments/basemainnet",
+  ],
 };
 
 extendConfig((config: HardhatConfig) => {
@@ -187,6 +213,18 @@ const config: HardhatUserConfig = {
       live: true,
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
+    basesepolia: {
+      url: process.env.ARCHIVE_NODE_basesepolia || "https://sepolia.base.org",
+      chainId: 84532,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    basemainnet: {
+      url: process.env.ARCHIVE_NODE_basemainnet || "https://mainnet.base.org",
+      chainId: 8453,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
   },
   etherscan: {
     apiKey: {
@@ -200,6 +238,8 @@ const config: HardhatUserConfig = {
       arbitrumone: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       opsepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       opmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      basesepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      basemainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
     customChains: [
       {
@@ -280,6 +320,22 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api-optimistic.etherscan.io/api",
           browserURL: "https://optimistic.etherscan.io/",
+        },
+      },
+      {
+        network: "basesepolia",
+        chainId: 84532,
+        urls: {
+          apiURL: "https://api-sepolia.basescan.org/api",
+          browserURL: "https://sepolia.basescan.org/",
+        },
+      },
+      {
+        network: "basemainnet",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org/",
         },
       },
     ],
