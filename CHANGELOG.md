@@ -1,3 +1,36 @@
+## [3.0.0](https://github.com/VenusProtocol/protocol-reserve/compare/v2.4.0...v3.0.0) (2024-12-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* support project and full protocol hardhat deploy
+
+### Features
+
+* converter network deployment files on arbitrum one ([c6c2f50](https://github.com/VenusProtocol/protocol-reserve/commit/c6c2f501d6711bd176c97c713d41fe20d2eefa92))
+* converters deployment files on arbitrum one ([e0397f0](https://github.com/VenusProtocol/protocol-reserve/commit/e0397f005b0f68afbe91b58518a34f06177f6fa9))
+* deployed on base mainnet ([c7f7b64](https://github.com/VenusProtocol/protocol-reserve/commit/c7f7b649ca9e31f253150bc1bdd9d35451e7da20))
+* deployment files for the converter network on arbitrum sepolia ([ebaab0c](https://github.com/VenusProtocol/protocol-reserve/commit/ebaab0cba32baa04da18304861dc5c967341878d))
+* deployment files for the converters on the arbitrum sepolia ([3e3c04b](https://github.com/VenusProtocol/protocol-reserve/commit/3e3c04ba91946b66c75bb8915294d844997bd98a))
+* deployment files for the xvsvault treasury on arbitrum sepolia ([8ea6e4b](https://github.com/VenusProtocol/protocol-reserve/commit/8ea6e4bf5022f18ba0cd86a6320b52a76c6432a6))
+* updating deployment files ([be43ca8](https://github.com/VenusProtocol/protocol-reserve/commit/be43ca82330299c8e413991ea96c2c66abbac3d8))
+* updating deployment files ([f0d55ad](https://github.com/VenusProtocol/protocol-reserve/commit/f0d55ad2ec076ebe45f2fe79c7ddeeb7784b5381))
+* updating deployment files ([53b1670](https://github.com/VenusProtocol/protocol-reserve/commit/53b1670a3d4c4fa4c1116c7e80aa4b7bf0eb5a12))
+* updating deployment files ([2107500](https://github.com/VenusProtocol/protocol-reserve/commit/21075008d181a7d1d3934fd9f4d123a99067658c))
+* updating deployment files ([9054a09](https://github.com/VenusProtocol/protocol-reserve/commit/9054a09a9111b9b32b1f78849743fc762b70cac0))
+* xvs vault treasury on arbitrum one ([88c440a](https://github.com/VenusProtocol/protocol-reserve/commit/88c440ab84be079a7465f0a4cf16950e56f3073c))
+
+
+### Bug Fixes
+
+* added config ([1ce0e03](https://github.com/VenusProtocol/protocol-reserve/commit/1ce0e0348b46faa7cce571d6e62ad128a6aaf2d0))
+* deployed contracts ([f16af29](https://github.com/VenusProtocol/protocol-reserve/commit/f16af2929254311f00c06adb80c7d39cda48fe0b))
+
+
+### Code Refactoring
+
+* support project and full protocol hardhat deploy ([1986c6a](https://github.com/VenusProtocol/protocol-reserve/commit/1986c6aabfb5b6e7483df9f8fce73957b49fc27d))
+
 ## [3.0.0-dev.4](https://github.com/VenusProtocol/protocol-reserve/compare/v3.0.0-dev.3...v3.0.0-dev.4) (2024-12-18)
 
 
