@@ -1,3 +1,5 @@
+## [3.0.1-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v3.0.0...v3.0.1-dev.1) (2024-12-19)
+
 ## [3.0.0](https://github.com/VenusProtocol/protocol-reserve/compare/v2.4.0...v3.0.0) (2024-12-18)
 
 
