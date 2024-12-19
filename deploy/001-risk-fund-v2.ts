@@ -12,9 +12,9 @@ const func: DeployFunction = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const proxyAdmin = await ethers.getContract("DefaultProxyAdmin");
   let owner = deployer;
   if (live) {
+    const proxyAdmin = await ethers.getContract("DefaultProxyAdmin");
     owner = await proxyAdmin.owner();
   }
 
