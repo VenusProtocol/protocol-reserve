@@ -1,0 +1,10 @@
+{
+  "name": "basesepolia",
+  "chainId": "84532",
+  "addresses": {
+    "DefaultProxyAdmin": "0xB85dD19112c4BF1240FeD0f26E8D0b0576a82546",
+    "ProtocolShareReserve": "0x4Ae3D77Ece08Ec3E5f5842B195f746bd3bCb8d73",
+    "ProtocolShareReserve_Implementation": "0xde1fC9E003c2637E94Da29d55783ce42F1e1f81c",
+    "ProtocolShareReserve_Proxy": "0x4Ae3D77Ece08Ec3E5f5842B195f746bd3bCb8d73"
+  }
+}

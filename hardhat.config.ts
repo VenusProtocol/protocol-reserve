@@ -55,10 +55,30 @@ const externalDeployments = {
     "node_modules/@venusprotocol/governance-contracts/deployments/opbnbmainnet",
     "node_modules/@venusprotocol/oracle/deployments/opbnbmainnet",
   ],
-  arbitrumsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/arbitrumsepolia"],
-  arbitrumone: ["node_modules/@venusprotocol/governance-contracts/deployments/arbitrumone"],
-  opsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/opsepolia"],
-  opmainnet: [],
+  arbitrumsepolia: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/arbitrumsepolia",
+    "node_modules/@venusprotocol/oracle/deployments/arbitrumsepolia",
+  ],
+  arbitrumone: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/arbitrumone",
+    "node_modules/@venusprotocol/oracle/deployments/arbitrumone",
+  ],
+  opsepolia: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/opsepolia",
+    "node_modules/@venusprotocol/oracle/deployments/opsepolia",
+  ],
+  opmainnet: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/opmainnet",
+    "node_modules/@venusprotocol/oracle/deployments/opmainnet",
+  ],
+  basesepolia: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/basesepolia",
+    "node_modules/@venusprotocol/oracle/deployments/basesepolia",
+  ],
+  basemainnet: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/basemainnet",
+    "node_modules/@venusprotocol/oracle/deployments/basemainnet",
+  ],
   unichainsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/unichainsepolia"],
 };
 
@@ -188,6 +208,18 @@ const config: HardhatUserConfig = {
       live: true,
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
+    basesepolia: {
+      url: process.env.ARCHIVE_NODE_basesepolia || "https://sepolia.base.org",
+      chainId: 84532,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    basemainnet: {
+      url: process.env.ARCHIVE_NODE_basemainnet || "https://mainnet.base.org",
+      chainId: 8453,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
     unichainsepolia: {
       url: process.env.ARCHIVE_NODE_unichainsepolia || "https://sepolia.unichain.org",
       chainId: 1301,
@@ -207,6 +239,8 @@ const config: HardhatUserConfig = {
       arbitrumone: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       opsepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       opmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      basesepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      basemainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       unichainsepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
     customChains: [
@@ -290,14 +324,6 @@ const config: HardhatUserConfig = {
           browserURL: "https://optimistic.etherscan.io/",
         },
       },
-      {
-        network: "unichainsepolia",
-        chainId: 1301,
-        urls: {
-          apiURL: `https://api-sepolia.uniscan.xyz/api/`,
-          browserURL: "https://sepolia.uniscan.xyz/",
-        },
-      },
     ],
   },
   paths: {
@@ -307,7 +333,20 @@ const config: HardhatUserConfig = {
     artifacts: "./artifacts",
   },
   external: {
-    deployments: {},
+    contracts: [
+      {
+        artifacts: "node_modules/@venusprotocol/governance-contracts/artifacts",
+      },
+      {
+        artifacts: "node_modules/@venusprotocol/venus-protocol/artifacts",
+      },
+      {
+        artifacts: "node_modules/@venusprotocol/isolated-pools/artifacts",
+      },
+      {
+        artifacts: "node_modules/@venusprotocol/oracle/artifacts",
+      },
+    ],
   },
   mocha: {
     timeout: 200000000,

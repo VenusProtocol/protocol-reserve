@@ -12,17 +12,22 @@ const func: DeployFunction = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const proxyAdmin = await ethers.getContract("DefaultProxyAdmin");
-  const owner = await proxyAdmin.owner();
+  let owner = deployer;
+  if (live) {
+    const proxyAdmin = await ethers.getContract("DefaultProxyAdmin");
+    owner = await proxyAdmin.owner();
+  }
 
   await deploy("RiskFundV2", {
     from: deployer,
     contract: "RiskFundV2",
-    proxy: {
-      owner: owner,
-      proxyContract: "OpenZeppelinTransparentProxy",
-      upgradeIndex: 0,
-    },
+    proxy: live
+      ? {
+          owner: owner,
+          proxyContract: "OpenZeppelinTransparentProxy",
+          upgradeIndex: 0,
+        }
+      : undefined,
     autoMine: true,
     log: true,
   });
