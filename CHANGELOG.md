@@ -1,3 +1,10 @@
+## [3.1.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v3.1.0-dev.1...v3.1.0-dev.2) (2025-02-07)
+
+
+### Features
+
+* update dependencies ([be5ef78](https://github.com/VenusProtocol/protocol-reserve/commit/be5ef788c42d570616aa1631ae427ed78f8f00b9))
+
 ## [3.1.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v3.0.1...v3.1.0-dev.1) (2025-02-07)
 
 
