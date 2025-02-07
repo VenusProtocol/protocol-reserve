@@ -79,6 +79,7 @@ const externalDeployments = {
     "node_modules/@venusprotocol/governance-contracts/deployments/basemainnet",
     "node_modules/@venusprotocol/oracle/deployments/basemainnet",
   ],
+  unichainsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/unichainsepolia"],
 };
 
 extendConfig((config: HardhatConfig) => {
@@ -219,6 +220,12 @@ const config: HardhatUserConfig = {
       live: true,
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
+    unichainsepolia: {
+      url: process.env.ARCHIVE_NODE_unichainsepolia || "https://sepolia.unichain.org",
+      chainId: 1301,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
   },
   etherscan: {
     apiKey: {
@@ -234,6 +241,7 @@ const config: HardhatUserConfig = {
       opmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       basesepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       basemainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      unichainsepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
     customChains: [
       {
@@ -330,6 +338,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api.basescan.org/api",
           browserURL: "https://basescan.org/",
+        },
+      },
+      {
+        network: "unichainsepolia",
+        chainId: 1301,
+        urls: {
+          apiURL: `https://api-sepolia.uniscan.xyz/api/`,
+          browserURL: "https://sepolia.uniscan.xyz/",
         },
       },
     ],

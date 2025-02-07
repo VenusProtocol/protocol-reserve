@@ -37,4 +37,5 @@ export const multisigs: ChainAddressesConfig = {
   opmainnet: "0x2e94dd14E81999CdBF5deDE31938beD7308354b3",
   basesepolia: "0xdf3b635d2b535f906BB02abb22AED71346E36a00",
   basemainnet: "0x1803Cf1D3495b43cC628aa1d8638A981F8CD341C",
+  unichainsepolia: "0x9831D3A641E8c7F082EEA75b8249c99be9D09a34",
 };
