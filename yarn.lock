@@ -3545,8 +3545,8 @@ __metadata:
   linkType: hard
 
 "@venusprotocol/protocol-reserve@npm:^2.0.0":
-  version: 2.4.0
-  resolution: "@venusprotocol/protocol-reserve@npm:2.4.0"
+  version: 2.3.0
+  resolution: "@venusprotocol/protocol-reserve@npm:2.3.0"
   dependencies:
     "@nomiclabs/hardhat-ethers": ^2.2.3
     "@openzeppelin/contracts": ^4.8.3
@@ -3558,7 +3558,7 @@ __metadata:
     ethers: ^5.7.0
     hardhat-deploy: ^0.11.14
     module-alias: ^2.2.2
-  checksum: 6e5ffa1c458cff073f9b920ab6385d9db0c86ac11d0950fe421a853e709ee12ec0013c6d3e9cb4e50e94f749dcd33e7a515d57828c5aa6f925dee8324e896ee5
+  checksum: b9e12702281d0790c0136f922400b5f90ff88d04d2af97580620a2677190c1957a4fdb38ff6600ff5e4f71e4d521c8bb013d7775814a2f68e3883544f38caa95
   languageName: node
   linkType: hard
 
