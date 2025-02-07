@@ -1,3 +1,12 @@
+## [3.1.0](https://github.com/VenusProtocol/protocol-reserve/compare/v3.0.1...v3.1.0) (2025-02-07)
+
+
+### Features
+
+* psr deployment on unichainsepolia ([4b95548](https://github.com/VenusProtocol/protocol-reserve/commit/4b955483a750d4ed4b390a72e15e36f73fab1518))
+* update dependencies ([be5ef78](https://github.com/VenusProtocol/protocol-reserve/commit/be5ef788c42d570616aa1631ae427ed78f8f00b9))
+* updating deployment files ([1aad370](https://github.com/VenusProtocol/protocol-reserve/commit/1aad3701fb22aabb6528c960762b8807232dab80))
+
 ## [3.1.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v3.1.0-dev.1...v3.1.0-dev.2) (2025-02-07)
 
 
