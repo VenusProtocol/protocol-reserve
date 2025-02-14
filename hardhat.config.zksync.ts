@@ -8,7 +8,7 @@ import "@nomiclabs/hardhat-ethers";
 import "@typechain/hardhat";
 import "hardhat-dependency-compiler";
 import "hardhat-deploy";
-import { HardhatUserConfig, extendConfig, task } from "hardhat/config";
+import { HardhatUserConfig, extendConfig, extendEnvironment, task } from "hardhat/config";
 import { HardhatConfig } from "hardhat/types";
 
 require("dotenv").config();
@@ -21,6 +21,10 @@ extendConfig((config: HardhatConfig) => {
   if (process.env.EXPORT !== "true") {
     config.external = { ...config.external, deployments: externalDeployments };
   }
+});
+
+extendEnvironment(hre => {
+  hre.getNetworkName = () => process.env.HARDHAT_FORK_NETWORK || hre.network.name;
 });
 
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
