@@ -10,6 +10,7 @@
     "saddle.config.js",
     "docgen-templates",
     "commitlint.config.js",
-    "./hardhat.config.zksync.ts"
+    "./hardhat.config.zksync.ts",
+    "type-extensions.ts"
   ]
 }
