@@ -1,3 +1,15 @@
+## [3.3.0](https://github.com/VenusProtocol/protocol-reserve/compare/v3.2.0...v3.3.0) (2025-02-14)
+
+
+### Features
+
+* update dependencies ([68b7543](https://github.com/VenusProtocol/protocol-reserve/commit/68b754389d53e4ecbf8b560e51ca0607490646e2))
+
+
+### Bug Fixes
+
+* add getNetworkName to hardhat environment ([216ff9a](https://github.com/VenusProtocol/protocol-reserve/commit/216ff9afe3f00b607c58a8fc49c081fd0515e8a0))
+
 ## [3.3.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v3.2.0...v3.3.0-dev.1) (2025-02-14)
 
 
