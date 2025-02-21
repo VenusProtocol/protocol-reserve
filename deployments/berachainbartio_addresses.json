@@ -1,0 +1,10 @@
+{
+  "name": "berachainbartio",
+  "chainId": "80084",
+  "addresses": {
+    "DefaultProxyAdmin": "0xccF1655d49bD9f94106524Cc416277135A811815",
+    "ProtocolShareReserve": "0xE4dD1B52c3D9d93d42B44cB77D769A9F73225012",
+    "ProtocolShareReserve_Implementation": "0x63C553610812e15c5d18B110F3215DD5a60dfCbB",
+    "ProtocolShareReserve_Proxy": "0xE4dD1B52c3D9d93d42B44cB77D769A9F73225012"
+  }
+}
