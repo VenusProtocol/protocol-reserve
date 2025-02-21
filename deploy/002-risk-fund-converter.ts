@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { ADDRESS_ONE, multisigs } from "../helpers/utils";
+import { ADDRESS_ONE } from "../helpers/utils";
 
 const MIN_AMOUNT_TO_CONVERT = parseUnits("10", 18);
 
@@ -12,7 +12,7 @@ const getTokenOrMockName = (name: string, live: boolean) => {
 };
 
 const func: DeployFunction = async ({
-  network: { live, name },
+  network: { live },
   getNamedAccounts,
   deployments,
 }: HardhatRuntimeEnvironment) => {
@@ -31,7 +31,7 @@ const func: DeployFunction = async ({
   const riskFundAddress = (await ethers.getContract("RiskFundV2"))?.address;
   const poolRegistryAddress = (await ethers.getContract("PoolRegistry"))?.address;
   let comptrollers;
-  const timelockAddress = (await ethers.getContract("NormalTimelock"))?.address || multisigs[name];
+  const timelockAddress = (await ethers.getContract("NormalTimelock")).address;
   if (live) {
     const poolDeFiAddress = (await ethers.getContract("Comptroller_DeFi"))?.address;
     const poolGameFiAddress = (await ethers.getContract("Comptroller_GameFi"))?.address;

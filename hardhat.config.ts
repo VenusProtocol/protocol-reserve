@@ -237,6 +237,15 @@ const config: HardhatUserConfig = {
       live: true,
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
+    berachainbartio: {
+      url: process.env.ARCHIVE_NODE_berachainbartio || "https://bartio.rpc.berachain.com",
+      chainId: 80084,
+      live: true,
+      // accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+      accounts: {
+        mnemonic: process.env.MNEMONIC || "",
+      },
+    },
   },
   etherscan: {
     apiKey: {
@@ -254,6 +263,7 @@ const config: HardhatUserConfig = {
       basemainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       unichainsepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       unichainmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      berachainbartio: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
     customChains: [
       {
@@ -366,6 +376,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: `https://api.uniscan.xyz/api/`,
           browserURL: "https://uniscan.xyz/",
+        },
+      },
+      {
+        network: "berachainbartio",
+        chainId: 80084,
+        urls: {
+          apiURL: "https://api.routescan.io/v2/network/testnet/evm/80084/etherscan",
+          browserURL: "https://bartio.beratrail.io",
         },
       },
     ],

@@ -1,14 +1,12 @@
 import { ethers } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { multisigs } from "../helpers/utils";
-
-const func = async ({ network: { live, name }, getNamedAccounts, deployments }: HardhatRuntimeEnvironment) => {
+const func = async ({ network: { live }, getNamedAccounts, deployments }: HardhatRuntimeEnvironment) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
   const xvsAddress = (await ethers.getContract("XVS"))?.address;
-  const proxyOwnerAddress = (await ethers.getContractOrNull("NormalTimelock"))?.address || multisigs[name];
+  const proxyOwnerAddress = (await ethers.getContract("NormalTimelock")).address;
   const acmAddress = (await ethers.getContract("AccessControlManager"))?.address;
   const xvsVaultAddress = (await ethers.getContract("XVSVaultProxy"))?.address;
 

@@ -1,15 +1,13 @@
 import { ethers } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { multisigs } from "../helpers/utils";
-
 const MAX_LOOPS_LIMIT = 20;
 
-const func = async ({ network: { live, name }, getNamedAccounts, deployments }: HardhatRuntimeEnvironment) => {
+const func = async ({ network: { live }, getNamedAccounts, deployments }: HardhatRuntimeEnvironment) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const timelockAddress = (await ethers.getContractOrNull("NormalTimelock"))?.address || multisigs[name];
+  const timelockAddress = (await ethers.getContract("NormalTimelock")).address;
   const acmAddress = (await ethers.getContract("AccessControlManager"))?.address;
 
   await deploy("ConverterNetwork", {
