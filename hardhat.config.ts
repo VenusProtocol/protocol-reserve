@@ -79,8 +79,18 @@ const externalDeployments = {
     "node_modules/@venusprotocol/governance-contracts/deployments/basemainnet",
     "node_modules/@venusprotocol/oracle/deployments/basemainnet",
   ],
-  unichainsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/unichainsepolia"],
-  unichainmainnet: ["node_modules/@venusprotocol/governance-contracts/deployments/unichainmainnet"],
+  unichainsepolia: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/unichainsepolia",
+    "node_modules/@venusprotocol/oracle/deployments/unichainsepolia",
+  ],
+  unichainmainnet: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/unichainmainnet",
+    "node_modules/@venusprotocol/oracle/deployments/unichainmainnet",
+  ],
+  berachainbartio: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/berachainbartio",
+    "node_modules/@venusprotocol/oracle/deployments/berachainbartio",
+  ],
 };
 
 extendConfig((config: HardhatConfig) => {
@@ -241,10 +251,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_berachainbartio || "https://bartio.rpc.berachain.com",
       chainId: 80084,
       live: true,
-      // accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
-      accounts: {
-        mnemonic: process.env.MNEMONIC || "",
-      },
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
   },
   etherscan: {
@@ -263,7 +270,7 @@ const config: HardhatUserConfig = {
       basemainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       unichainsepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       unichainmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      berachainbartio: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      berachainbartio: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
     customChains: [
       {
