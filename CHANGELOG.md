@@ -1,3 +1,11 @@
+## [3.4.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v3.3.0...v3.4.0-dev.1) (2025-03-04)
+
+
+### Features
+
+* deployed psr ([3fad6c9](https://github.com/VenusProtocol/protocol-reserve/commit/3fad6c9e7d3de82c26d9c4d5ab88ecdcfa277819))
+* updating deployment files ([91ee1d8](https://github.com/VenusProtocol/protocol-reserve/commit/91ee1d82b75f6c5311ac94d74d613b7514f62d6d))
+
 ## [3.3.0](https://github.com/VenusProtocol/protocol-reserve/compare/v3.2.0...v3.3.0) (2025-02-14)
 
 
