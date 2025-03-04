@@ -2,11 +2,11 @@ import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { ADDRESS_ONE, multisigs } from "../helpers/utils";
+import { ADDRESS_ONE } from "../helpers/utils";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const {
-    network: { live, name },
+    network: { live },
     getNamedAccounts,
     deployments,
   } = hre;
@@ -24,8 +24,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   }
 
   const WBNBAddress = (await ethers.getContractOrNull("WBNB"))?.address || ADDRESS_ONE;
-  const timelockAddress = (await ethers.getContract("NormalTimelock"))?.address || multisigs[name];
-  const acmAddress = (await ethers.getContract("AccessControlManager"))?.address;
+  const timelockAddress = (await ethers.getContract("NormalTimelock")).address;
+  const acmAddress = (await ethers.getContract("AccessControlManager")).address;
   const loopsLimit = 20;
 
   const defaultProxyAdmin = await hre.artifacts.readArtifact(

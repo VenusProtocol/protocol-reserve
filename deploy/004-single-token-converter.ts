@@ -4,8 +4,6 @@ import { DeployResult } from "hardhat-deploy/dist/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { multisigs } from "../helpers/utils";
-
 type NETWORK = "hardhat" | "bsctestnet" | "bscmainnet" | "sepolia" | "ethereum";
 
 interface BaseAssets {
@@ -81,7 +79,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const acmAddress = (await ethers.getContract("AccessControlManager"))?.address;
   const oracleAddress = (await ethers.getContract("ResilientOracle"))?.address;
-  const proxyOwnerAddress = (await ethers.getContract("NormalTimelock"))?.address || multisigs[networkName];
+  const proxyOwnerAddress = (await ethers.getContract("NormalTimelock")).address;
 
   const singleTokenConverterImp: DeployResult = await deploy("SingleTokenConverterImp", {
     contract: "SingleTokenConverter",
