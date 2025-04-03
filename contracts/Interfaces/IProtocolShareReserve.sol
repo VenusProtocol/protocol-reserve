@@ -5,7 +5,9 @@ interface IProtocolShareReserve {
     /// @notice it represents the type of vToken income
     enum IncomeType {
         SPREAD,
-        LIQUIDATION
+        LIQUIDATION,
+        ERC4626_WRAPPER_REWARDS,
+        FLASHLOAN
     }
 
     function updateAssetsState(
