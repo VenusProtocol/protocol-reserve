@@ -1,3 +1,10 @@
+## [3.4.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v3.4.0-dev.1...v3.4.0-dev.2) (2025-04-03)
+
+
+### Features
+
+* add incomeType for erc4626 rewards and flashloan in PSR ([46dc80e](https://github.com/VenusProtocol/protocol-reserve/commit/46dc80e664d4e6c96af3a0a794bb45c8078e1d60))
+
 ## [3.4.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v3.3.0...v3.4.0-dev.1) (2025-03-04)
 
 
