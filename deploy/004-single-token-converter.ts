@@ -61,6 +61,18 @@ async function getBaseAssets(network: NETWORK): Promise<BaseAssets> {
       WETHPrimeConverter: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1", // WETH on arbitrum one
       XVSVaultConverter: "0xc1Eb7689147C81aC840d4FF0D298489fc7986d52", // XVS on arbitrum one
     }),
+    unichainsepolia: async () => ({
+      USDTPrimeConverter: (await ethers.getContract("MockUSDT"))?.address,
+      USDCPrimeConverter: (await ethers.getContract("MockUSDC"))?.address,
+      cbBTCPrimeConverter: (await ethers.getContract("MockcbBTC"))?.address,
+      WETHPrimeConverter: "0x4200000000000000000000000000000000000006", // WETH on Unichain Sepolia
+      XVSVaultConverter: (await ethers.getContract("XVS"))?.address,
+    }),
+    unichainmainnet: async () => ({
+      USDCPrimeConverter: "0x078D782b760474a361dDA0AF3839290b0EF57AD6",
+      WETHPrimeConverter: "0x4200000000000000000000000000000000000006", // WETH on Unichain Sepolia
+      XVSVaultConverter: (await ethers.getContract("XVS"))?.address,
+    }),
     // add more networks
   };
   return await networkBaseAssets[network]();
