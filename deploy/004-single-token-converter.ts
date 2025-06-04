@@ -25,6 +25,8 @@ async function getBaseAssets(network: NETWORK): Promise<BaseAssets> {
       BTCBPrimeConverter: (await ethers.getContract("BTCB"))?.address,
       ETHPrimeConverter: (await ethers.getContract("ETH"))?.address,
       XVSVaultConverter: (await ethers.getContract("XVS"))?.address,
+      WBNBPrimeConverter: "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd",
+      FDUSDPrimeConverter: "0xcF27439fA231af9931ee40c4f27Bb77B83826F3C",
     }),
     bscmainnet: async () => ({
       USDTPrimeConverter: (await ethers.getContract("USDT"))?.address,
@@ -32,6 +34,8 @@ async function getBaseAssets(network: NETWORK): Promise<BaseAssets> {
       BTCBPrimeConverter: (await ethers.getContract("BTCB"))?.address,
       ETHPrimeConverter: (await ethers.getContract("ETH"))?.address,
       XVSVaultConverter: (await ethers.getContract("XVS"))?.address,
+      WBNBPrimeConverter: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+      FDUSDPrimeConverter: "0xc5f0f7b66764F6ec8C8Dff7BA683102295E16409",
     }),
     sepolia: async () => ({
       USDTPrimeConverter: (await ethers.getContract("MockUSDT"))?.address,
@@ -87,6 +91,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const SingleTokenConverterBeacon: DeployResult = await deploy("SingleTokenConverterBeacon", {
@@ -95,6 +100,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [singleTokenConverterImp.address],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const SingleTokenConverter = await ethers.getContractFactory("SingleTokenConverter");
@@ -116,6 +122,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       args: [SingleTokenConverterBeacon.address, SingleTokenConverter.interface.encodeFunctionData("initialize", args)],
       log: true,
       autoMine: true,
+      skipIfAlreadyDeployed: true,
     });
 
     if (network.live) {
