@@ -7,7 +7,7 @@
     "ConverterNetwork_Proxy": "0xB5A4208bFC4cC2C4670744849B8fC35B21A690Fa",
     "DefaultProxyAdmin": "0x01435866babd91311b1355cf3af488cca36db68e",
     "ProtocolShareReserve": "0xbea70755cc3555708ca11219adB0db4C80F6721B",
-    "ProtocolShareReserve_Implementation": "0x5429e6ddc967c7f6a1e2c13bb812b6c6a57cbe19",
+    "ProtocolShareReserve_Implementation": "0x0Bb458A710333A3f3a6DD689136A999238E7341D",
     "ProtocolShareReserve_Proxy": "0xbea70755cc3555708ca11219adB0db4C80F6721B",
     "SingleTokenConverterBeacon": "0xb86e532a5333d413A1c35d86cCdF1484B40219eF",
     "SingleTokenConverterImp": "0xb13409Cbf2b3420856DD577AE2FcC4a4Cd6d9F1e",

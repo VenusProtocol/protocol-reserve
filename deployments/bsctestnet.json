@@ -2427,7 +2427,7 @@
       ]
     },
     "ProtocolShareReserve_Implementation": {
-      "address": "0x91B67df8B13a1B53a3828EAAD3f4233B55FEc26d",
+      "address": "0xC23631E757d15680a8686D97Cf200625ad30c826",
       "abi": [
         {
           "inputs": [
