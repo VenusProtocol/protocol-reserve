@@ -4,6 +4,8 @@ import { DeployResult } from "hardhat-deploy/dist/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
+import { ADDRESS_ONE } from "../helpers/utils";
+
 type NETWORK = "hardhat" | "bsctestnet" | "bscmainnet" | "sepolia" | "ethereum";
 
 interface BaseAssets {
@@ -25,6 +27,7 @@ async function getBaseAssets(network: NETWORK): Promise<BaseAssets> {
       BTCBPrimeConverter: (await ethers.getContract("BTCB"))?.address,
       ETHPrimeConverter: (await ethers.getContract("ETH"))?.address,
       XVSVaultConverter: (await ethers.getContract("XVS"))?.address,
+      WBNBBurnConverter: "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd", // WBNB on Bsctestnet
     }),
     bscmainnet: async () => ({
       USDTPrimeConverter: (await ethers.getContract("USDT"))?.address,
@@ -32,6 +35,7 @@ async function getBaseAssets(network: NETWORK): Promise<BaseAssets> {
       BTCBPrimeConverter: (await ethers.getContract("BTCB"))?.address,
       ETHPrimeConverter: (await ethers.getContract("ETH"))?.address,
       XVSVaultConverter: (await ethers.getContract("XVS"))?.address,
+      WBNBBurnConverter: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB on Bscmainnet
     }),
     sepolia: async () => ({
       USDTPrimeConverter: (await ethers.getContract("MockUSDT"))?.address,
@@ -87,6 +91,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const SingleTokenConverterBeacon: DeployResult = await deploy("SingleTokenConverterBeacon", {
@@ -95,6 +100,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [singleTokenConverterImp.address],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const SingleTokenConverter = await ethers.getContractFactory("SingleTokenConverter");
@@ -106,6 +112,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     if (baseAsset == (await ethers.getContract("XVS"))?.address) {
       destinationAddress = (await ethers.getContract("XVSVaultTreasury"))?.address;
+    }
+
+    // For WBNBBurnConverter
+    if (
+      baseAsset == "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd" ||
+      baseAsset == "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"
+    ) {
+      destinationAddress = ADDRESS_ONE;
     }
 
     const args: string[] = [acmAddress, oracleAddress, destinationAddress, baseAsset, MIN_AMOUNT_TO_CONVERT];
