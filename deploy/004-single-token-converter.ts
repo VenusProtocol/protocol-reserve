@@ -7,10 +7,13 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { ADDRESS_ONE } from "../helpers/utils";
 
 type NETWORK = "hardhat" | "bsctestnet" | "bscmainnet" | "sepolia" | "ethereum";
-
 interface BaseAssets {
   [key: string]: string;
 }
+const WBNB: Record<"bsctestnet" | "bscmainnet", string> = {
+  bsctestnet: "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd",
+  bscmainnet: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+};
 
 async function getBaseAssets(network: NETWORK): Promise<BaseAssets> {
   const networkBaseAssets = {
@@ -27,7 +30,7 @@ async function getBaseAssets(network: NETWORK): Promise<BaseAssets> {
       BTCBPrimeConverter: (await ethers.getContract("BTCB"))?.address,
       ETHPrimeConverter: (await ethers.getContract("ETH"))?.address,
       XVSVaultConverter: (await ethers.getContract("XVS"))?.address,
-      WBNBBurnConverter: "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd", // WBNB on Bsctestnet
+      WBNBBurnConverter: WBNB["bsctestnet"],
     }),
     bscmainnet: async () => ({
       USDTPrimeConverter: (await ethers.getContract("USDT"))?.address,
@@ -35,7 +38,7 @@ async function getBaseAssets(network: NETWORK): Promise<BaseAssets> {
       BTCBPrimeConverter: (await ethers.getContract("BTCB"))?.address,
       ETHPrimeConverter: (await ethers.getContract("ETH"))?.address,
       XVSVaultConverter: (await ethers.getContract("XVS"))?.address,
-      WBNBBurnConverter: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB on Bscmainnet
+      WBNBBurnConverter: WBNB["bscmainnet"],
     }),
     sepolia: async () => ({
       USDTPrimeConverter: (await ethers.getContract("MockUSDT"))?.address,
@@ -115,10 +118,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     }
 
     // For WBNBBurnConverter
-    if (
-      baseAsset == "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd" ||
-      baseAsset == "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"
-    ) {
+    if (baseAsset == WBNB[hre.network.name as "bsctestnet" | "bscmainnet"]) {
       destinationAddress = ADDRESS_ONE;
     }
 
