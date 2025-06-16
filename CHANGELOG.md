@@ -1,3 +1,12 @@
+## [3.4.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v3.4.0-dev.2...v3.4.0-dev.3) (2025-06-16)
+
+
+### Features
+
+* add constant WBNB ([469c0f2](https://github.com/VenusProtocol/protocol-reserve/commit/469c0f2e52725a8f3970780e3741908c85c02cd6))
+* add WBNB burning converter deployments ([d0cedc6](https://github.com/VenusProtocol/protocol-reserve/commit/d0cedc61cc09707c014764391f361953936f0cbe))
+* updating deployment files ([305b790](https://github.com/VenusProtocol/protocol-reserve/commit/305b7906264ce821ef98ca9b8257e1c92ddf1f5b))
+
 ## [3.4.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v3.4.0-dev.1...v3.4.0-dev.2) (2025-04-03)
 
 
