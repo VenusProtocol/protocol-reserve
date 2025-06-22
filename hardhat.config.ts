@@ -82,10 +82,16 @@ const externalDeployments = {
   unichainsepolia: [
     "node_modules/@venusprotocol/governance-contracts/deployments/unichainsepolia",
     "node_modules/@venusprotocol/oracle/deployments/unichainsepolia",
+    "node_modules/@venusprotocol/token-bridge/deployments/unichainsepolia",
+    "node_modules/@venusprotocol/isolated-pools/deployments/unichainsepolia",
+    "node_modules/@venusprotocol/venus-protocol/deployments/unichainsepolia",
   ],
   unichainmainnet: [
     "node_modules/@venusprotocol/governance-contracts/deployments/unichainmainnet",
     "node_modules/@venusprotocol/oracle/deployments/unichainmainnet",
+    "node_modules/@venusprotocol/token-bridge/deployments/unichainmainnet",
+    "node_modules/@venusprotocol/isolated-pools/deployments/unichainmainnet",
+    "node_modules/@venusprotocol/venus-protocol/deployments/unichainmainnet",
   ],
   berachainbartio: [
     "node_modules/@venusprotocol/governance-contracts/deployments/berachainbartio",

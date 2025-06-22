@@ -2,9 +2,20 @@
   "name": "unichainsepolia",
   "chainId": "1301",
   "addresses": {
+    "ConverterNetwork": "0xfD57cc379D74d2d4A94D653f989F8EEb6b078aBF",
+    "ConverterNetwork_Implementation": "0x325783d3Ff21b997edE749279717bfc5C8ae9a72",
+    "ConverterNetwork_Proxy": "0xfD57cc379D74d2d4A94D653f989F8EEb6b078aBF",
     "DefaultProxyAdmin": "0x256735eFdfDf135bD6991854e0065909e57804aa",
     "ProtocolShareReserve": "0xcCcFc9B37A5575ae270352CC85D55C3C52a646C0",
     "ProtocolShareReserve_Implementation": "0x856CeD0855383ead1992f0B13a10A71Ecd5917ca",
-    "ProtocolShareReserve_Proxy": "0xcCcFc9B37A5575ae270352CC85D55C3C52a646C0"
+    "ProtocolShareReserve_Proxy": "0xcCcFc9B37A5575ae270352CC85D55C3C52a646C0",
+    "SingleTokenConverterBeacon": "0x27A5FEcd58ce932BB5151f16d2DD8C3A018d295E",
+    "SingleTokenConverterImp": "0xDf71c8eb814043973F7d3C0485FA6F22E73D04Ed",
+    "USDCPrimeConverter": "0x599708901Cee4921EDb7E0816A76fE8861C5D059",
+    "WETHPrimeConverter": "0x49ace012A451219290B54f07385880727e86D376",
+    "XVSVaultConverter": "0x835F8A6C29d539cd7B78DCb8B9DaeAb643Ff9f0E",
+    "XVSVaultTreasury": "0xA2c492f85aad1847dc21a44650cc687b94CdD6B3",
+    "XVSVaultTreasury_Implementation": "0xaC75E1a65db61B78Ed5B86A9829181965B3546A1",
+    "XVSVaultTreasury_Proxy": "0xA2c492f85aad1847dc21a44650cc687b94CdD6B3"
   }
 }
