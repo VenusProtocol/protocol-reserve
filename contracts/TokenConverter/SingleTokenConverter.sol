@@ -85,6 +85,16 @@ contract SingleTokenConverter is AbstractTokenConverter {
         }
     }
 
+    function _postPrivateConversionHook(
+        address comptroller,
+        address tokenAddressIn,
+        uint256 convertedTokenInBalance,
+        address,
+        uint256
+    ) internal override {
+        emit AssetTransferredToDestination(destinationAddress, comptroller, tokenAddressIn, convertedTokenInBalance);
+    }
+
     /// @dev Sets the base asset for the contract
     /// @param baseAsset_ The new address of the base asset
     /// @custom:error ZeroAddressNotAllowed is thrown when address is zero

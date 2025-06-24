@@ -1,7 +1,9 @@
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
 import { Contract, Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import hre from "hardhat";
+import { ethers } from "hardhat";
 
 import { forking, initMainnetUser } from "../utils";
 
@@ -13,6 +15,10 @@ const SINGLE_TOKEN_CONVERTER_BEACON_PROXY = "0x4c9D57b05B245c40235D720A5f3A592f3
 const RISK_FUND_CONVERTER_PROXY = "0xA5622D276CcbB8d9BBE3D1ffd1BB11a0032E53F0";
 const PROXY_ADMIN = "0x6beb6D2695B67FEb73ad4f172E8E2975497187e4";
 const BTCB_PRIME_CONVERTER = "0xE8CeAa79f082768f99266dFd208d665d2Dd18f53";
+const USDT_PRIME_CONVERTER = "0xD9f101AA67F3D72662609a2703387242452078C3";
+const USDC_PRIME_CONVERTER = "0xa758c9C215B6c4198F0a0e3FA46395Fa15Db691b";
+const ETH_PRIME_CONVERTER = "0xca430B8A97Ea918fF634162acb0b731445B8195E";
+const XVS_VAULT_CONVERTER = "0xd5b9AE835F4C59272032B3B954417179573331E0";
 const CORE_POOL = "0xfd36e2c2a6789db23113685031d7f16329158384";
 
 //Assets listed in core pool and need to release funds for them
@@ -57,6 +63,7 @@ forking(36468100, () => {
   let proxyAdmin: Contract;
   let singleTokenConverterImplementation = Contract;
   let timeLockSigner: Signer;
+
   const FORK_MAINNET = process.env.FORK === "true" && process.env.FORKED_NETWORK === "bscmainnet";
 
   if (FORK_MAINNET) {
@@ -217,6 +224,76 @@ forking(36468100, () => {
             // should be 1 greater than the amountIn as output received when called as private conversion
             expect(amountInMantissaForPrivate).to.equal(amountInMantissaForUser - 1);
           });
+        });
+      });
+
+      describe("SingleTokenConverter Private Conversion Event Test", () => {
+        let btcbPrimeConverter: Contract;
+        let usdtPrimeConverter: Contract;
+        let usdcPrimeConverter: Contract;
+        let ethPrimeConverter: Contract;
+        let xvsVaultConverter: Contract;
+        let protocolShareReserve: Contract;
+        let timeLockSigner: SignerWithAddress;
+
+        before(async () => {
+          // Setup mainnet state
+          protocolShareReserve = await hre.ethers.getContractAt("ProtocolShareReserve", PROTOCOL_SHARE_RESERVE);
+          timeLockSigner = await initMainnetUser(NORMAL_TIMELOCK);
+
+          // Upgrade logic contracts to ensure we have correct _postPrivateConversionHook behavior
+          const concreteImpl = await hre.ethers.getContractFactory("SingleTokenConverter");
+          const upgradedImpl = await concreteImpl.deploy();
+          await upgradedImpl.deployed();
+
+          const beacon = await hre.ethers.getContractAt("UpgradeableBeacon", SINGLE_TOKEN_CONVERTER_BEACON_PROXY);
+          await beacon.connect(timeLockSigner).upgradeTo(upgradedImpl.address);
+
+          console.log("beacon implementation : ", await beacon.implementation());
+
+          btcbPrimeConverter = await hre.ethers.getContractAt("SingleTokenConverter", BTCB_PRIME_CONVERTER);
+          usdtPrimeConverter = await hre.ethers.getContractAt("SingleTokenConverter", USDT_PRIME_CONVERTER);
+          ethPrimeConverter = await hre.ethers.getContractAt("SingleTokenConverter", ETH_PRIME_CONVERTER);
+          usdcPrimeConverter = await hre.ethers.getContractAt("SingleTokenConverter", USDC_PRIME_CONVERTER);
+          xvsVaultConverter = await hre.ethers.getContractAt("SingleTokenConverter", XVS_VAULT_CONVERTER);
+        });
+
+        it("emits AssetTransferredToDestination from Converters during private conversion", async () => {
+          const tx = await protocolShareReserve.releaseFunds(CORE_POOL, [BTCB]);
+          const receipt = await tx.wait();
+
+          const converters = [
+            usdtPrimeConverter,
+            usdcPrimeConverter,
+            ethPrimeConverter,
+            btcbPrimeConverter,
+            xvsVaultConverter,
+          ];
+
+          for (const converter of converters) {
+            // Expect the event to be emitted
+            await expect(tx).to.emit(converter, "AssetTransferredToDestination");
+
+            console.log(`\n[${(await converter.name?.()) || converter.address}]`);
+            console.log("  Receiver:    ", await converter.destinationAddress());
+            console.log("  Comptroller: ", CORE_POOL.toLowerCase());
+            console.log("  Asset:       ", await converter.baseAsset());
+          }
+
+          const AssetTransferredEvent = usdtPrimeConverter.interface.getEvent("AssetTransferredToDestination");
+          const AssetTransferredTopic = usdtPrimeConverter.interface.getEventTopic(AssetTransferredEvent);
+
+          // Filter all logs matching the event topic
+          const AssetTransferredLogs = receipt.logs.filter(log => log.topics[0] === AssetTransferredTopic);
+
+          // Decode each log
+          for (const log of AssetTransferredLogs) {
+            const parsed = usdtPrimeConverter.interface.parseLog(log);
+            console.log("AssetTransferredToDestination receiver:", parsed.args.receiver);
+            console.log("AssetTransferredToDestination comptroller:", parsed.args.comptroller);
+            console.log("AssetTransferredToDestination asset:", parsed.args.asset);
+            console.log("AssetTransferredToDestination amount:", parsed.args.amount.toString());
+          }
         });
       });
     });
