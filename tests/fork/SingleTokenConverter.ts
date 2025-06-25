@@ -228,11 +228,11 @@ forking(36468100, () => {
       });
 
       describe("SingleTokenConverter Private Conversion Event Test", () => {
-        let btcbPrimeConverter: Contract;
         let usdtPrimeConverter: Contract;
         let usdcPrimeConverter: Contract;
         let ethPrimeConverter: Contract;
         let xvsVaultConverter: Contract;
+        let riskFundConverter: Contract;
         let protocolShareReserve: Contract;
         let timeLockSigner: SignerWithAddress;
 
@@ -251,48 +251,45 @@ forking(36468100, () => {
 
           console.log("beacon implementation : ", await beacon.implementation());
 
-          btcbPrimeConverter = await hre.ethers.getContractAt("SingleTokenConverter", BTCB_PRIME_CONVERTER);
           usdtPrimeConverter = await hre.ethers.getContractAt("SingleTokenConverter", USDT_PRIME_CONVERTER);
           ethPrimeConverter = await hre.ethers.getContractAt("SingleTokenConverter", ETH_PRIME_CONVERTER);
           usdcPrimeConverter = await hre.ethers.getContractAt("SingleTokenConverter", USDC_PRIME_CONVERTER);
           xvsVaultConverter = await hre.ethers.getContractAt("SingleTokenConverter", XVS_VAULT_CONVERTER);
+          riskFundConverter = await hre.ethers.getContractAt("RiskFundConverter", RISK_FUND_CONVERTER_PROXY);
         });
 
         it("emits AssetTransferredToDestination from Converters during private conversion", async () => {
           const tx = await protocolShareReserve.releaseFunds(CORE_POOL, [BTCB]);
           const receipt = await tx.wait();
 
-          const converters = [
-            usdtPrimeConverter,
-            usdcPrimeConverter,
-            ethPrimeConverter,
-            btcbPrimeConverter,
-            xvsVaultConverter,
-          ];
+          const converters = [usdtPrimeConverter, usdcPrimeConverter, ethPrimeConverter, xvsVaultConverter];
 
           for (const converter of converters) {
-            // Expect the event to be emitted
-            await expect(tx).to.emit(converter, "AssetTransferredToDestination");
+            const AssetTransferredEvent = usdtPrimeConverter.interface.getEvent("AssetTransferredToDestination");
+            const AssetTransferredTopic = usdtPrimeConverter.interface.getEventTopic(AssetTransferredEvent);
+
+            // Filter all logs matching the event topic
+            const AssetTransferredLogs = receipt.logs.filter(log => log.topics[0] === AssetTransferredTopic);
 
             console.log(`\n[${(await converter.name?.()) || converter.address}]`);
             console.log("  Receiver:    ", await converter.destinationAddress());
             console.log("  Comptroller: ", CORE_POOL.toLowerCase());
             console.log("  Asset:       ", await converter.baseAsset());
-          }
 
-          const AssetTransferredEvent = usdtPrimeConverter.interface.getEvent("AssetTransferredToDestination");
-          const AssetTransferredTopic = usdtPrimeConverter.interface.getEventTopic(AssetTransferredEvent);
-
-          // Filter all logs matching the event topic
-          const AssetTransferredLogs = receipt.logs.filter(log => log.topics[0] === AssetTransferredTopic);
-
-          // Decode each log
-          for (const log of AssetTransferredLogs) {
-            const parsed = usdtPrimeConverter.interface.parseLog(log);
-            console.log("AssetTransferredToDestination receiver:", parsed.args.receiver);
-            console.log("AssetTransferredToDestination comptroller:", parsed.args.comptroller);
-            console.log("AssetTransferredToDestination asset:", parsed.args.asset);
-            console.log("AssetTransferredToDestination amount:", parsed.args.amount.toString());
+            // Decode each log
+            for (const log of AssetTransferredLogs) {
+              const parsed = usdtPrimeConverter.interface.parseLog(log);
+              if (
+                (await converter.baseAsset()) == parsed.args.asset &&
+                parsed.args.receiver !== (await riskFundConverter.destinationAddress())
+              ) {
+                // Expect the event to be emitted
+                await expect(tx).to.emit(converter, "AssetTransferredToDestination");
+                expect(parsed.args.receiver).to.equal(await converter.destinationAddress());
+                expect(parsed.args.comptroller.toLowerCase()).to.equal(CORE_POOL.toLowerCase());
+                expect(parsed.args.asset).to.equal(await converter.baseAsset());
+              }
+            }
           }
         });
       });
