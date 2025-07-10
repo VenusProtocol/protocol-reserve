@@ -92,7 +92,14 @@ contract SingleTokenConverter is AbstractTokenConverter {
         address,
         uint256
     ) internal override {
-        emit AssetTransferredToDestination(destinationAddress, comptroller, tokenAddressIn, convertedTokenInBalance);
+        if (convertedTokenInBalance > 0) {
+            emit AssetTransferredToDestination(
+                destinationAddress,
+                comptroller,
+                tokenAddressIn,
+                convertedTokenInBalance
+            );
+        }
     }
 
     /// @dev Sets the base asset for the contract
