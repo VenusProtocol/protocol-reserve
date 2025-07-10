@@ -10,7 +10,7 @@
     "ProtocolShareReserve_Implementation": "0x5429e6ddc967c7f6a1e2c13bb812b6c6a57cbe19",
     "ProtocolShareReserve_Proxy": "0xbea70755cc3555708ca11219adB0db4C80F6721B",
     "SingleTokenConverterBeacon": "0xb86e532a5333d413A1c35d86cCdF1484B40219eF",
-    "SingleTokenConverterImp": "0xb13409Cbf2b3420856DD577AE2FcC4a4Cd6d9F1e",
+    "SingleTokenConverterImp": "0x04444eAc8811140A3B22814a2203F6908d0708ad",
     "USDCPrimeConverter": "0x511a559a699cBd665546a1F75908f7E9454Bfc67",
     "USDTPrimeConverter": "0x3716C24EA86A67cAf890d7C9e4C4505cDDC2F8A2",
     "WBTCPrimeConverter": "0x8a3937F27921e859db3FDA05729CbCea8cfd82AE",
