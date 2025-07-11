@@ -4,7 +4,7 @@
   "addresses": {
     "DefaultProxyAdmin": "0xeaF9490cBEA6fF9bA1D23671C39a799CeD0DCED2",
     "ProtocolShareReserve": "0x735ed037cB0dAcf90B133370C33C08764f88140a",
-    "ProtocolShareReserve_Implementation": "0x236CF0E7086A079e4091cA8Cd1C6C05259b38150",
+    "ProtocolShareReserve_Implementation": "0x72672A4f9d2EF78eC98cF8Fd4b3544beBC3fea9E",
     "ProtocolShareReserve_Proxy": "0x735ed037cB0dAcf90B133370C33C08764f88140a"
   }
 }
