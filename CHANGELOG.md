@@ -1,3 +1,13 @@
+## [3.4.0-dev.4](https://github.com/VenusProtocol/protocol-reserve/compare/v3.4.0-dev.3...v3.4.0-dev.4) (2025-07-11)
+
+
+### Features
+
+* add deployments for new PSR implementation for mainnets ([d8ebc82](https://github.com/VenusProtocol/protocol-reserve/commit/d8ebc82f047005d5c4e3e8e8b646f0c8b1e8ee9a))
+* add deployments for new PSR implementation for testnets ([8f229e9](https://github.com/VenusProtocol/protocol-reserve/commit/8f229e970a105f91f07fce808d133851cee98f21))
+* updating deployment files ([9ab6895](https://github.com/VenusProtocol/protocol-reserve/commit/9ab689560418f9cf38e597721391810f13f14cd9))
+* updating deployment files ([4adb2d0](https://github.com/VenusProtocol/protocol-reserve/commit/4adb2d0988d4bd6ebcdf92bd23a86aa2a4b2e4db))
+
 ## [3.4.0-dev.3](https://github.com/VenusProtocol/protocol-reserve/compare/v3.4.0-dev.2...v3.4.0-dev.3) (2025-06-16)
 
 
