@@ -25,7 +25,18 @@ async function getBaseAssets(network: NETWORK): Promise<BaseAssets> {
     arbitrumone: async () => ({
       USDTTreasuryConverter: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", // USDT on arbitrum one
     }),
-    // add more networks
+  };
+  return await networkBaseAssets[network]();
+}
+
+async function getTreasuryAddress(network: NETWORK): Promise<string> {
+  const networkBaseAssets = {
+    hardhat: async () => (await ethers.getContract("USDT"))?.address,
+
+    bsctestnet: async () => "0x8b293600c50d6fbdc6ed4251cc75ece29880276f",
+    bscmainnet: async () => "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+    ethereum: async () => "0xFD9B071168bC27DBE16406eC3Aba050Ce8Eb22FA",
+    arbitrumone: async () => "0x8a662ceAC418daeF956Bc0e6B2dd417c80CDA631",
   };
   return await networkBaseAssets[network]();
 }
@@ -68,11 +79,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   for (const singleTokenConverterName in baseAssets) {
     const baseAsset: string = baseAssets[singleTokenConverterName];
 
-    let destinationAddress = (await ethers.getContract("PrimeLiquidityProvider"))?.address;
-
-    if (baseAsset == (await ethers.getContract("XVS"))?.address) {
-      destinationAddress = (await ethers.getContract("XVSVaultTreasury"))?.address;
-    }
+    let destinationAddress = await getTreasuryAddress(networkName);
 
     const args: string[] = [acmAddress, oracleAddress, destinationAddress, baseAsset, MIN_AMOUNT_TO_CONVERT];
 

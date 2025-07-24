@@ -172,6 +172,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_bscmainnet || "https://bsc-dataseed.binance.org/",
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
       live: true,
+      timeout: 1200000, // 20 minutes
     },
     sepolia: {
       url: process.env.ARCHIVE_NODE_sepolia || "https://ethereum-sepolia.blockpi.network/v1/rpc/public",
@@ -203,6 +204,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_arbitrumsepolia || "https://sepolia-rollup.arbitrum.io/rpc",
       chainId: 421614,
       live: true,
+      timeout: 1200000, // 20 minutes
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
     arbitrumone: {
