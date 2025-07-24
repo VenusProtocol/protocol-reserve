@@ -9,7 +9,7 @@
     "DefaultProxyAdmin": "0x7877ffd62649b6a1557b55d4c20fcbab17344c91",
     "ETHPrimeConverter": "0xf358650A007aa12ecC8dac08CF8929Be7f72A4D9",
     "ProtocolShareReserve": "0x25c7c7D6Bf710949fD7f03364E9BA19a1b3c10E3",
-    "ProtocolShareReserve_Implementation": "0xC23631E757d15680a8686D97Cf200625ad30c826",
+    "ProtocolShareReserve_Implementation": "0x80F4151Fd5c0e3abE127966DbAc33d8B4Cbf7015",
     "ProtocolShareReserve_Proxy": "0x25c7c7D6Bf710949fD7f03364E9BA19a1b3c10E3",
     "RiskFundConverter": "0x32Fbf7bBbd79355B86741E3181ef8c1D9bD309Bb",
     "RiskFundConverter_Implementation": "0x857ebb8CAcb97DE5ab719320c9FB3aa16076bFe3",
