@@ -79,7 +79,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   for (const singleTokenConverterName in baseAssets) {
     const baseAsset: string = baseAssets[singleTokenConverterName];
 
-    let destinationAddress = await getTreasuryAddress(networkName);
+    const destinationAddress = await getTreasuryAddress(networkName);
 
     const args: string[] = [acmAddress, oracleAddress, destinationAddress, baseAsset, MIN_AMOUNT_TO_CONVERT];
 
