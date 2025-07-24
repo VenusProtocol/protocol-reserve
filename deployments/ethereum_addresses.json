@@ -18,6 +18,7 @@
     "XVSVaultConverter": "0x1FD30e761C3296fE36D9067b1e398FD97B4C0407",
     "XVSVaultTreasury": "0xaE39C38AF957338b3cEE2b3E5d825ea88df02EfE",
     "XVSVaultTreasury_Implementation": "0xF37e2f9366Db8F26B1fAf16700C6858c09C8E754",
-    "XVSVaultTreasury_Proxy": "0xaE39C38AF957338b3cEE2b3E5d825ea88df02EfE"
+    "XVSVaultTreasury_Proxy": "0xaE39C38AF957338b3cEE2b3E5d825ea88df02EfE",
+    "USDTTreasuryConverter": "0x484551fad723Ec68fcB42844781bBDE519d933C3"
   }
 }
