@@ -29,6 +29,9 @@ contract SingleTokenConverter is AbstractTokenConverter {
         uint256 amount
     );
 
+    /// @dev Error thrown when only the destination address is allowed for direct transfer
+    error OnlyDestinationAddressAllowedForDirectTransfer();
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -78,7 +81,7 @@ contract SingleTokenConverter is AbstractTokenConverter {
         uint256 balance = token.balanceOf(address(this));
         balanceLeft = balance;
 
-        if (asset == baseAsset) {
+        if (asset == baseAsset || poolsAssetsDirectTransfer[destinationAddress][asset]) {
             balanceLeft = 0;
             token.safeTransfer(destinationAddress, balance);
             emit AssetTransferredToDestination(destinationAddress, comptroller, asset, balance);
@@ -106,6 +109,47 @@ contract SingleTokenConverter is AbstractTokenConverter {
                 tokenAddressIn,
                 convertedTokenInBalance
             );
+        }
+    }
+
+    /// @dev Override to only allow setting poolsAssetsDirectTransfer for destinationAddress
+    /// @param assets Addresses of the assets need to be added for direct transfer
+    /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
+    /// @custom:event PoolAssetsDirectTransferUpdated emits on success
+    /// @custom:error OnlyDestinationAddressAllowedForDirectTransfer is thrown when receivers array is not an array of one element equal to the destination address
+    /// @custom:error InputLengthMisMatch thrown when assets and values array lengths don't match
+    function _setPoolsAssetsDirectTransfer(
+        address[] calldata receivers,
+        address[][] calldata assets,
+        bool[][] calldata values
+    ) internal override {
+        uint256 receiversLength = receivers.length;
+        uint256 destinationAddressIndex = 0;
+
+        // Ensure that the destinationAddress is the only receiver
+        if (receiversLength != 1 || receivers[destinationAddressIndex] != destinationAddress) {
+            revert OnlyDestinationAddressAllowedForDirectTransfer();
+        }
+
+        if ((receiversLength != assets.length) || (receiversLength != values.length)) {
+            revert InputLengthMisMatch();
+        }
+
+        address[] memory poolAssets = assets[destinationAddressIndex];
+        bool[] memory assetsValues = values[destinationAddressIndex];
+        uint256 poolAssetsLength = poolAssets.length;
+
+        if (poolAssetsLength != assetsValues.length) {
+            revert InputLengthMisMatch();
+        }
+
+        for (uint256 j; j < poolAssetsLength; ) {
+            // Always use destinationAddress as the direct transfer receiver address
+            poolsAssetsDirectTransfer[destinationAddress][poolAssets[j]] = assetsValues[j];
+            emit PoolAssetsDirectTransferUpdated(destinationAddress, poolAssets[j], assetsValues[j]);
+            unchecked {
+                ++j;
+            }
         }
     }
 

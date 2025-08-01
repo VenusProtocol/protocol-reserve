@@ -42,10 +42,6 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @notice Address of pool registry contract
     address public poolRegistry;
 
-    /// @notice The mapping contains the assets for each pool which are sent to RiskFund directly
-    /// @dev Comptroller(pool) -> Asset -> bool(should transfer directly on true)
-    mapping(address => mapping(address => bool)) public poolsAssetsDirectTransfer;
-
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
 
@@ -60,12 +56,6 @@ contract RiskFundConverter is AbstractTokenConverter {
         address indexed asset,
         uint256 amount
     );
-
-    /// @notice Emitted after the poolsAssetsDirectTransfer mapping is updated
-    event PoolAssetsDirectTransferUpdated(address indexed comptroller, address indexed asset, bool value);
-
-    // Error thrown when comptrollers array length is not equal to assets array length
-    error InvalidArguments();
 
     /// @notice thrown when amount entered is greater than balance
     error InsufficientBalance();
@@ -82,11 +72,7 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @param vBNB_ Address of the vBNB
     /// @param nativeWrapped_ Address of the wrapped native currency
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(
-        address corePoolComptroller_,
-        address vBNB_,
-        address nativeWrapped_
-    ) {
+    constructor(address corePoolComptroller_, address vBNB_, address nativeWrapped_) {
         ensureNonzeroAddress(corePoolComptroller_);
         ensureNonzeroAddress(vBNB_);
         ensureNonzeroAddress(nativeWrapped_);
@@ -135,21 +121,6 @@ contract RiskFundConverter is AbstractTokenConverter {
         ensureNonzeroAddress(poolRegistry_);
         emit PoolRegistryUpdated(poolRegistry, poolRegistry_);
         poolRegistry = poolRegistry_;
-    }
-
-    /// @notice Update the poolsAssetsDirectTransfer mapping
-    /// @param comptrollers Addresses of the pools
-    /// @param assets Addresses of the assets need to be added for direct transfer
-    /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
-    /// @custom:event PoolAssetsDirectTransferUpdated emits on success
-    /// @custom:access Restricted by ACM
-    function setPoolsAssetsDirectTransfer(
-        address[] calldata comptrollers,
-        address[][] calldata assets,
-        bool[][] calldata values
-    ) external {
-        _checkAccessAllowed("setPoolsAssetsDirectTransfer(address[],address[][],bool[][])");
-        _setPoolsAssetsDirectTransfer(comptrollers, assets, values);
     }
 
     /// @dev Get the Amount of the asset in the risk fund for the specific pool
@@ -301,46 +272,6 @@ contract RiskFundConverter is AbstractTokenConverter {
         emit AssetsReservesUpdated(pool, tokenAddress, poolAmountShare);
     }
 
-    /// @dev Update the poolsAssetsDirectTransfer mapping
-    /// @param comptrollers Addresses of the pools
-    /// @param assets Addresses of the assets need to be added for direct transfer
-    /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
-    /// @custom:event PoolAssetsDirectTransferUpdated emits on success
-    /// @custom:error InvalidArguments thrown when comptrollers array length is not equal to assets array length
-    function _setPoolsAssetsDirectTransfer(
-        address[] calldata comptrollers,
-        address[][] calldata assets,
-        bool[][] calldata values
-    ) internal {
-        uint256 comptrollersLength = comptrollers.length;
-
-        if ((comptrollersLength != assets.length) || (comptrollersLength != values.length)) {
-            revert InvalidArguments();
-        }
-
-        for (uint256 i; i < comptrollersLength; ) {
-            address[] memory poolAssets = assets[i];
-            bool[] memory assetsValues = values[i];
-            uint256 poolAssetsLength = poolAssets.length;
-
-            if (poolAssetsLength != assetsValues.length) {
-                revert InvalidArguments();
-            }
-
-            for (uint256 j; j < poolAssetsLength; ) {
-                poolsAssetsDirectTransfer[comptrollers[i]][poolAssets[j]] = assetsValues[j];
-                emit PoolAssetsDirectTransferUpdated(comptrollers[i], poolAssets[j], assetsValues[j]);
-                unchecked {
-                    ++j;
-                }
-            }
-
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
     /// @dev Update the reserve of the asset for the specific pool after transferring to risk fund
     /// and transferring funds to the protocol share reserve
     /// @param comptroller Comptroller address (pool)
@@ -348,11 +279,10 @@ contract RiskFundConverter is AbstractTokenConverter {
     /// @return balanceDifference Amount of asset, for _privateConversion
     /// @custom:event AssetTransferredToDestination emits when poolsAssetsDirectTransfer is enabled for entered comptroller and asset
     /// @custom:error MarketNotExistInPool When asset does not exist in the pool(comptroller)
-    function _updateAssetsState(address comptroller, address asset)
-        internal
-        override
-        returns (uint256 balanceDifference)
-    {
+    function _updateAssetsState(
+        address comptroller,
+        address asset
+    ) internal override returns (uint256 balanceDifference) {
         if (!ensureAssetListed(comptroller, asset)) revert MarketNotExistInPool(comptroller, asset);
 
         IERC20Upgradeable token = IERC20Upgradeable(asset);
@@ -362,6 +292,7 @@ contract RiskFundConverter is AbstractTokenConverter {
             unchecked {
                 balanceDifference = currentBalance - assetReserve;
             }
+
             if (poolsAssetsDirectTransfer[comptroller][asset]) {
                 uint256 previousDestinationBalance = token.balanceOf(destinationAddress);
                 token.safeTransfer(destinationAddress, balanceDifference);

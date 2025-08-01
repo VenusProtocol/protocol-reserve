@@ -265,19 +265,19 @@ describe("Risk fund Converter: tests", () => {
           [[tokenIn.address], [tokenIn.address]],
           [[true]],
         ),
-      ).to.be.revertedWithCustomError(converter, "InvalidArguments");
+      ).to.be.revertedWithCustomError(converter, "InputLengthMisMatch");
 
       await expect(
         converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address], [tokenIn.address]], [[true]]),
-      ).to.be.revertedWithCustomError(converter, "InvalidArguments");
+      ).to.be.revertedWithCustomError(converter, "InputLengthMisMatch");
 
       await expect(
         converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address, tokenIn.address]], [[true]]),
-      ).to.be.revertedWithCustomError(converter, "InvalidArguments");
+      ).to.be.revertedWithCustomError(converter, "InputLengthMisMatch");
 
       await expect(
         converter.setPoolsAssetsDirectTransfer([poolA.address], [[tokenIn.address]], [[true, true]]),
-      ).to.be.revertedWithCustomError(converter, "InvalidArguments");
+      ).to.be.revertedWithCustomError(converter, "InputLengthMisMatch");
     });
   });
 

@@ -975,6 +975,171 @@ describe("MockConverter: tests", () => {
     });
   });
 
+  describe("Pools direct transfer", () => {
+    it("Revert on invalid access control", async () => {
+      await accessControl.isAllowedToCall.returns(false);
+
+      await expect(
+        converter.setPoolsAssetsDirectTransfer([comptroller.address], [[tokenIn.address]], [[true]]),
+      ).to.be.revertedWithCustomError(converter, "Unauthorized");
+    });
+
+    it("Success on the setPoolsAssetsDirectTransfer", async () => {
+      await accessControl.isAllowedToCall.returns(true);
+
+      await expect(converter.setPoolsAssetsDirectTransfer([comptroller.address], [[tokenIn.address]], [[true]]))
+        .to.emit(converter, "PoolAssetsDirectTransferUpdated")
+        .withArgs(comptroller.address, tokenIn.address, true);
+
+      expect(await converter.poolsAssetsDirectTransfer(comptroller.address, tokenIn.address)).to.equal(true);
+    });
+
+    it("Success on setting multiple pools and assets", async () => {
+      await accessControl.isAllowedToCall.returns(true);
+
+      const [, , poolB] = await ethers.getSigners();
+
+      await expect(
+        converter.setPoolsAssetsDirectTransfer(
+          [comptroller.address, poolB.address],
+          [[tokenIn.address, tokenOut.address], [tokenIn.address]],
+          [[true, false], [true]],
+        ),
+      )
+        .to.emit(converter, "PoolAssetsDirectTransferUpdated")
+        .withArgs(comptroller.address, tokenIn.address, true)
+        .to.emit(converter, "PoolAssetsDirectTransferUpdated")
+        .withArgs(comptroller.address, tokenOut.address, false)
+        .to.emit(converter, "PoolAssetsDirectTransferUpdated")
+        .withArgs(poolB.address, tokenIn.address, true);
+
+      expect(await converter.poolsAssetsDirectTransfer(comptroller.address, tokenIn.address)).to.equal(true);
+      expect(await converter.poolsAssetsDirectTransfer(comptroller.address, tokenOut.address)).to.equal(false);
+      expect(await converter.poolsAssetsDirectTransfer(poolB.address, tokenIn.address)).to.equal(true);
+    });
+
+    it("Revert on invalid parameters - comptrollers and assets length mismatch", async () => {
+      await accessControl.isAllowedToCall.returns(true);
+
+      const [, , poolB] = await ethers.getSigners();
+
+      await expect(
+        converter.setPoolsAssetsDirectTransfer(
+          [comptroller.address, poolB.address],
+          [[tokenIn.address]],
+          [[true], [true]],
+        ),
+      ).to.be.revertedWithCustomError(converter, "InputLengthMisMatch");
+    });
+
+    it("Revert on invalid parameters - comptrollers and values length mismatch", async () => {
+      await accessControl.isAllowedToCall.returns(true);
+
+      await expect(
+        converter.setPoolsAssetsDirectTransfer([comptroller.address], [[tokenIn.address]], [[true], [false]]),
+      ).to.be.revertedWithCustomError(converter, "InputLengthMisMatch");
+    });
+
+    it("Revert on invalid parameters - assets and values nested array length mismatch", async () => {
+      await accessControl.isAllowedToCall.returns(true);
+
+      await expect(
+        converter.setPoolsAssetsDirectTransfer([comptroller.address], [[tokenIn.address, tokenOut.address]], [[true]]),
+      ).to.be.revertedWithCustomError(converter, "InputLengthMisMatch");
+    });
+
+    it("Update existing poolsAssetsDirectTransfer mapping", async () => {
+      await accessControl.isAllowedToCall.returns(true);
+
+      await converter.setPoolsAssetsDirectTransfer([comptroller.address], [[tokenIn.address]], [[true]]);
+      expect(await converter.poolsAssetsDirectTransfer(comptroller.address, tokenIn.address)).to.equal(true);
+
+      await expect(converter.setPoolsAssetsDirectTransfer([comptroller.address], [[tokenIn.address]], [[false]]))
+        .to.emit(converter, "PoolAssetsDirectTransferUpdated")
+        .withArgs(comptroller.address, tokenIn.address, false);
+
+      expect(await converter.poolsAssetsDirectTransfer(comptroller.address, tokenIn.address)).to.equal(false);
+    });
+
+    it("Handle empty arrays correctly", async () => {
+      await accessControl.isAllowedToCall.returns(true);
+
+      await converter.setPoolsAssetsDirectTransfer([], [], []);
+
+      expect(await converter.poolsAssetsDirectTransfer(comptroller.address, tokenIn.address)).to.equal(false);
+    });
+
+    it("Verify poolsAssetsDirectTransfer mapping getter returns correct values", async () => {
+      await accessControl.isAllowedToCall.returns(true);
+
+      const [, , poolB, poolC] = await ethers.getSigners();
+
+      await converter.setPoolsAssetsDirectTransfer(
+        [comptroller.address, poolB.address, poolC.address],
+        [[tokenIn.address, tokenOut.address], [tokenIn.address], [tokenOut.address]],
+        [[true, false], [false], [true]],
+      );
+
+      expect(await converter.poolsAssetsDirectTransfer(comptroller.address, tokenIn.address)).to.equal(true);
+      expect(await converter.poolsAssetsDirectTransfer(comptroller.address, tokenOut.address)).to.equal(false);
+      expect(await converter.poolsAssetsDirectTransfer(poolB.address, tokenIn.address)).to.equal(false);
+      expect(await converter.poolsAssetsDirectTransfer(poolB.address, tokenOut.address)).to.equal(false);
+      expect(await converter.poolsAssetsDirectTransfer(poolC.address, tokenIn.address)).to.equal(false);
+      expect(await converter.poolsAssetsDirectTransfer(poolC.address, tokenOut.address)).to.equal(true);
+    });
+
+    it("Verify multiple batch operations work correctly", async () => {
+      await accessControl.isAllowedToCall.returns(true);
+
+      const [, , poolB, poolC, poolD] = await ethers.getSigners();
+
+      // First batch
+      await converter.setPoolsAssetsDirectTransfer(
+        [comptroller.address, poolB.address],
+        [[tokenIn.address], [tokenOut.address, tokenOut2.address]],
+        [[true], [true, false]],
+      );
+
+      // Second batch - should update existing and add new
+      await converter.setPoolsAssetsDirectTransfer(
+        [comptroller.address, poolC.address, poolD.address],
+        [[tokenIn.address, tokenOut.address], [tokenIn.address], [tokenOut2.address]],
+        [[false, true], [true], [true]],
+      );
+
+      expect(await converter.poolsAssetsDirectTransfer(comptroller.address, tokenIn.address)).to.equal(false);
+      expect(await converter.poolsAssetsDirectTransfer(comptroller.address, tokenOut.address)).to.equal(true);
+      expect(await converter.poolsAssetsDirectTransfer(poolB.address, tokenOut.address)).to.equal(true);
+      expect(await converter.poolsAssetsDirectTransfer(poolB.address, tokenOut2.address)).to.equal(false);
+      expect(await converter.poolsAssetsDirectTransfer(poolC.address, tokenIn.address)).to.equal(true);
+      expect(await converter.poolsAssetsDirectTransfer(poolD.address, tokenOut2.address)).to.equal(true);
+    });
+
+    it("Verify events are emitted for all changes in batch operations", async () => {
+      await accessControl.isAllowedToCall.returns(true);
+
+      const [, , poolB] = await ethers.getSigners();
+
+      const tx = await converter.setPoolsAssetsDirectTransfer(
+        [comptroller.address, poolB.address],
+        [[tokenIn.address, tokenOut.address], [tokenOut2.address]],
+        [[true, false], [true]],
+      );
+
+      await expect(tx)
+        .to.emit(converter, "PoolAssetsDirectTransferUpdated")
+        .withArgs(comptroller.address, tokenIn.address, true);
+
+      await expect(tx)
+        .to.emit(converter, "PoolAssetsDirectTransferUpdated")
+        .withArgs(comptroller.address, tokenOut.address, false);
+
+      await expect(tx)
+        .to.emit(converter, "PoolAssetsDirectTransferUpdated")
+        .withArgs(poolB.address, tokenOut2.address, true);
+    });
+  });
+
   describe("Private conversion: tests", () => {
     beforeEach(async () => {
       await destination.convertibleBaseAsset.returns(tokenIn.address);

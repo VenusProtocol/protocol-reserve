@@ -2,7 +2,7 @@ import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
 import { parseUnits } from "ethers/lib/utils";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 import {
   IAccessControlManagerV8,
@@ -24,6 +24,7 @@ chai.use(smock.matchers);
 let accessControl: FakeContract<IAccessControlManagerV8>;
 let converter: MockContract<SingleTokenConverter>;
 let tokenIn: MockContract<MockToken>;
+let whitelistedTokenIn: MockContract<MockToken>;
 let tokenOut: MockContract<MockToken>;
 let xvs: MockContract<MockToken>;
 let oracle: FakeContract<ResilientOracleInterface>;
@@ -52,6 +53,9 @@ async function fixture(): Promise<void> {
   tokenOut = await MockToken.deploy("TokenOut", "tokenOut", 18);
   await tokenOut.faucet(parseUnits("1000", 18));
 
+  whitelistedTokenIn = await MockToken.deploy("WhitelistedTokenIn", "whitelistedTokenIn", 18);
+  await whitelistedTokenIn.faucet(parseUnits("1000", 18));
+
   xvs = await MockToken.deploy("XVS", "xvs", 18);
   await xvs.faucet(parseUnits("1000", 18));
 
@@ -67,7 +71,7 @@ async function fixture(): Promise<void> {
 }
 
 describe("XVS vault Converter: tests", () => {
-  before(async function () {
+  beforeEach(async function () {
     await loadFixture(fixture);
   });
 
@@ -119,6 +123,160 @@ describe("XVS vault Converter: tests", () => {
       await expect(converter.setBaseAsset(unknownAddress.address))
         .to.emit(converter, "BaseAssetUpdated")
         .withArgs(xvs.address, unknownAddress.address);
+    });
+  });
+
+  describe("Whitelisted tokens direct transfer", () => {
+    it("Revert on invalid access control", async () => {
+      await accessControl.isAllowedToCall.returns(false);
+
+      await expect(
+        converter.setPoolsAssetsDirectTransfer([xvsVaultTreasury.address], [[whitelistedTokenIn.address]], [[true]]),
+      ).to.be.revertedWithCustomError(converter, "Unauthorized");
+    });
+
+    it("Success on the setPoolsAssetsDirectTransfer", async () => {
+      await accessControl.isAllowedToCall.returns(true);
+
+      await expect(
+        converter.setPoolsAssetsDirectTransfer([xvsVaultTreasury.address], [[whitelistedTokenIn.address]], [[true]]),
+      )
+        .to.emit(converter, "PoolAssetsDirectTransferUpdated")
+        .withArgs(xvsVaultTreasury.address, whitelistedTokenIn.address, true);
+
+      expect(await converter.poolsAssetsDirectTransfer(xvsVaultTreasury.address, whitelistedTokenIn.address)).to.equal(
+        true,
+      );
+    });
+
+    it("Transfer funds to treasury directly when using whitelisted token", async () => {
+      const [, fakeComptroller] = await ethers.getSigners();
+      const whitelistedTokenAmount = convertToUnit(10, 18);
+
+      expect(await whitelistedTokenIn.balanceOf(xvsVaultTreasury.address)).to.equal(0);
+      expect(await whitelistedTokenIn.balanceOf(converter.address)).to.equal(0);
+      await whitelistedTokenIn.transfer(converter.address, whitelistedTokenAmount);
+      await converter.setPoolsAssetsDirectTransfer(
+        [xvsVaultTreasury.address],
+        [[whitelistedTokenIn.address]],
+        [[true]],
+      );
+      await converter.updateAssetsState(fakeComptroller.address, whitelistedTokenIn.address);
+
+      expect(await whitelistedTokenIn.balanceOf(converter.address)).to.equal(0);
+      expect(await whitelistedTokenIn.balanceOf(xvsVaultTreasury.address)).to.equal(whitelistedTokenAmount);
+    });
+
+    it("Revert on when trying to set to a differnet address than xvsVaultTreasury", async () => {
+      await accessControl.isAllowedToCall.returns(true);
+      await expect(
+        converter.setPoolsAssetsDirectTransfer([whitelistedTokenIn.address], [[whitelistedTokenIn.address]], [[true]]),
+      ).to.be.revertedWithCustomError(converter, "OnlyDestinationAddressAllowedForDirectTransfer");
+
+      await expect(
+        converter.setPoolsAssetsDirectTransfer(
+          [xvsVaultTreasury.address, xvsVaultTreasury.address],
+          [[whitelistedTokenIn.address], [whitelistedTokenIn.address]],
+          [[true]],
+        ),
+      ).to.be.revertedWithCustomError(converter, "OnlyDestinationAddressAllowedForDirectTransfer");
+    });
+
+    it("Revert on invalid parameters lengths", async () => {
+      await accessControl.isAllowedToCall.returns(true);
+
+      await expect(
+        converter.setPoolsAssetsDirectTransfer(
+          [xvsVaultTreasury.address],
+          [[whitelistedTokenIn.address], [whitelistedTokenIn.address]],
+          [[true]],
+        ),
+      ).to.be.revertedWithCustomError(converter, "InputLengthMisMatch");
+
+      await expect(
+        converter.setPoolsAssetsDirectTransfer(
+          [xvsVaultTreasury.address],
+          [[whitelistedTokenIn.address, whitelistedTokenIn.address]],
+          [[true]],
+        ),
+      ).to.be.revertedWithCustomError(converter, "InputLengthMisMatch");
+
+      await expect(
+        converter.setPoolsAssetsDirectTransfer(
+          [xvsVaultTreasury.address],
+          [[whitelistedTokenIn.address]],
+          [[true, true]],
+        ),
+      ).to.be.revertedWithCustomError(converter, "InputLengthMisMatch");
+    });
+  });
+
+  describe("setBaseAsset", () => {
+    it("Should revert on non-owner call", async () => {
+      const [, user] = await ethers.getSigners();
+      await expect(converter.connect(user).setBaseAsset(tokenIn.address)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
+    });
+
+    it("Should revert on zero address", async () => {
+      await expect(converter.setBaseAsset(ethers.constants.AddressZero)).to.be.revertedWithCustomError(
+        converter,
+        "ZeroAddressNotAllowed",
+      );
+    });
+
+    it("Should succeed on updating existing base asset", async () => {
+      await converter.setBaseAsset(tokenIn.address);
+      expect(await converter.baseAsset()).to.equal(tokenIn.address);
+
+      const tx = await converter.setBaseAsset(tokenOut.address);
+      expect(tx).to.emit(converter, "BaseAssetUpdated").withArgs(tokenIn.address, tokenOut.address);
+
+      expect(await converter.baseAsset()).to.equal(tokenOut.address);
+    });
+
+    it("Should succeed on setting same base asset multiple times", async () => {
+      await converter.setBaseAsset(tokenIn.address);
+      expect(await converter.baseAsset()).to.equal(tokenIn.address);
+
+      const tx = await converter.setBaseAsset(tokenIn.address);
+      expect(tx).to.emit(converter, "BaseAssetUpdated").withArgs(tokenIn.address, tokenIn.address);
+
+      expect(await converter.baseAsset()).to.equal(tokenIn.address);
+    });
+  });
+
+  describe("balanceOf", () => {
+    it("Should return zero for token not in contract", async () => {
+      expect(await converter.balanceOf(tokenIn.address)).to.equal(0);
+      expect(await converter.balanceOf(tokenOut.address)).to.equal(0);
+    });
+
+    it("Should return correct balance for single token", async () => {
+      const amount = convertToUnit(100, 18);
+      await tokenIn.transfer(converter.address, amount);
+
+      expect(await converter.balanceOf(tokenIn.address)).to.equal(amount);
+      expect(await converter.balanceOf(tokenOut.address)).to.equal(0);
+    });
+
+    it("Should return correct balances for multiple tokens", async () => {
+      const tokenInAmount = convertToUnit(50, 18);
+      const tokenOutAmount = convertToUnit(75, 18);
+      const xvsAmount = convertToUnit(25, 18);
+
+      await tokenIn.transfer(converter.address, tokenInAmount);
+      await tokenOut.transfer(converter.address, tokenOutAmount);
+      await xvs.transfer(converter.address, xvsAmount);
+
+      expect(await converter.balanceOf(tokenIn.address)).to.equal(tokenInAmount);
+      expect(await converter.balanceOf(tokenOut.address)).to.equal(tokenOutAmount);
+      expect(await converter.balanceOf(xvs.address)).to.equal(xvsAmount);
+    });
+
+    it("Should handle zero address token with no revert", async () => {
+      await expect(converter.balanceOf(ethers.constants.AddressZero)).to.be.reverted;
     });
   });
 });
