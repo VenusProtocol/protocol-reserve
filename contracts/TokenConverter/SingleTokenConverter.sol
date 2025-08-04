@@ -153,6 +153,7 @@ contract SingleTokenConverter is AbstractTokenConverter {
     /// @dev Sets the base asset for the contract
     /// @param baseAsset_ The new address of the base asset
     /// @custom:error ZeroAddressNotAllowed is thrown when address is zero
+    /// @custom:error SameBaseAssetNotAllowed is thrown when `baseAsset_` is equal to the current base asset
     /// @custom:event BaseAssetUpdated is emitted on success
     function _setBaseAsset(address baseAsset_) internal {
         ensureNonzeroAddress(baseAsset_);
