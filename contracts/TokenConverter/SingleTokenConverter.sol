@@ -36,6 +36,9 @@ contract SingleTokenConverter is AbstractTokenConverter {
     /// @notice Emitted after the assetsDirectTransfer mapping is updated
     event AssetsDirectTransferUpdated(address indexed receiver, address indexed asset, bool value);
 
+    /// @notice Thrown when the base asset is the same as the new base asset
+    error SameBaseAssetNotAllowed();
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -153,6 +156,11 @@ contract SingleTokenConverter is AbstractTokenConverter {
     /// @custom:event BaseAssetUpdated is emitted on success
     function _setBaseAsset(address baseAsset_) internal {
         ensureNonzeroAddress(baseAsset_);
+
+        if (baseAsset == baseAsset_) {
+            revert SameBaseAssetNotAllowed();
+        }
+
         emit BaseAssetUpdated(baseAsset, baseAsset_);
         baseAsset = baseAsset_;
     }

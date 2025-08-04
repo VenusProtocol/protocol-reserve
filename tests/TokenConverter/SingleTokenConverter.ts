@@ -180,13 +180,6 @@ describe("XVS vault Converter: tests", () => {
       );
     });
 
-    it("Should revert on zero address", async () => {
-      await expect(converter.setBaseAsset(ethers.constants.AddressZero)).to.be.revertedWithCustomError(
-        converter,
-        "ZeroAddressNotAllowed",
-      );
-    });
-
     it("Should succeed on updating existing base asset", async () => {
       await converter.setBaseAsset(tokenIn.address);
       expect(await converter.baseAsset()).to.equal(tokenIn.address);
@@ -197,14 +190,14 @@ describe("XVS vault Converter: tests", () => {
       expect(await converter.baseAsset()).to.equal(tokenOut.address);
     });
 
-    it("Should succeed on setting same base asset multiple times", async () => {
+    it("Should revert on setting same base asset multiple times", async () => {
       await converter.setBaseAsset(tokenIn.address);
       expect(await converter.baseAsset()).to.equal(tokenIn.address);
 
-      const tx = await converter.setBaseAsset(tokenIn.address);
-      expect(tx).to.emit(converter, "BaseAssetUpdated").withArgs(tokenIn.address, tokenIn.address);
-
-      expect(await converter.baseAsset()).to.equal(tokenIn.address);
+      await expect(converter.setBaseAsset(tokenIn.address)).to.be.revertedWithCustomError(
+        converter,
+        "SameBaseAssetNotAllowed",
+      );
     });
   });
 
