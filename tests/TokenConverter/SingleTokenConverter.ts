@@ -126,27 +126,23 @@ describe("XVS vault Converter: tests", () => {
     });
   });
 
-  describe("Whitelisted tokens direct transfer", () => {
+  describe("Assets direct transfer", () => {
     it("Revert on invalid access control", async () => {
       await accessControl.isAllowedToCall.returns(false);
 
       await expect(
-        converter.setPoolsAssetsDirectTransfer([xvsVaultTreasury.address], [[whitelistedTokenIn.address]], [[true]]),
+        converter.setAssetsDirectTransfer([whitelistedTokenIn.address], [true]),
       ).to.be.revertedWithCustomError(converter, "Unauthorized");
     });
 
-    it("Success on the setPoolsAssetsDirectTransfer", async () => {
+    it("Success on the setAssetsDirectTransfer", async () => {
       await accessControl.isAllowedToCall.returns(true);
 
-      await expect(
-        converter.setPoolsAssetsDirectTransfer([xvsVaultTreasury.address], [[whitelistedTokenIn.address]], [[true]]),
-      )
-        .to.emit(converter, "PoolAssetsDirectTransferUpdated")
+      await expect(converter.setAssetsDirectTransfer([whitelistedTokenIn.address], [true]))
+        .to.emit(converter, "AssetsDirectTransferUpdated")
         .withArgs(xvsVaultTreasury.address, whitelistedTokenIn.address, true);
 
-      expect(await converter.poolsAssetsDirectTransfer(xvsVaultTreasury.address, whitelistedTokenIn.address)).to.equal(
-        true,
-      );
+      expect(await converter.assetsDirectTransfer(whitelistedTokenIn.address)).to.equal(true);
     });
 
     it("Transfer funds to treasury directly when using whitelisted token", async () => {
@@ -156,57 +152,22 @@ describe("XVS vault Converter: tests", () => {
       expect(await whitelistedTokenIn.balanceOf(xvsVaultTreasury.address)).to.equal(0);
       expect(await whitelistedTokenIn.balanceOf(converter.address)).to.equal(0);
       await whitelistedTokenIn.transfer(converter.address, whitelistedTokenAmount);
-      await converter.setPoolsAssetsDirectTransfer(
-        [xvsVaultTreasury.address],
-        [[whitelistedTokenIn.address]],
-        [[true]],
-      );
+      await converter.setAssetsDirectTransfer([whitelistedTokenIn.address], [true]);
       await converter.updateAssetsState(fakeComptroller.address, whitelistedTokenIn.address);
 
       expect(await whitelistedTokenIn.balanceOf(converter.address)).to.equal(0);
       expect(await whitelistedTokenIn.balanceOf(xvsVaultTreasury.address)).to.equal(whitelistedTokenAmount);
     });
 
-    it("Revert on when trying to set to a differnet address than xvsVaultTreasury", async () => {
-      await accessControl.isAllowedToCall.returns(true);
-      await expect(
-        converter.setPoolsAssetsDirectTransfer([whitelistedTokenIn.address], [[whitelistedTokenIn.address]], [[true]]),
-      ).to.be.revertedWithCustomError(converter, "OnlyDestinationAddressAllowedForDirectTransfer");
-
-      await expect(
-        converter.setPoolsAssetsDirectTransfer(
-          [xvsVaultTreasury.address, xvsVaultTreasury.address],
-          [[whitelistedTokenIn.address], [whitelistedTokenIn.address]],
-          [[true]],
-        ),
-      ).to.be.revertedWithCustomError(converter, "OnlyDestinationAddressAllowedForDirectTransfer");
-    });
-
     it("Revert on invalid parameters lengths", async () => {
       await accessControl.isAllowedToCall.returns(true);
 
       await expect(
-        converter.setPoolsAssetsDirectTransfer(
-          [xvsVaultTreasury.address],
-          [[whitelistedTokenIn.address], [whitelistedTokenIn.address]],
-          [[true]],
-        ),
+        converter.setAssetsDirectTransfer([whitelistedTokenIn.address, whitelistedTokenIn.address], [true]),
       ).to.be.revertedWithCustomError(converter, "InputLengthMisMatch");
 
       await expect(
-        converter.setPoolsAssetsDirectTransfer(
-          [xvsVaultTreasury.address],
-          [[whitelistedTokenIn.address, whitelistedTokenIn.address]],
-          [[true]],
-        ),
-      ).to.be.revertedWithCustomError(converter, "InputLengthMisMatch");
-
-      await expect(
-        converter.setPoolsAssetsDirectTransfer(
-          [xvsVaultTreasury.address],
-          [[whitelistedTokenIn.address]],
-          [[true, true]],
-        ),
+        converter.setAssetsDirectTransfer([whitelistedTokenIn.address], [true, true]),
       ).to.be.revertedWithCustomError(converter, "InputLengthMisMatch");
     });
   });

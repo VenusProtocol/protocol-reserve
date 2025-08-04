@@ -18,9 +18,9 @@ contract SingleTokenConverter is AbstractTokenConverter {
     /// @notice Address of the base asset token
     address public baseAsset;
 
-    /// @notice The mapping contains the assets for each receiver which are sent to destination directly
-    /// @dev Direct Transfer Receiver -> Asset -> bool(should transfer directly on true)
-    mapping(address => mapping(address => bool)) public poolsAssetsDirectTransfer;
+    /// @notice The mapping contains the assets which are sent to destination directly
+    /// @dev Asset -> bool(should transfer directly on true)
+    mapping(address => bool) public assetsDirectTransfer;
 
     /// @notice Emitted when base asset is updated
     event BaseAssetUpdated(address indexed oldBaseAsset, address indexed newBaseAsset);
@@ -33,11 +33,8 @@ contract SingleTokenConverter is AbstractTokenConverter {
         uint256 amount
     );
 
-    /// @notice Emitted after the poolsAssetsDirectTransfer mapping is updated
-    event PoolAssetsDirectTransferUpdated(address indexed receiver, address indexed asset, bool value);
-
-    /// @dev Error thrown when only the destination address is allowed for direct transfer
-    error OnlyDestinationAddressAllowedForDirectTransfer();
+    /// @notice Emitted after the assetsDirectTransfer mapping is updated
+    event AssetsDirectTransferUpdated(address indexed receiver, address indexed asset, bool value);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -71,19 +68,14 @@ contract SingleTokenConverter is AbstractTokenConverter {
         _setBaseAsset(baseAsset_);
     }
 
-    /// @notice Update the poolsAssetsDirectTransfer mapping
-    /// @param receivers Addresses of the pools
+    /// @notice Update the assetsDirectTransfer mapping
     /// @param assets Addresses of the assets need to be added for direct transfer
     /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
-    /// @custom:event PoolAssetsDirectTransferUpdated emits on success
+    /// @custom:event AssetsDirectTransferUpdated emits on success
     /// @custom:access Restricted by ACM
-    function setPoolsAssetsDirectTransfer(
-        address[] calldata receivers,
-        address[][] calldata assets,
-        bool[][] calldata values
-    ) external virtual {
-        _checkAccessAllowed("setPoolsAssetsDirectTransfer(address[],address[][],bool[][])");
-        _setPoolsAssetsDirectTransfer(receivers, assets, values);
+    function setAssetsDirectTransfer(address[] calldata assets, bool[] calldata values) external virtual {
+        _checkAccessAllowed("setAssetsDirectTransfer(address[],bool[])");
+        _setAssetsDirectTransfer(assets, values);
     }
 
     /// @notice Get the balance for specific token
@@ -103,7 +95,7 @@ contract SingleTokenConverter is AbstractTokenConverter {
         uint256 balance = token.balanceOf(address(this));
         balanceLeft = balance;
 
-        if (asset == baseAsset || poolsAssetsDirectTransfer[destinationAddress][asset]) {
+        if (asset == baseAsset || assetsDirectTransfer[asset]) {
             balanceLeft = 0;
             token.safeTransfer(destinationAddress, balance);
             emit AssetTransferredToDestination(destinationAddress, comptroller, asset, balance);
@@ -134,43 +126,23 @@ contract SingleTokenConverter is AbstractTokenConverter {
         }
     }
 
-    /// @dev Override to only allow setting poolsAssetsDirectTransfer for destinationAddress
+    /// @dev Update the assetsDirectTransfer mapping for destinationAddress
     /// @param assets Addresses of the assets need to be added for direct transfer
     /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
-    /// @custom:event PoolAssetsDirectTransferUpdated emits on success
-    /// @custom:error OnlyDestinationAddressAllowedForDirectTransfer is thrown when receivers array is not an array of one element equal to the destination address
+    /// @custom:event AssetsDirectTransferUpdated emits on success
     /// @custom:error InputLengthMisMatch thrown when assets and values array lengths don't match
-    function _setPoolsAssetsDirectTransfer(
-        address[] calldata receivers,
-        address[][] calldata assets,
-        bool[][] calldata values
-    ) internal {
-        uint256 receiversLength = receivers.length;
-        uint256 destinationAddressIndex = 0;
+    function _setAssetsDirectTransfer(address[] calldata assets, bool[] calldata values) internal {
+        uint256 assetsLength = assets.length;
 
-        // Ensure that the destinationAddress is the only receiver
-        if (receiversLength != 1 || receivers[destinationAddressIndex] != destinationAddress) {
-            revert OnlyDestinationAddressAllowedForDirectTransfer();
-        }
-
-        if ((receiversLength != assets.length) || (receiversLength != values.length)) {
+        if (assetsLength != values.length) {
             revert InputLengthMisMatch();
         }
 
-        address[] memory poolAssets = assets[destinationAddressIndex];
-        bool[] memory assetsValues = values[destinationAddressIndex];
-        uint256 poolAssetsLength = poolAssets.length;
-
-        if (poolAssetsLength != assetsValues.length) {
-            revert InputLengthMisMatch();
-        }
-
-        for (uint256 j; j < poolAssetsLength; ) {
-            // Always use destinationAddress as the direct transfer receiver address
-            poolsAssetsDirectTransfer[destinationAddress][poolAssets[j]] = assetsValues[j];
-            emit PoolAssetsDirectTransferUpdated(destinationAddress, poolAssets[j], assetsValues[j]);
+        for (uint256 i; i < assetsLength; ) {
+            assetsDirectTransfer[assets[i]] = values[i];
+            emit AssetsDirectTransferUpdated(destinationAddress, assets[i], values[i]);
             unchecked {
-                ++j;
+                ++i;
             }
         }
     }

@@ -362,7 +362,6 @@ contract RiskFundConverter is AbstractTokenConverter {
             unchecked {
                 balanceDifference = currentBalance - assetReserve;
             }
-
             if (poolsAssetsDirectTransfer[comptroller][asset]) {
                 uint256 previousDestinationBalance = token.balanceOf(destinationAddress);
                 token.safeTransfer(destinationAddress, balanceDifference);
