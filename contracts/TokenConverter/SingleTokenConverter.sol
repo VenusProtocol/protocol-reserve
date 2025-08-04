@@ -18,6 +18,10 @@ contract SingleTokenConverter is AbstractTokenConverter {
     /// @notice Address of the base asset token
     address public baseAsset;
 
+    /// @notice The mapping contains the assets for each receiver which are sent to destination directly
+    /// @dev Direct Transfer Receiver -> Asset -> bool(should transfer directly on true)
+    mapping(address => mapping(address => bool)) public poolsAssetsDirectTransfer;
+
     /// @notice Emitted when base asset is updated
     event BaseAssetUpdated(address indexed oldBaseAsset, address indexed newBaseAsset);
 
@@ -28,6 +32,9 @@ contract SingleTokenConverter is AbstractTokenConverter {
         address indexed asset,
         uint256 amount
     );
+
+    /// @notice Emitted after the poolsAssetsDirectTransfer mapping is updated
+    event PoolAssetsDirectTransferUpdated(address indexed receiver, address indexed asset, bool value);
 
     /// @dev Error thrown when only the destination address is allowed for direct transfer
     error OnlyDestinationAddressAllowedForDirectTransfer();
@@ -62,6 +69,21 @@ contract SingleTokenConverter is AbstractTokenConverter {
     /// @custom:access Only Governance
     function setBaseAsset(address baseAsset_) external onlyOwner {
         _setBaseAsset(baseAsset_);
+    }
+
+    /// @notice Update the poolsAssetsDirectTransfer mapping
+    /// @param receivers Addresses of the pools
+    /// @param assets Addresses of the assets need to be added for direct transfer
+    /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
+    /// @custom:event PoolAssetsDirectTransferUpdated emits on success
+    /// @custom:access Restricted by ACM
+    function setPoolsAssetsDirectTransfer(
+        address[] calldata receivers,
+        address[][] calldata assets,
+        bool[][] calldata values
+    ) external virtual {
+        _checkAccessAllowed("setPoolsAssetsDirectTransfer(address[],address[][],bool[][])");
+        _setPoolsAssetsDirectTransfer(receivers, assets, values);
     }
 
     /// @notice Get the balance for specific token
@@ -122,7 +144,7 @@ contract SingleTokenConverter is AbstractTokenConverter {
         address[] calldata receivers,
         address[][] calldata assets,
         bool[][] calldata values
-    ) internal override {
+    ) internal {
         uint256 receiversLength = receivers.length;
         uint256 destinationAddressIndex = 0;
 

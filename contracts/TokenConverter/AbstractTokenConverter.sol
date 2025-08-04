@@ -120,14 +120,10 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @notice Address of the converterNetwork contract
     IConverterNetwork public converterNetwork;
 
-    /// @notice The mapping contains the assets for each receiver which are sent to destination directly
-    /// @dev Direct Transfer Receiver -> Asset -> bool(should transfer directly on true)
-    mapping(address => mapping(address => bool)) public poolsAssetsDirectTransfer;
-
     /// @dev This empty reserved space is put in place to allow future versions to add new
     /// variables without shifting down storage in the inheritance chain.
     /// See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-    uint256[44] private __gap;
+    uint256[45] private __gap;
 
     /// @notice Emitted when config is updated for tokens pair
     event ConversionConfigUpdated(
@@ -198,9 +194,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
     /// @notice Emitted when minimum amount to convert is updated
     event MinAmountToConvertUpdated(uint256 oldMinAmountToConvert, uint256 newMinAmountToConvert);
-
-    /// @notice Emitted after the poolsAssetsDirectTransfer mapping is updated
-    event PoolAssetsDirectTransferUpdated(address indexed receiver, address indexed asset, bool value);
 
     /// @notice Thrown when actualAmountOut does not match with amountOutMantissa for convertForExactTokens
     error AmountOutMismatched();
@@ -331,21 +324,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     function setMinAmountToConvert(uint256 minAmountToConvert_) external {
         _checkAccessAllowed("setMinAmountToConvert(uint256)");
         _setMinAmountToConvert(minAmountToConvert_);
-    }
-
-    /// @notice Update the poolsAssetsDirectTransfer mapping
-    /// @param receivers Addresses of the pools
-    /// @param assets Addresses of the assets need to be added for direct transfer
-    /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
-    /// @custom:event PoolAssetsDirectTransferUpdated emits on success
-    /// @custom:access Restricted by ACM
-    function setPoolsAssetsDirectTransfer(
-        address[] calldata receivers,
-        address[][] calldata assets,
-        bool[][] calldata values
-    ) external virtual {
-        _checkAccessAllowed("setPoolsAssetsDirectTransfer(address[],address[][],bool[][])");
-        _setPoolsAssetsDirectTransfer(receivers, assets, values);
     }
 
     /// @notice Batch sets the conversion configurations
@@ -549,7 +527,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @custom:event Emits SweepToken event on success
     /// @custom:error ZeroAddressNotAllowed is thrown when tokenAddress/to address is zero
     /// @custom:access Only Governance
-    function sweepToken(address tokenAddress, address to, uint256 amount) external onlyOwner nonReentrant {
+    function sweepToken(
+        address tokenAddress,
+        address to,
+        uint256 amount
+    ) external onlyOwner nonReentrant {
         ensureNonzeroAddress(tokenAddress);
         ensureNonzeroAddress(to);
         ensureNonzeroValue(amount);
@@ -860,7 +842,11 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param to Address of the tokenAddressOut receiver
     /// @param amountConvertedMantissa Amount of tokenAddressOut supposed to get transferred
     /// @custom:error InsufficientPoolLiquidity If contract has less liquidity for tokenAddressOut than amountOutMantissa
-    function _doTransferOut(address tokenAddressOut, address to, uint256 amountConvertedMantissa) internal {
+    function _doTransferOut(
+        address tokenAddressOut,
+        address to,
+        uint256 amountConvertedMantissa
+    ) internal {
         uint256 maxTokenOutReserve = balanceOf(tokenAddressOut);
 
         /// If contract has less liquidity for tokenAddressOut than amountOutMantissa
@@ -978,13 +964,17 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
     /// @param comptroller Comptroller address (pool)
     /// @param tokenAddressOut Address of the token transferred to converter, and through _privateConversion it will be converted into base asset
     /// @param amountToConvert Amount of the tokenAddressOut transferred to converter
-    function _privateConversion(address comptroller, address tokenAddressOut, uint256 amountToConvert) internal {
+    function _privateConversion(
+        address comptroller,
+        address tokenAddressOut,
+        uint256 amountToConvert
+    ) internal {
         address tokenAddressIn = _getDestinationBaseAsset();
         address _destinationAddress = destinationAddress;
         uint256 convertedTokenInBalance;
         if (address(converterNetwork) != address(0)) {
             (address[] memory converterAddresses, uint256[] memory converterBalances) = converterNetwork
-                .findTokenConvertersForConverters(tokenAddressOut, tokenAddressIn);
+            .findTokenConvertersForConverters(tokenAddressOut, tokenAddressIn);
             uint256 convertersLength = converterAddresses.length;
             for (uint256 i; i < convertersLength; ) {
                 if (converterBalances[i] == 0) break;
@@ -1061,46 +1051,6 @@ abstract contract AbstractTokenConverter is AccessControlledV8, IAbstractTokenCo
 
         if (amountInInUsd >= minAmountToConvert) {
             isValid = true;
-        }
-    }
-
-    /// @dev Update the poolsAssetsDirectTransfer mapping
-    /// @param receivers Addresses of the pools
-    /// @param assets Addresses of the assets need to be added for direct transfer
-    /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
-    /// @custom:event PoolAssetsDirectTransferUpdated emits on success
-    /// @custom:error InputLengthMisMatch thrown when comptrollers array length is not equal to assets array length
-    function _setPoolsAssetsDirectTransfer(
-        address[] calldata receivers,
-        address[][] calldata assets,
-        bool[][] calldata values
-    ) internal virtual {
-        uint256 receiversLength = receivers.length;
-
-        if ((receiversLength != assets.length) || (receiversLength != values.length)) {
-            revert InputLengthMisMatch();
-        }
-
-        for (uint256 i; i < receiversLength; ) {
-            address[] memory poolAssets = assets[i];
-            bool[] memory assetsValues = values[i];
-            uint256 poolAssetsLength = poolAssets.length;
-
-            if (poolAssetsLength != assetsValues.length) {
-                revert InputLengthMisMatch();
-            }
-
-            for (uint256 j; j < poolAssetsLength; ) {
-                poolsAssetsDirectTransfer[receivers[i]][poolAssets[j]] = assetsValues[j];
-                emit PoolAssetsDirectTransferUpdated(receivers[i], poolAssets[j], assetsValues[j]);
-                unchecked {
-                    ++j;
-                }
-            }
-
-            unchecked {
-                ++i;
-            }
         }
     }
 
