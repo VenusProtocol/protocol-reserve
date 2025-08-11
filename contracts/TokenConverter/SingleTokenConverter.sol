@@ -141,12 +141,9 @@ contract SingleTokenConverter is AbstractTokenConverter {
             revert InputLengthMisMatch();
         }
 
-        for (uint256 i; i < assetsLength; ) {
+        for (uint256 i; i < assetsLength; ++i) {
             assetsDirectTransfer[assets[i]] = values[i];
             emit AssetsDirectTransferUpdated(destinationAddress, assets[i], values[i]);
-            unchecked {
-                ++i;
-            }
         }
     }
 
