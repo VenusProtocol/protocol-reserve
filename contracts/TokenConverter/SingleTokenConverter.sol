@@ -75,7 +75,7 @@ contract SingleTokenConverter is AbstractTokenConverter {
     }
 
     /// @notice Update the assetsDirectTransfer mapping
-    /// @param assets Addresses of the assets need to be added for direct transfer
+    /// @param assets Addresses of the assets need to be added or removed for direct transfer
     /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
     /// @custom:event AssetsDirectTransferUpdated emits on success
     /// @custom:error InputLengthMisMatch thrown when assets and values array lengths don't match
@@ -93,10 +93,12 @@ contract SingleTokenConverter is AbstractTokenConverter {
         tokenBalance = token.balanceOf(address(this));
     }
 
+    /// @dev It returns the balance of the `asset` in this contract. If `asset` is the `baseAsset`
+    /// or `assetsDirectTransfer[asset]` is true, then the balance of `asset` in this contract will
+    /// be transferred to the `destinationAddress` and 0 will be returned
     /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address.
     /// @return balanceLeft Amount of asset, for _privateConversion
-    // solhint-disable-next-line
     function _updateAssetsState(address comptroller, address asset) internal override returns (uint256 balanceLeft) {
         IERC20Upgradeable token = IERC20Upgradeable(asset);
         uint256 balance = token.balanceOf(address(this));
@@ -134,7 +136,7 @@ contract SingleTokenConverter is AbstractTokenConverter {
     }
 
     /// @dev Update the assetsDirectTransfer mapping for destinationAddress
-    /// @param assets Addresses of the assets need to be added for direct transfer
+    /// @param assets Addresses of the assets need to be added or removed for direct transfer
     /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
     /// @custom:event AssetsDirectTransferUpdated emits on success
     /// @custom:error InputLengthMisMatch thrown when assets and values array lengths don't match
