@@ -39,6 +39,14 @@ contract SingleTokenConverter is AbstractTokenConverter {
     /// @notice Thrown when the base asset is the same as the new base asset
     error SameBaseAssetNotAllowed();
 
+    /// @notice Thrown if someone tries to add `baseAssets` to the `assetsDirectTransfer` collection
+    error DirectTransferBaseAssetNotAllowed();
+
+    /// @notice Thrown when the `assetsDirectTransfer[asset]` is already `value`
+    /// @param asset The asset address whose `assetDirectTransfer` value went to be set
+    /// @param value The value to be set
+    error SameAssetDirectTransferNotAllowed(address asset, bool value);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -140,6 +148,9 @@ contract SingleTokenConverter is AbstractTokenConverter {
     /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
     /// @custom:event AssetsDirectTransferUpdated emits on success
     /// @custom:error InputLengthMisMatch thrown when assets and values array lengths don't match
+    /// @custom:error DirectTransferBaseAssetNotAllowed thrown when an asset in `assets` is the `baseAsset`
+    /// @custom:error SameAssetDirectTransferNotAllowed thrown when the value to set for an asset doesn't differs
+    /// from its current value
     function _setAssetsDirectTransfer(address[] calldata assets, bool[] calldata values) internal {
         uint256 assetsLength = assets.length;
 
@@ -148,6 +159,14 @@ contract SingleTokenConverter is AbstractTokenConverter {
         }
 
         for (uint256 i; i < assetsLength; ++i) {
+            if (assets[i] == baseAsset) {
+                revert DirectTransferBaseAssetNotAllowed();
+            }
+
+            if (assetsDirectTransfer[assets[i]] == values[i]) {
+                revert SameAssetDirectTransferNotAllowed(assets[i], values[i]);
+            }
+
             assetsDirectTransfer[assets[i]] = values[i];
             emit AssetsDirectTransferUpdated(destinationAddress, assets[i], values[i]);
         }

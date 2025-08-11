@@ -117,12 +117,32 @@ describe("XVS vault Converter: tests", () => {
       );
     });
 
+    it("Should revert on setting same base asset multiple times", async () => {
+      await converter.setBaseAsset(tokenIn.address);
+      expect(await converter.baseAsset()).to.equal(tokenIn.address);
+
+      await expect(converter.setBaseAsset(tokenIn.address)).to.be.revertedWithCustomError(
+        converter,
+        "SameBaseAssetNotAllowed",
+      );
+    });
+
     it("Should set base asset successfully", async () => {
       const [, unknownAddress] = await ethers.getSigners();
 
       await expect(converter.setBaseAsset(unknownAddress.address))
         .to.emit(converter, "BaseAssetUpdated")
         .withArgs(xvs.address, unknownAddress.address);
+    });
+
+    it("Should succeed on updating existing base asset", async () => {
+      await converter.setBaseAsset(tokenIn.address);
+      expect(await converter.baseAsset()).to.equal(tokenIn.address);
+
+      const tx = await converter.setBaseAsset(tokenOut.address);
+      expect(tx).to.emit(converter, "BaseAssetUpdated").withArgs(tokenIn.address, tokenOut.address);
+
+      expect(await converter.baseAsset()).to.equal(tokenOut.address);
     });
   });
 
@@ -133,6 +153,23 @@ describe("XVS vault Converter: tests", () => {
       await expect(
         converter.setAssetsDirectTransfer([whitelistedTokenIn.address], [true]),
       ).to.be.revertedWithCustomError(converter, "Unauthorized");
+    });
+
+    it("Revert when the asset is the base asset", async () => {
+      await accessControl.isAllowedToCall.returns(true);
+      await converter.setBaseAsset(whitelistedTokenIn.address);
+
+      await expect(
+        converter.setAssetsDirectTransfer([whitelistedTokenIn.address], [true]),
+      ).to.be.revertedWithCustomError(converter, "DirectTransferBaseAssetNotAllowed");
+    });
+
+    it("Revert then value to set is the current value", async () => {
+      await accessControl.isAllowedToCall.returns(true);
+      await converter.setAssetsDirectTransfer([whitelistedTokenIn.address], [true]),
+        await expect(
+          converter.setAssetsDirectTransfer([whitelistedTokenIn.address], [true]),
+        ).to.be.revertedWithCustomError(converter, "SameAssetDirectTransferNotAllowed");
     });
 
     it("Success on the setAssetsDirectTransfer", async () => {
@@ -169,35 +206,6 @@ describe("XVS vault Converter: tests", () => {
       await expect(
         converter.setAssetsDirectTransfer([whitelistedTokenIn.address], [true, true]),
       ).to.be.revertedWithCustomError(converter, "InputLengthMisMatch");
-    });
-  });
-
-  describe("setBaseAsset", () => {
-    it("Should revert on non-owner call", async () => {
-      const [, user] = await ethers.getSigners();
-      await expect(converter.connect(user).setBaseAsset(tokenIn.address)).to.be.revertedWith(
-        "Ownable: caller is not the owner",
-      );
-    });
-
-    it("Should succeed on updating existing base asset", async () => {
-      await converter.setBaseAsset(tokenIn.address);
-      expect(await converter.baseAsset()).to.equal(tokenIn.address);
-
-      const tx = await converter.setBaseAsset(tokenOut.address);
-      expect(tx).to.emit(converter, "BaseAssetUpdated").withArgs(tokenIn.address, tokenOut.address);
-
-      expect(await converter.baseAsset()).to.equal(tokenOut.address);
-    });
-
-    it("Should revert on setting same base asset multiple times", async () => {
-      await converter.setBaseAsset(tokenIn.address);
-      expect(await converter.baseAsset()).to.equal(tokenIn.address);
-
-      await expect(converter.setBaseAsset(tokenIn.address)).to.be.revertedWithCustomError(
-        converter,
-        "SameBaseAssetNotAllowed",
-      );
     });
   });
 
