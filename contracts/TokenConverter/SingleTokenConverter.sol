@@ -66,6 +66,9 @@ contract SingleTokenConverter is AbstractTokenConverter {
 
     /// @notice Sets the base asset for the contract
     /// @param baseAsset_ The new address of the base asset
+    /// @custom:error ZeroAddressNotAllowed is thrown when address is zero
+    /// @custom:error SameBaseAssetNotAllowed is thrown when `baseAsset_` is equal to the current base asset
+    /// @custom:event BaseAssetUpdated is emitted on success
     /// @custom:access Only Governance
     function setBaseAsset(address baseAsset_) external onlyOwner {
         _setBaseAsset(baseAsset_);
@@ -75,6 +78,7 @@ contract SingleTokenConverter is AbstractTokenConverter {
     /// @param assets Addresses of the assets need to be added for direct transfer
     /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
     /// @custom:event AssetsDirectTransferUpdated emits on success
+    /// @custom:error InputLengthMisMatch thrown when assets and values array lengths don't match
     /// @custom:access Restricted by ACM
     function setAssetsDirectTransfer(address[] calldata assets, bool[] calldata values) external virtual {
         _checkAccessAllowed("setAssetsDirectTransfer(address[],bool[])");
