@@ -1,3 +1,10 @@
+## [3.4.0-dev.5](https://github.com/VenusProtocol/protocol-reserve/compare/v3.4.0-dev.4...v3.4.0-dev.5) (2025-08-11)
+
+
+### Bug Fixes
+
+* removed berachain deployment ([38866ae](https://github.com/VenusProtocol/protocol-reserve/commit/38866ae3b4dd4690a0e13f0c4e721081ab3b65ed))
+
 ## [3.4.0-dev.4](https://github.com/VenusProtocol/protocol-reserve/compare/v3.4.0-dev.3...v3.4.0-dev.4) (2025-07-11)
 
 
