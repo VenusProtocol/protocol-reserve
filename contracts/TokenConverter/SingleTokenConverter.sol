@@ -18,6 +18,10 @@ contract SingleTokenConverter is AbstractTokenConverter {
     /// @notice Address of the base asset token
     address public baseAsset;
 
+    /// @notice The mapping contains the assets which are sent to destination directly
+    /// @dev Asset -> bool(should transfer directly on true)
+    mapping(address => bool) public assetsDirectTransfer;
+
     /// @notice Emitted when base asset is updated
     event BaseAssetUpdated(address indexed oldBaseAsset, address indexed newBaseAsset);
 
@@ -28,6 +32,20 @@ contract SingleTokenConverter is AbstractTokenConverter {
         address indexed asset,
         uint256 amount
     );
+
+    /// @notice Emitted after the assetsDirectTransfer mapping is updated
+    event AssetsDirectTransferUpdated(address indexed receiver, address indexed asset, bool value);
+
+    /// @notice Thrown when the base asset is the same as the new base asset
+    error SameBaseAssetNotAllowed();
+
+    /// @notice Thrown if someone tries to add `baseAssets` to the `assetsDirectTransfer` collection
+    error DirectTransferBaseAssetNotAllowed();
+
+    /// @notice Thrown when the `assetsDirectTransfer[asset]` is already `value`
+    /// @param asset The asset address whose `assetDirectTransfer` value went to be set
+    /// @param value The value to be set
+    error SameAssetDirectTransferNotAllowed(address asset, bool value);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -56,9 +74,23 @@ contract SingleTokenConverter is AbstractTokenConverter {
 
     /// @notice Sets the base asset for the contract
     /// @param baseAsset_ The new address of the base asset
+    /// @custom:error ZeroAddressNotAllowed is thrown when address is zero
+    /// @custom:error SameBaseAssetNotAllowed is thrown when `baseAsset_` is equal to the current base asset
+    /// @custom:event BaseAssetUpdated is emitted on success
     /// @custom:access Only Governance
     function setBaseAsset(address baseAsset_) external onlyOwner {
         _setBaseAsset(baseAsset_);
+    }
+
+    /// @notice Update the assetsDirectTransfer mapping
+    /// @param assets Addresses of the assets need to be added or removed for direct transfer
+    /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
+    /// @custom:event AssetsDirectTransferUpdated emits on success
+    /// @custom:error InputLengthMisMatch thrown when assets and values array lengths don't match
+    /// @custom:access Restricted by ACM
+    function setAssetsDirectTransfer(address[] calldata assets, bool[] calldata values) external virtual {
+        _checkAccessAllowed("setAssetsDirectTransfer(address[],bool[])");
+        _setAssetsDirectTransfer(assets, values);
     }
 
     /// @notice Get the balance for specific token
@@ -69,16 +101,18 @@ contract SingleTokenConverter is AbstractTokenConverter {
         tokenBalance = token.balanceOf(address(this));
     }
 
+    /// @dev It returns the balance of the `asset` in this contract. If `asset` is the `baseAsset`
+    /// or `assetsDirectTransfer[asset]` is true, then the balance of `asset` in this contract will
+    /// be transferred to the `destinationAddress` and 0 will be returned
     /// @param comptroller Comptroller address (pool)
     /// @param asset Asset address.
     /// @return balanceLeft Amount of asset, for _privateConversion
-    // solhint-disable-next-line
     function _updateAssetsState(address comptroller, address asset) internal override returns (uint256 balanceLeft) {
         IERC20Upgradeable token = IERC20Upgradeable(asset);
         uint256 balance = token.balanceOf(address(this));
         balanceLeft = balance;
 
-        if (asset == baseAsset) {
+        if (asset == baseAsset || assetsDirectTransfer[asset]) {
             balanceLeft = 0;
             token.safeTransfer(destinationAddress, balance);
             emit AssetTransferredToDestination(destinationAddress, comptroller, asset, balance);
@@ -109,12 +143,47 @@ contract SingleTokenConverter is AbstractTokenConverter {
         }
     }
 
+    /// @dev Update the assetsDirectTransfer mapping for destinationAddress
+    /// @param assets Addresses of the assets need to be added or removed for direct transfer
+    /// @param values Boolean value to indicate whether direct transfer is allowed for each asset.
+    /// @custom:event AssetsDirectTransferUpdated emits on success
+    /// @custom:error InputLengthMisMatch thrown when assets and values array lengths don't match
+    /// @custom:error DirectTransferBaseAssetNotAllowed thrown when an asset in `assets` is the `baseAsset`
+    /// @custom:error SameAssetDirectTransferNotAllowed thrown when the value to set for an asset doesn't differs
+    /// from its current value
+    function _setAssetsDirectTransfer(address[] calldata assets, bool[] calldata values) internal {
+        uint256 assetsLength = assets.length;
+
+        if (assetsLength != values.length) {
+            revert InputLengthMisMatch();
+        }
+
+        for (uint256 i; i < assetsLength; ++i) {
+            if (assets[i] == baseAsset) {
+                revert DirectTransferBaseAssetNotAllowed();
+            }
+
+            if (assetsDirectTransfer[assets[i]] == values[i]) {
+                revert SameAssetDirectTransferNotAllowed(assets[i], values[i]);
+            }
+
+            assetsDirectTransfer[assets[i]] = values[i];
+            emit AssetsDirectTransferUpdated(destinationAddress, assets[i], values[i]);
+        }
+    }
+
     /// @dev Sets the base asset for the contract
     /// @param baseAsset_ The new address of the base asset
     /// @custom:error ZeroAddressNotAllowed is thrown when address is zero
+    /// @custom:error SameBaseAssetNotAllowed is thrown when `baseAsset_` is equal to the current base asset
     /// @custom:event BaseAssetUpdated is emitted on success
     function _setBaseAsset(address baseAsset_) internal {
         ensureNonzeroAddress(baseAsset_);
+
+        if (baseAsset == baseAsset_) {
+            revert SameBaseAssetNotAllowed();
+        }
+
         emit BaseAssetUpdated(baseAsset, baseAsset_);
         baseAsset = baseAsset_;
     }
