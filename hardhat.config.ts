@@ -255,56 +255,8 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    apiKey: {
-      bscmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      bsctestnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      sepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      ethereum: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      opbnbtestnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      opbnbmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      arbitrumsepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      arbitrumone: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      opsepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      opmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      basesepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      basemainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      unichainsepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      unichainmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      berachainbartio: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-    },
+    apiKey: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     customChains: [
-      {
-        network: "bscmainnet",
-        chainId: 56,
-        urls: {
-          apiURL: "https://api.bscscan.com/api",
-          browserURL: "https://bscscan.com",
-        },
-      },
-      {
-        network: "bsctestnet",
-        chainId: 97,
-        urls: {
-          apiURL: "https://api-testnet.bscscan.com/api",
-          browserURL: "https://testnet.bscscan.com",
-        },
-      },
-      {
-        network: "sepolia",
-        chainId: 11155111,
-        urls: {
-          apiURL: "https://api-sepolia.etherscan.io/api",
-          browserURL: "https://sepolia.etherscan.io",
-        },
-      },
-      {
-        network: "ethereum",
-        chainId: 1,
-        urls: {
-          apiURL: "https://api.etherscan.io/api",
-          browserURL: "https://etherscan.io",
-        },
-      },
       {
         network: "opbnbtestnet",
         chainId: 5611,
@@ -322,51 +274,11 @@ const config: HardhatUserConfig = {
         },
       },
       {
-        network: "arbitrumsepolia",
-        chainId: 421614,
-        urls: {
-          apiURL: `https://api-sepolia.arbiscan.io/api`,
-          browserURL: "https://sepolia.arbiscan.io/",
-        },
-      },
-      {
-        network: "arbitrumone",
-        chainId: 42161,
-        urls: {
-          apiURL: `https://api.arbiscan.io/api/`,
-          browserURL: "https://arbiscan.io/",
-        },
-      },
-      {
         network: "opsepolia",
         chainId: 11155420,
         urls: {
           apiURL: "https://api-sepolia-optimistic.etherscan.io/api/",
           browserURL: "https://sepolia-optimistic.etherscan.io/",
-        },
-      },
-      {
-        network: "opmainnet",
-        chainId: 10,
-        urls: {
-          apiURL: "https://api-optimistic.etherscan.io/api",
-          browserURL: "https://optimistic.etherscan.io/",
-        },
-      },
-      {
-        network: "basesepolia",
-        chainId: 84532,
-        urls: {
-          apiURL: "https://api-sepolia.basescan.org/api",
-          browserURL: "https://sepolia.basescan.org/",
-        },
-      },
-      {
-        network: "basemainnet",
-        chainId: 8453,
-        urls: {
-          apiURL: "https://api.basescan.org/api",
-          browserURL: "https://basescan.org/",
         },
       },
       {
