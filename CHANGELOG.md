@@ -1,3 +1,24 @@
+## [3.4.0](https://github.com/VenusProtocol/protocol-reserve/compare/v3.3.0...v3.4.0) (2025-09-29)
+
+
+### Features
+
+* add constant WBNB ([469c0f2](https://github.com/VenusProtocol/protocol-reserve/commit/469c0f2e52725a8f3970780e3741908c85c02cd6))
+* add deployments for new PSR implementation for mainnets ([d8ebc82](https://github.com/VenusProtocol/protocol-reserve/commit/d8ebc82f047005d5c4e3e8e8b646f0c8b1e8ee9a))
+* add deployments for new PSR implementation for testnets ([8f229e9](https://github.com/VenusProtocol/protocol-reserve/commit/8f229e970a105f91f07fce808d133851cee98f21))
+* add incomeType for erc4626 rewards and flashloan in PSR ([46dc80e](https://github.com/VenusProtocol/protocol-reserve/commit/46dc80e664d4e6c96af3a0a794bb45c8078e1d60))
+* add WBNB burning converter deployments ([d0cedc6](https://github.com/VenusProtocol/protocol-reserve/commit/d0cedc61cc09707c014764391f361953936f0cbe))
+* deployed psr ([3fad6c9](https://github.com/VenusProtocol/protocol-reserve/commit/3fad6c9e7d3de82c26d9c4d5ab88ecdcfa277819))
+* updating deployment files ([305b790](https://github.com/VenusProtocol/protocol-reserve/commit/305b7906264ce821ef98ca9b8257e1c92ddf1f5b))
+* updating deployment files ([9ab6895](https://github.com/VenusProtocol/protocol-reserve/commit/9ab689560418f9cf38e597721391810f13f14cd9))
+* updating deployment files ([4adb2d0](https://github.com/VenusProtocol/protocol-reserve/commit/4adb2d0988d4bd6ebcdf92bd23a86aa2a4b2e4db))
+* updating deployment files ([91ee1d8](https://github.com/VenusProtocol/protocol-reserve/commit/91ee1d82b75f6c5311ac94d74d613b7514f62d6d))
+
+
+### Bug Fixes
+
+* removed berachain deployment ([38866ae](https://github.com/VenusProtocol/protocol-reserve/commit/38866ae3b4dd4690a0e13f0c4e721081ab3b65ed))
+
 ## [3.4.0-dev.5](https://github.com/VenusProtocol/protocol-reserve/compare/v3.4.0-dev.4...v3.4.0-dev.5) (2025-08-11)
 
 
