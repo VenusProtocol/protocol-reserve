@@ -2427,7 +2427,7 @@
       ]
     },
     "ProtocolShareReserve_Implementation": {
-      "address": "0x91B67df8B13a1B53a3828EAAD3f4233B55FEc26d",
+      "address": "0xC23631E757d15680a8686D97Cf200625ad30c826",
       "abi": [
         {
           "inputs": [
@@ -10013,6 +10013,80 @@
     },
     "USDTPrimeConverter": {
       "address": "0xf1FA230D25fC5D6CAfe87C5A6F9e1B17Bc6F194E",
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
+            }
+          ],
+          "stateMutability": "payable",
+          "type": "constructor"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "previousAdmin",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "newAdmin",
+              "type": "address"
+            }
+          ],
+          "name": "AdminChanged",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            }
+          ],
+          "name": "BeaconUpgraded",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "implementation",
+              "type": "address"
+            }
+          ],
+          "name": "Upgraded",
+          "type": "event"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "fallback"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "receive"
+        }
+      ]
+    },
+    "WBNBBurnConverter": {
+      "address": "0x42DBA48e7cCeB030eC73AaAe29d4A3F0cD4facba",
       "abi": [
         {
           "inputs": [

@@ -79,8 +79,14 @@ const externalDeployments = {
     "node_modules/@venusprotocol/governance-contracts/deployments/basemainnet",
     "node_modules/@venusprotocol/oracle/deployments/basemainnet",
   ],
-  unichainsepolia: ["node_modules/@venusprotocol/governance-contracts/deployments/unichainsepolia"],
-  unichainmainnet: ["node_modules/@venusprotocol/governance-contracts/deployments/unichainmainnet"],
+  unichainsepolia: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/unichainsepolia",
+    "node_modules/@venusprotocol/oracle/deployments/unichainsepolia",
+  ],
+  unichainmainnet: [
+    "node_modules/@venusprotocol/governance-contracts/deployments/unichainmainnet",
+    "node_modules/@venusprotocol/oracle/deployments/unichainmainnet",
+  ],
 };
 
 extendConfig((config: HardhatConfig) => {

@@ -4,13 +4,16 @@ import { DeployResult } from "hardhat-deploy/dist/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { multisigs } from "../helpers/utils";
+import { ADDRESS_ONE } from "../helpers/utils";
 
 type NETWORK = "hardhat" | "bsctestnet" | "bscmainnet" | "sepolia" | "ethereum";
-
 interface BaseAssets {
   [key: string]: string;
 }
+const WBNB: Record<"bsctestnet" | "bscmainnet", string> = {
+  bsctestnet: "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd",
+  bscmainnet: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+};
 
 async function getBaseAssets(network: NETWORK): Promise<BaseAssets> {
   const networkBaseAssets = {
@@ -27,6 +30,7 @@ async function getBaseAssets(network: NETWORK): Promise<BaseAssets> {
       BTCBPrimeConverter: (await ethers.getContract("BTCB"))?.address,
       ETHPrimeConverter: (await ethers.getContract("ETH"))?.address,
       XVSVaultConverter: (await ethers.getContract("XVS"))?.address,
+      WBNBBurnConverter: WBNB["bsctestnet"],
     }),
     bscmainnet: async () => ({
       USDTPrimeConverter: (await ethers.getContract("USDT"))?.address,
@@ -34,6 +38,7 @@ async function getBaseAssets(network: NETWORK): Promise<BaseAssets> {
       BTCBPrimeConverter: (await ethers.getContract("BTCB"))?.address,
       ETHPrimeConverter: (await ethers.getContract("ETH"))?.address,
       XVSVaultConverter: (await ethers.getContract("XVS"))?.address,
+      WBNBBurnConverter: WBNB["bscmainnet"],
     }),
     sepolia: async () => ({
       USDTPrimeConverter: (await ethers.getContract("MockUSDT"))?.address,
@@ -81,7 +86,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const acmAddress = (await ethers.getContract("AccessControlManager"))?.address;
   const oracleAddress = (await ethers.getContract("ResilientOracle"))?.address;
-  const proxyOwnerAddress = (await ethers.getContract("NormalTimelock"))?.address || multisigs[networkName];
+  const proxyOwnerAddress = (await ethers.getContract("NormalTimelock")).address;
 
   const singleTokenConverterImp: DeployResult = await deploy("SingleTokenConverterImp", {
     contract: "SingleTokenConverter",
@@ -89,6 +94,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const SingleTokenConverterBeacon: DeployResult = await deploy("SingleTokenConverterBeacon", {
@@ -97,6 +103,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [singleTokenConverterImp.address],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const SingleTokenConverter = await ethers.getContractFactory("SingleTokenConverter");
@@ -108,6 +115,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     if (baseAsset == (await ethers.getContract("XVS"))?.address) {
       destinationAddress = (await ethers.getContract("XVSVaultTreasury"))?.address;
+    }
+
+    // For WBNBBurnConverter
+    if (baseAsset == WBNB[hre.network.name as "bsctestnet" | "bscmainnet"]) {
+      destinationAddress = ADDRESS_ONE;
     }
 
     const args: string[] = [acmAddress, oracleAddress, destinationAddress, baseAsset, MIN_AMOUNT_TO_CONVERT];

@@ -1089,7 +1089,7 @@
       ]
     },
     "ProtocolShareReserve_Implementation": {
-      "address": "0xD91a8d928413daEc12028800cb934562138b8b36",
+      "address": "0x87fe63539af70B0634f1f831A194BD0C97CffAfF",
       "abi": [
         {
           "inputs": [
@@ -1157,6 +1157,11 @@
             }
           ],
           "name": "Unauthorized",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "ZeroAddressNotAllowed",
           "type": "error"
         },
         {

@@ -2,10 +2,8 @@ import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { multisigs } from "../helpers/utils";
-
 const func: DeployFunction = async ({
-  network: { name, live },
+  network: { live },
   getNamedAccounts,
   deployments,
 }: HardhatRuntimeEnvironment) => {
@@ -33,7 +31,7 @@ const func: DeployFunction = async ({
   });
 
   if (live) {
-    const targetOwner = (await ethers.getContractOrNull("NormalTimelock"))?.address || multisigs[name];
+    const targetOwner = (await ethers.getContract("NormalTimelock")).address;
 
     const contract = await ethers.getContract("RiskFundV2");
     if ((await contract.owner()) !== targetOwner && (await contract.pendingOwner()) !== targetOwner) {
