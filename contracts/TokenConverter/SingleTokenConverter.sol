@@ -85,6 +85,30 @@ contract SingleTokenConverter is AbstractTokenConverter {
         }
     }
 
+    /// @notice Hook called after a private conversion is completed
+    /// @dev Emits an AssetTransferredToDestination event if Private Conversion happens
+    /// @param comptroller The address of the comptroller (pool) associated with the conversion
+    /// @param tokenAddressIn The address of the input token that was converted
+    /// @param convertedTokenInBalance The amount of input token that was converted
+    /// @custom:event AssetTransferredToDestination Emitted when convertedTokenInBalance > 0, indicating
+    ///         the converted assets were transferred to the destination address
+    function _postPrivateConversionHook(
+        address comptroller,
+        address tokenAddressIn,
+        uint256 convertedTokenInBalance,
+        address,
+        uint256
+    ) internal override {
+        if (convertedTokenInBalance > 0) {
+            emit AssetTransferredToDestination(
+                destinationAddress,
+                comptroller,
+                tokenAddressIn,
+                convertedTokenInBalance
+            );
+        }
+    }
+
     /// @dev Sets the base asset for the contract
     /// @param baseAsset_ The new address of the base asset
     /// @custom:error ZeroAddressNotAllowed is thrown when address is zero
