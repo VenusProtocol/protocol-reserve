@@ -1,3 +1,10 @@
+## [3.4.1-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v3.4.0...v3.4.1-dev.1) (2025-09-29)
+
+
+### Bug Fixes
+
+* release ([4dd0cbc](https://github.com/VenusProtocol/protocol-reserve/commit/4dd0cbc9c3eb13d8954b5f9ece094569ff5a046a))
+
 ## [3.4.0](https://github.com/VenusProtocol/protocol-reserve/compare/v3.3.0...v3.4.0) (2025-09-29)
 
 
