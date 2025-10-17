@@ -3,7 +3,7 @@ import "module-alias/register";
 import "@nomicfoundation/hardhat-chai-matchers";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomiclabs/hardhat-ethers";
-import "@nomiclabs/hardhat-etherscan";
+import "@nomicfoundation/hardhat-verify";
 import "@openzeppelin/hardhat-upgrades";
 import "@typechain/hardhat";
 import dotenv from "dotenv";
@@ -253,6 +253,9 @@ const config: HardhatUserConfig = {
       live: true,
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
+  },
+  sourcify: {
+    enabled: true,
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
