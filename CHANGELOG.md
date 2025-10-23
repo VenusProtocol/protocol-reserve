@@ -1,3 +1,10 @@
+## [3.5.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v3.4.1-dev.1...v3.5.0-dev.1) (2025-10-23)
+
+
+### Features
+
+* add slim package scripts ([c8a4cdc](https://github.com/VenusProtocol/protocol-reserve/commit/c8a4cdc8e8c7493783214b3f4b59b575b8ba2404))
+
 ## [3.4.1-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v3.4.0...v3.4.1-dev.1) (2025-09-29)
 
 
