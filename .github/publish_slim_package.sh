@@ -1,3 +1,6 @@
+# Set npm authentication
+echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+
 cd slim
 
 # Extract to PRE_RELEASE_TAG the tag in the version field of the package json, or the empty string if it doesn't exist
