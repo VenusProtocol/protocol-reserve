@@ -1,3 +1,12 @@
+## [3.5.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v3.5.0-dev.1...v3.5.0-dev.2) (2025-11-03)
+
+
+### Bug Fixes
+
+* add id-token permission ([f5c3c5a](https://github.com/VenusProtocol/protocol-reserve/commit/f5c3c5a44d7bfe894537b19f68fcd8008afc142a))
+* auth NPM before publish ([710d289](https://github.com/VenusProtocol/protocol-reserve/commit/710d289f065305069050bdd9f31a137b76a0c741))
+* slim package publish scripts ([64d8f92](https://github.com/VenusProtocol/protocol-reserve/commit/64d8f92cdfb4b5222f4d795383ff762c9cdf57ae))
+
 ## [3.5.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v3.4.1-dev.1...v3.5.0-dev.1) (2025-10-23)
 
 
