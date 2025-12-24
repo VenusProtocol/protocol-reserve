@@ -361,9 +361,7 @@ describe("Risk Fund: Tests", function () {
       const sweepAmount = parseUnits("45", 18); // 30 from donated + 15 from pools
 
       // This should not revert with underflow
-      await expect(
-        riskFund.sweepToken(tokenA.address, await admin.getAddress(), sweepAmount),
-      ).to.not.be.reverted;
+      await expect(riskFund.sweepToken(tokenA.address, await admin.getAddress(), sweepAmount)).to.not.be.reverted;
     });
   });
 
