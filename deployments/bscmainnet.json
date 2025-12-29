@@ -7669,7 +7669,7 @@
       ]
     },
     "RiskFundV2_Implementation": {
-      "address": "0x7Ef5ABbcC9A701e728BeB7Afd4fb5747fAB15A28",
+      "address": "0x60e322C3418EcAEA5E6859551c299c968adc9816",
       "abi": [
         {
           "inputs": [],
@@ -7953,6 +7953,12 @@
               "indexed": true,
               "internalType": "address",
               "name": "comptroller",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "receiver",
               "type": "address"
             },
             {
