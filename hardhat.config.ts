@@ -1,7 +1,6 @@
 import "module-alias/register";
 
 import "@nomicfoundation/hardhat-chai-matchers";
-import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-verify";
 import "@nomiclabs/hardhat-ethers";
 import "@openzeppelin/hardhat-upgrades";
