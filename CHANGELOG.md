@@ -1,3 +1,7 @@
+## 3.5.0-dev.4 (2026-01-15)
+
+* fix: add packageMgr back ([4812016](https://github.com/VenusProtocol/protocol-reserve/commit/4812016))
+
 ## 3.5.0-dev.3 (2026-01-15)
 
 * build: fix ci ([bd88d75](https://github.com/VenusProtocol/protocol-reserve/commit/bd88d75))
