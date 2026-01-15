@@ -214,6 +214,155 @@ describe("Risk Fund: Tests", function () {
         [1000, -1000],
       );
     });
+
+    it("Should correctly handle sweep when extra tokens exist (donated tokens)", async () => {
+      await impersonateAccount(riskFundConverter.address);
+      riskFundConverterSigner = await ethers.getSigner(riskFundConverter.address);
+      await admin.sendTransaction({ to: riskFundConverter.address, value: ethers.utils.parseEther("10") });
+
+      // Setup: Add tracked tokens to pool
+      await riskFund
+        .connect(riskFundConverterSigner)
+        .updatePoolState(comptrollerA.address, tokenA.address, COMPTROLLER_A_AMOUNT);
+
+      // Mock getPools to return comptrollerA
+      riskFundConverter.getPools.whenCalledWith(tokenA.address).returns([comptrollerA.address]);
+
+      // Simulate attacker donating tokens (extra untracked tokens)
+      const donatedAmount = parseUnits("5", 18);
+      await tokenA.transfer(riskFund.address, donatedAmount);
+
+      // Total balance = 10 (tracked) + 10 (initial) + 5 (donated) = 25
+      // Try to sweep 12 tokens: 5 from donated + 7 from pool reserves
+      const sweepAmount = parseUnits("12", 18);
+
+      // Should succeed without underflow
+      await expect(riskFund.sweepToken(tokenA.address, await admin.getAddress(), sweepAmount)).to.changeTokenBalances(
+        tokenA,
+        [await riskFund.owner(), riskFund.address],
+        [sweepAmount, sweepAmount.mul(-1)],
+      );
+    });
+
+    it("Should correctly proportionally reduce pool reserves with donated tokens", async () => {
+      await impersonateAccount(riskFundConverter.address);
+      riskFundConverterSigner = await ethers.getSigner(riskFundConverter.address);
+      await admin.sendTransaction({ to: riskFundConverter.address, value: ethers.utils.parseEther("10") });
+
+      // Add a second comptroller
+      const comptrollerB = await smock.fake<IComptroller>("IComptroller");
+      const COMPTROLLER_B_AMOUNT = convertToUnit(20, 18); // 20 tokens
+
+      // Update state for both pools: A has 10, B has 20 (total 30 tracked)
+      await riskFund
+        .connect(riskFundConverterSigner)
+        .updatePoolState(comptrollerA.address, tokenA.address, COMPTROLLER_A_AMOUNT);
+
+      await tokenA.transfer(riskFund.address, COMPTROLLER_B_AMOUNT);
+      await riskFund
+        .connect(riskFundConverterSigner)
+        .updatePoolState(comptrollerB.address, tokenA.address, COMPTROLLER_B_AMOUNT);
+
+      // Mock getPools to return both comptrollers
+      riskFundConverter.getPools.whenCalledWith(tokenA.address).returns([comptrollerA.address, comptrollerB.address]);
+
+      // Donate extra tokens
+      const donatedAmount = parseUnits("10", 18); // 10 donated
+      await tokenA.transfer(riskFund.address, donatedAmount);
+
+      // Total: 10 (initial) + 30 (tracked pools) + 10 (donated) = 50 tokens
+      // Sweep 25 tokens: 10 from donated + 15 from pools
+      // Pool A should lose: (10/30) * 15 = 5 tokens
+      // Pool B should lose: (20/30) * 15 = 10 tokens
+      const sweepAmount = parseUnits("25", 18);
+
+      const poolABefore = await riskFund.poolAssetsFunds(comptrollerA.address, tokenA.address);
+      const poolBBefore = await riskFund.poolAssetsFunds(comptrollerB.address, tokenA.address);
+
+      await riskFund.sweepToken(tokenA.address, await admin.getAddress(), sweepAmount);
+
+      const poolAAfter = await riskFund.poolAssetsFunds(comptrollerA.address, tokenA.address);
+      const poolBAfter = await riskFund.poolAssetsFunds(comptrollerB.address, tokenA.address);
+
+      // Pool A should have lost approximately 5 tokens
+      const poolALoss = poolABefore.sub(poolAAfter);
+      expect(poolALoss).to.be.closeTo(parseUnits("5", 18), parseUnits("0.01", 18));
+
+      // Pool B should have lost approximately 10 tokens
+      const poolBLoss = poolBBefore.sub(poolBAfter);
+      expect(poolBLoss).to.be.closeTo(parseUnits("10", 18), parseUnits("0.01", 18));
+    });
+
+    it("Should handle edge case: sweep exactly the donated amount", async () => {
+      await impersonateAccount(riskFundConverter.address);
+      riskFundConverterSigner = await ethers.getSigner(riskFundConverter.address);
+      await admin.sendTransaction({ to: riskFundConverter.address, value: ethers.utils.parseEther("10") });
+
+      // Add tracked tokens
+      await riskFund
+        .connect(riskFundConverterSigner)
+        .updatePoolState(comptrollerA.address, tokenA.address, COMPTROLLER_A_AMOUNT);
+
+      // Mock getPools
+      riskFundConverter.getPools.whenCalledWith(tokenA.address).returns([comptrollerA.address]);
+
+      // Donate tokens
+      const donatedAmount = parseUnits("7", 18);
+      await tokenA.transfer(riskFund.address, donatedAmount);
+
+      const poolBefore = await riskFund.poolAssetsFunds(comptrollerA.address, tokenA.address);
+
+      // Sweep exactly the donated amount - pool reserves should not be touched
+      await riskFund.sweepToken(tokenA.address, await admin.getAddress(), donatedAmount);
+
+      const poolAfter = await riskFund.poolAssetsFunds(comptrollerA.address, tokenA.address);
+
+      // Pool reserves should remain unchanged
+      expect(poolAfter).to.equal(poolBefore);
+    });
+
+    it("Should not revert on underflow with multiple pools and donated tokens", async () => {
+      await impersonateAccount(riskFundConverter.address);
+      riskFundConverterSigner = await ethers.getSigner(riskFundConverter.address);
+      await admin.sendTransaction({ to: riskFundConverter.address, value: ethers.utils.parseEther("10") });
+
+      // Create 3 pools with different amounts
+      const comptrollerB = await smock.fake<IComptroller>("IComptroller");
+      const comptrollerC = await smock.fake<IComptroller>("IComptroller");
+
+      const POOL_A_AMOUNT = convertToUnit(10, 18);
+      const POOL_B_AMOUNT = convertToUnit(15, 18);
+      const POOL_C_AMOUNT = convertToUnit(25, 18);
+
+      await riskFund
+        .connect(riskFundConverterSigner)
+        .updatePoolState(comptrollerA.address, tokenA.address, POOL_A_AMOUNT);
+
+      await tokenA.transfer(riskFund.address, POOL_B_AMOUNT);
+      await riskFund
+        .connect(riskFundConverterSigner)
+        .updatePoolState(comptrollerB.address, tokenA.address, POOL_B_AMOUNT);
+
+      await tokenA.transfer(riskFund.address, POOL_C_AMOUNT);
+      await riskFund
+        .connect(riskFundConverterSigner)
+        .updatePoolState(comptrollerC.address, tokenA.address, POOL_C_AMOUNT);
+
+      // Mock getPools to return all three comptrollers
+      riskFundConverter.getPools
+        .whenCalledWith(tokenA.address)
+        .returns([comptrollerA.address, comptrollerB.address, comptrollerC.address]);
+
+      // Donate significant amount
+      const donatedAmount = parseUnits("30", 18);
+      await tokenA.transfer(riskFund.address, donatedAmount);
+
+      // Sweep amount larger than donated but less than total
+      const sweepAmount = parseUnits("45", 18); // 30 from donated + 15 from pools
+
+      // This should not revert with underflow
+      await expect(riskFund.sweepToken(tokenA.address, await admin.getAddress(), sweepAmount)).to.not.be.reverted;
+    });
   });
 
   describe("sweepTokenFromPool", () => {
