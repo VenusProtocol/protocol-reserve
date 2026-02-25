@@ -1,3 +1,9 @@
+## 3.5.0-dev.5 (2026-02-25)
+
+* Merge branch 'develop' into fix/add-repo ([c511115](https://github.com/VenusProtocol/protocol-reserve/commit/c511115))
+* Merge pull request #156 from VenusProtocol/fix/add-repo ([915d607](https://github.com/VenusProtocol/protocol-reserve/commit/915d607)), closes [#156](https://github.com/VenusProtocol/protocol-reserve/issues/156)
+* fix: add repo URL ([3afad48](https://github.com/VenusProtocol/protocol-reserve/commit/3afad48))
+
 ## 3.5.0-dev.4 (2026-01-15)
 
 * fix: add packageMgr back ([4812016](https://github.com/VenusProtocol/protocol-reserve/commit/4812016))
