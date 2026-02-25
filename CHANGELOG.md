@@ -1,3 +1,21 @@
+## 3.5.0-dev.4 (2026-01-15)
+
+* fix: add packageMgr back ([4812016](https://github.com/VenusProtocol/protocol-reserve/commit/4812016))
+
+## 3.5.0-dev.3 (2026-01-15)
+
+* build: fix ci ([bd88d75](https://github.com/VenusProtocol/protocol-reserve/commit/bd88d75))
+* style: prettier ([a8e22eb](https://github.com/VenusProtocol/protocol-reserve/commit/a8e22eb))
+* ci: update to use the Trusted Publisher for npm release ([d13f028](https://github.com/VenusProtocol/protocol-reserve/commit/d13f028))
+* Merge branch 'fix/vpd-392' of github.com:VenusProtocol/protocol-reserve into fix/vpd-392 ([767f038](https://github.com/VenusProtocol/protocol-reserve/commit/767f038))
+* Merge pull request #157 from VenusProtocol/fix/vpd-392 ([23a1719](https://github.com/VenusProtocol/protocol-reserve/commit/23a1719)), closes [#157](https://github.com/VenusProtocol/protocol-reserve/issues/157)
+* fix: deployed riskfund v2 ([0d03e22](https://github.com/VenusProtocol/protocol-reserve/commit/0d03e22))
+* fix: etherscan verify ([4d9b589](https://github.com/VenusProtocol/protocol-reserve/commit/4d9b589))
+* fix: fixed calc and added tests ([c37594b](https://github.com/VenusProtocol/protocol-reserve/commit/c37594b))
+* fix: fixed hardhat config ([7c733ae](https://github.com/VenusProtocol/protocol-reserve/commit/7c733ae))
+* fix: fixed lint ([76a0540](https://github.com/VenusProtocol/protocol-reserve/commit/76a0540))
+* feat: updating deployment files ([db9cd8f](https://github.com/VenusProtocol/protocol-reserve/commit/db9cd8f))
+
 ## [3.5.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v3.5.0-dev.1...v3.5.0-dev.2) (2025-11-03)
 
 
