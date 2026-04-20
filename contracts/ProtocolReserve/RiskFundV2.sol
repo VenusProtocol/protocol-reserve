@@ -7,7 +7,6 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { ensureNonzeroAddress, ensureNonzeroValue } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 
 import { IRiskFund } from "../Interfaces/IRiskFund.sol";
-import { IRiskFundConverter } from "../Interfaces/IRiskFundConverter.sol";
 import { RiskFundV2Storage } from "./RiskFundStorage.sol";
 
 /// @title RiskFundV2
@@ -46,9 +45,6 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
         address indexed receiver,
         uint256 amount
     );
-
-    /// @notice Error is thrown when updatePoolState is not called by riskFundConverter
-    error InvalidRiskFundConverter();
 
     /// @notice Error is thrown when transferReserveForAuction is called by non shortfall address
     error InvalidShortfallAddress();
@@ -199,16 +195,13 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @param asset Address of the asset(token)
     /// @param amount Amount transferred for the pool
     /// @custom:event PoolAssetsIncreased emits on success
-    /// @custom:error InvalidRiskFundConverter is thrown if caller is not riskFundConverter contract
-    /// @custom:access Only RiskFundConverter contract
+    /// @custom:access Controlled by AccessControlManager
     function updatePoolState(
         address comptroller,
         address asset,
         uint256 amount
     ) public {
-        if (msg.sender != riskFundConverter) {
-            revert InvalidRiskFundConverter();
-        }
+        _checkAccessAllowed("updatePoolState(address,address,uint256)");
 
         poolAssetsFunds[comptroller][asset] += amount;
         emit PoolAssetsIncreased(comptroller, asset, amount);
@@ -218,45 +211,8 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @param tokenAddress Address of the token
     /// @param amount Amount transferred to address(to)
     /// @custom:error InsufficientBalance is thrown when amount entered is greater than balance
-    function preSweepToken(address tokenAddress, uint256 amount) internal {
+    function preSweepToken(address tokenAddress, uint256 amount) internal view {
         uint256 balance = IERC20Upgradeable(tokenAddress).balanceOf(address(this));
         if (amount > balance) revert InsufficientBalance();
-
-        address[] memory pools = IRiskFundConverter(riskFundConverter).getPools(tokenAddress);
-
-        uint256 assetReserves;
-        uint256 poolsLength = pools.length;
-        for (uint256 i; i < poolsLength; ) {
-            assetReserves += poolAssetsFunds[pools[i]][tokenAddress];
-            unchecked {
-                ++i;
-            }
-        }
-
-        uint256 balanceDiff = balance - assetReserves;
-
-        if (balanceDiff < amount) {
-            uint256 amountDiff;
-            unchecked {
-                amountDiff = amount - balanceDiff;
-            }
-            uint256 distributedShare;
-            for (uint256 i; i < poolsLength; ) {
-                if (poolAssetsFunds[pools[i]][tokenAddress] != 0) {
-                    uint256 poolAmountShare;
-                    if (i < (poolsLength - 1)) {
-                        poolAmountShare = (poolAssetsFunds[pools[i]][tokenAddress] * amountDiff) / assetReserves;
-                        distributedShare += poolAmountShare;
-                    } else {
-                        poolAmountShare = amountDiff - distributedShare;
-                    }
-                    poolAssetsFunds[pools[i]][tokenAddress] -= poolAmountShare;
-                    emit PoolAssetsDecreased(pools[i], tokenAddress, poolAmountShare);
-                }
-                unchecked {
-                    ++i;
-                }
-            }
-        }
     }
 }
