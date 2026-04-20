@@ -45,11 +45,7 @@ async function deployBuyback(destination: string, isRiskFund: boolean): Promise<
   });
 }
 
-async function encodeSwap(
-  amountIn: BigNumber,
-  amountOut: BigNumber,
-  recipient: string,
-): Promise<string> {
+async function encodeSwap(amountIn: BigNumber, amountOut: BigNumber, recipient: string): Promise<string> {
   return router.interface.encodeFunctionData("swap", [
     tokenIn.address,
     amountIn,
@@ -145,9 +141,8 @@ describe("TokenBuyback", () => {
     });
 
     it("callable by any account", async () => {
-      await expect(
-        buyback.connect(nonOwner).updateAssetsState(await comptroller.getAddress(), tokenIn.address),
-      ).to.not.be.reverted;
+      await expect(buyback.connect(nonOwner).updateAssetsState(await comptroller.getAddress(), tokenIn.address)).to.not
+        .be.reverted;
     });
   });
 
@@ -167,14 +162,10 @@ describe("TokenBuyback", () => {
 
     it("toggles router allowlist and emits event", async () => {
       const other = await nonOwner.getAddress();
-      await expect(buyback.setAllowedRouter(other, true))
-        .to.emit(buyback, "RouterAllowlisted")
-        .withArgs(other, true);
+      await expect(buyback.setAllowedRouter(other, true)).to.emit(buyback, "RouterAllowlisted").withArgs(other, true);
       expect(await buyback.allowedRouters(other)).to.equal(true);
 
-      await expect(buyback.setAllowedRouter(other, false))
-        .to.emit(buyback, "RouterAllowlisted")
-        .withArgs(other, false);
+      await expect(buyback.setAllowedRouter(other, false)).to.emit(buyback, "RouterAllowlisted").withArgs(other, false);
       expect(await buyback.allowedRouters(other)).to.equal(false);
     });
   });
@@ -197,9 +188,10 @@ describe("TokenBuyback", () => {
     });
 
     it("reverts on zero recipient", async () => {
-      await expect(
-        buyback.sweepToken(tokenIn.address, constants.AddressZero, AMOUNT_IN),
-      ).to.be.revertedWithCustomError(buyback, "ZeroAddressNotAllowed");
+      await expect(buyback.sweepToken(tokenIn.address, constants.AddressZero, AMOUNT_IN)).to.be.revertedWithCustomError(
+        buyback,
+        "ZeroAddressNotAllowed",
+      );
     });
 
     it("reverts on zero amount", async () => {
@@ -410,11 +402,7 @@ describe("TokenBuyback", () => {
         comptrollerAddr,
       );
 
-      expect(riskFund.updatePoolState).to.have.been.calledOnceWith(
-        comptrollerAddr,
-        baseAsset.address,
-        AMOUNT_OUT,
-      );
+      expect(riskFund.updatePoolState).to.have.been.calledOnceWith(comptrollerAddr, baseAsset.address, AMOUNT_OUT);
     });
 
     it("RiskFund: amountOut zero skips updatePoolState", async () => {
@@ -528,11 +516,7 @@ describe("TokenBuyback", () => {
 
       await buybackRiskFund.forwardBaseAsset(comptrollerAddr);
 
-      expect(riskFund.updatePoolState).to.have.been.calledOnceWith(
-        comptrollerAddr,
-        baseAsset.address,
-        amount,
-      );
+      expect(riskFund.updatePoolState).to.have.been.calledOnceWith(comptrollerAddr, baseAsset.address, amount);
     });
   });
 });
