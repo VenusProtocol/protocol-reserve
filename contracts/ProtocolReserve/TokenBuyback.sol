@@ -36,8 +36,14 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     /// @notice DEX router allowlist
     mapping(address => bool) public allowedRouters;
 
+    /// @notice Per-asset balance watermark used to derive the delta received
+    ///         on each updateAssetsState call. Resynced after every outflow
+    ///         (executeBuyback, forwardBaseAsset, sweepToken) so inflow deltas
+    ///         stay correct across interleaved deposits and withdrawals.
+    mapping(address => uint256) public assetsReserves;
+
     /// @dev Gap for future storage variables
-    uint256[49] private __gap;
+    uint256[48] private __gap;
 
     /// @notice Emitted when PSR transfers tokens and calls updateAssetsState
     event AssetsReceived(address indexed comptroller, address indexed asset, uint256 amount);
@@ -111,8 +117,16 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     /// @param asset Address of the token transferred
     /// @custom:event AssetsReceived emits the received amount
     function updateAssetsState(address comptroller, address asset) external override nonReentrant {
-        uint256 balance = IERC20Upgradeable(asset).balanceOf(address(this));
-        emit AssetsReceived(comptroller, asset, balance);
+        uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
+        uint256 previousBalance = assetsReserves[asset];
+        uint256 balanceDifference;
+        if (currentBalance > previousBalance) {
+            unchecked {
+                balanceDifference = currentBalance - previousBalance;
+            }
+            assetsReserves[asset] = currentBalance;
+        }
+        emit AssetsReceived(comptroller, asset, balanceDifference);
     }
 
     /// @notice Executes a buyback by swapping accumulated tokens via a DEX router
@@ -159,6 +173,9 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
 
         _settleBuyback(amountOut, comptroller);
 
+        assetsReserves[tokenIn] = IERC20Upgradeable(tokenIn).balanceOf(address(this));
+        assetsReserves[BASE_ASSET] = IERC20Upgradeable(BASE_ASSET).balanceOf(address(this));
+
         emit BuybackExecuted(tokenIn, amountIn, amountOut, router, comptroller);
     }
 
@@ -183,6 +200,7 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         }
 
         IERC20Upgradeable(BASE_ASSET).safeTransfer(DESTINATION, amount);
+        assetsReserves[BASE_ASSET] = IERC20Upgradeable(BASE_ASSET).balanceOf(address(this));
 
         if (IS_RISK_FUND) {
             IRiskFund(DESTINATION).updatePoolState(comptroller, BASE_ASSET, amount);
@@ -221,6 +239,7 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         ensureNonzeroValue(amount);
 
         IERC20Upgradeable(token).safeTransfer(to, amount);
+        assetsReserves[token] = IERC20Upgradeable(token).balanceOf(address(this));
 
         emit SweepToken(token, to, amount);
     }

@@ -131,18 +131,134 @@ describe("TokenBuyback", () => {
   });
 
   describe("updateAssetsState", () => {
-    it("emits AssetsReceived with current balance", async () => {
+    it("emits AssetsReceived with the first-deposit delta", async () => {
       await tokenIn.transfer(buyback.address, AMOUNT_IN);
       const comptrollerAddr = await comptroller.getAddress();
 
       await expect(buyback.updateAssetsState(comptrollerAddr, tokenIn.address))
         .to.emit(buyback, "AssetsReceived")
         .withArgs(comptrollerAddr, tokenIn.address, AMOUNT_IN);
+
+      expect(await buyback.assetsReserves(tokenIn.address)).to.equal(AMOUNT_IN);
     });
 
     it("callable by any account", async () => {
       await expect(buyback.connect(nonOwner).updateAssetsState(await comptroller.getAddress(), tokenIn.address)).to.not
         .be.reverted;
+    });
+
+    // POC: PSR.releaseFunds calls safeTransfer+updateAssetsState per-pool-per-asset.
+    // Two consecutive deliveries of the same asset from different pools must each
+    // report their own delta, not the cumulative contract balance. The pre-fix
+    // implementation emitted 100 then 300 (cumulative) instead of 100 then 200.
+    it("reports per-call delta across back-to-back pool deliveries (regression)", async () => {
+      const comptrollerA = await comptroller.getAddress();
+      const comptrollerB = await nonOwner.getAddress();
+      const firstDelivery = parseUnits("100", 18);
+      const secondDelivery = parseUnits("200", 18);
+
+      await tokenIn.transfer(buyback.address, firstDelivery);
+      await expect(buyback.updateAssetsState(comptrollerA, tokenIn.address))
+        .to.emit(buyback, "AssetsReceived")
+        .withArgs(comptrollerA, tokenIn.address, firstDelivery);
+
+      await tokenIn.transfer(buyback.address, secondDelivery);
+      await expect(buyback.updateAssetsState(comptrollerB, tokenIn.address))
+        .to.emit(buyback, "AssetsReceived")
+        .withArgs(comptrollerB, tokenIn.address, secondDelivery);
+
+      expect(await buyback.assetsReserves(tokenIn.address)).to.equal(firstDelivery.add(secondDelivery));
+    });
+
+    it("emits zero delta on a no-op call with no new inflow", async () => {
+      const comptrollerAddr = await comptroller.getAddress();
+      await tokenIn.transfer(buyback.address, AMOUNT_IN);
+      await buyback.updateAssetsState(comptrollerAddr, tokenIn.address);
+
+      await expect(buyback.updateAssetsState(comptrollerAddr, tokenIn.address))
+        .to.emit(buyback, "AssetsReceived")
+        .withArgs(comptrollerAddr, tokenIn.address, 0);
+    });
+
+    it("ignores pre-existing dust when computing the first delta", async () => {
+      const dust = parseUnits("5", 18);
+      const delivery = parseUnits("100", 18);
+      const comptrollerAddr = await comptroller.getAddress();
+
+      // Dust arrives before any updateAssetsState bookkeeping (e.g. leftover from a
+      // prior partial swap or a donation). The next legitimate PSR delivery should
+      // still report the full balance minus the zero watermark — we take a
+      // conservative one-time hit, not ongoing inflation.
+      await tokenIn.transfer(buyback.address, dust);
+      await tokenIn.transfer(buyback.address, delivery);
+
+      await expect(buyback.updateAssetsState(comptrollerAddr, tokenIn.address))
+        .to.emit(buyback, "AssetsReceived")
+        .withArgs(comptrollerAddr, tokenIn.address, dust.add(delivery));
+    });
+
+    it("watermark tracks outflow: buyback then next delivery reports only the new amount", async () => {
+      const comptrollerA = await comptroller.getAddress();
+      const comptrollerB = await nonOwner.getAddress();
+      const firstDelivery = AMOUNT_IN;
+      const secondDelivery = parseUnits("50", 18);
+
+      await tokenIn.transfer(buyback.address, firstDelivery);
+      await buyback.updateAssetsState(comptrollerA, tokenIn.address);
+
+      const calldata = await encodeSwap(firstDelivery, AMOUNT_OUT, buyback.address);
+      await buyback.executeBuyback(
+        tokenIn.address,
+        firstDelivery,
+        MIN_AMOUNT_OUT,
+        futureDeadline(),
+        router.address,
+        calldata,
+        comptrollerA,
+      );
+
+      expect(await buyback.assetsReserves(tokenIn.address)).to.equal(0);
+
+      await tokenIn.transfer(buyback.address, secondDelivery);
+      await expect(buyback.updateAssetsState(comptrollerB, tokenIn.address))
+        .to.emit(buyback, "AssetsReceived")
+        .withArgs(comptrollerB, tokenIn.address, secondDelivery);
+    });
+
+    it("sweepToken resyncs the watermark so subsequent deltas stay accurate", async () => {
+      const comptrollerAddr = await comptroller.getAddress();
+      const delivery = AMOUNT_IN;
+      const sweepAmount = parseUnits("40", 18);
+      const topUp = parseUnits("10", 18);
+
+      await tokenIn.transfer(buyback.address, delivery);
+      await buyback.updateAssetsState(comptrollerAddr, tokenIn.address);
+
+      await buyback.sweepToken(tokenIn.address, await owner.getAddress(), sweepAmount);
+      expect(await buyback.assetsReserves(tokenIn.address)).to.equal(delivery.sub(sweepAmount));
+
+      await tokenIn.transfer(buyback.address, topUp);
+      await expect(buyback.updateAssetsState(comptrollerAddr, tokenIn.address))
+        .to.emit(buyback, "AssetsReceived")
+        .withArgs(comptrollerAddr, tokenIn.address, topUp);
+    });
+
+    it("forwardBaseAsset resyncs BASE_ASSET watermark", async () => {
+      const comptrollerAddr = await comptroller.getAddress();
+      const firstDrop = parseUnits("300", 6);
+      const secondDrop = parseUnits("100", 6);
+
+      await baseAsset.transfer(buyback.address, firstDrop);
+      await buyback.updateAssetsState(comptrollerAddr, baseAsset.address);
+      expect(await buyback.assetsReserves(baseAsset.address)).to.equal(firstDrop);
+
+      await buyback.forwardBaseAsset(comptrollerAddr);
+      expect(await buyback.assetsReserves(baseAsset.address)).to.equal(0);
+
+      await baseAsset.transfer(buyback.address, secondDrop);
+      await expect(buyback.updateAssetsState(comptrollerAddr, baseAsset.address))
+        .to.emit(buyback, "AssetsReceived")
+        .withArgs(comptrollerAddr, baseAsset.address, secondDrop);
     });
   });
 
