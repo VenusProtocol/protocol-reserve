@@ -36,7 +36,7 @@ let destinationEOA: Signer;
 let comptroller: Signer;
 
 const BUYBACK_SIG = "executeBuyback(address,uint256,uint256,uint256,address,bytes,address)";
-const FORWARD_SIG = "forwardBaseAsset(address)";
+const FORWARD_SIG = "forwardBaseAsset(address,uint256)";
 
 async function deployBuyback(destination: string, isRiskFund: boolean): Promise<MockContract<TokenBuyback>> {
   const TokenBuybackFactory = await smock.mock<TokenBuyback__factory>("TokenBuyback");
@@ -252,7 +252,7 @@ describe("TokenBuyback", () => {
       await buyback.updateAssetsState(comptrollerAddr, baseAsset.address);
       expect(await buyback.assetsReserves(baseAsset.address)).to.equal(firstDrop);
 
-      await buyback.forwardBaseAsset(comptrollerAddr);
+      await buyback.forwardBaseAsset(comptrollerAddr, firstDrop);
       expect(await buyback.assetsReserves(baseAsset.address)).to.equal(0);
 
       await baseAsset.transfer(buyback.address, secondDrop);
@@ -589,50 +589,96 @@ describe("TokenBuyback", () => {
   describe("forwardBaseAsset", () => {
     it("reverts when ACM denies", async () => {
       accessControl.isAllowedToCall.whenCalledWith(await owner.getAddress(), FORWARD_SIG).returns(false);
-      await expect(buyback.forwardBaseAsset(await comptroller.getAddress())).to.be.revertedWithCustomError(
-        buyback,
-        "Unauthorized",
-      );
+      await expect(
+        buyback.forwardBaseAsset(await comptroller.getAddress(), parseUnits("1", 6)),
+      ).to.be.revertedWithCustomError(buyback, "Unauthorized");
     });
 
     it("reverts when IS_RISK_FUND and comptroller is zero", async () => {
-      await expect(buybackRiskFund.forwardBaseAsset(constants.AddressZero)).to.be.revertedWithCustomError(
-        buybackRiskFund,
-        "ComptrollerRequired",
-      );
+      await expect(
+        buybackRiskFund.forwardBaseAsset(constants.AddressZero, parseUnits("1", 6)),
+      ).to.be.revertedWithCustomError(buybackRiskFund, "ComptrollerRequired");
     });
 
-    it("no-op when balance is zero", async () => {
+    it("no-op when amount is zero", async () => {
       const comptrollerAddr = await comptroller.getAddress();
-      const tx = await buyback.forwardBaseAsset(comptrollerAddr);
+      const tx = await buyback.forwardBaseAsset(comptrollerAddr, 0);
       const receipt = await tx.wait();
       expect(receipt.events?.find(e => e.event === "BaseAssetForwarded")).to.equal(undefined);
     });
 
-    it("transfers full balance to DESTINATION (non-RiskFund)", async () => {
-      const amount = parseUnits("300", 6);
-      await baseAsset.transfer(buyback.address, amount);
+    it("reverts on insufficient balance", async () => {
+      const deposit = parseUnits("100", 6);
+      const tooMuch = parseUnits("150", 6);
+      await baseAsset.transfer(buyback.address, deposit);
+      const comptrollerAddr = await comptroller.getAddress();
+
+      await expect(buyback.forwardBaseAsset(comptrollerAddr, tooMuch))
+        .to.be.revertedWithCustomError(buyback, "InsufficientBalance")
+        .withArgs(baseAsset.address, tooMuch, deposit);
+    });
+
+    it("transfers the specified amount to DESTINATION (non-RiskFund)", async () => {
+      const deposit = parseUnits("300", 6);
+      const forwardAmount = parseUnits("200", 6);
+      await baseAsset.transfer(buyback.address, deposit);
       const destAddr = await destinationEOA.getAddress();
       const before = await baseAsset.balanceOf(destAddr);
       const comptrollerAddr = await comptroller.getAddress();
 
-      await expect(buyback.forwardBaseAsset(comptrollerAddr))
+      await expect(buyback.forwardBaseAsset(comptrollerAddr, forwardAmount))
         .to.emit(buyback, "BaseAssetForwarded")
-        .withArgs(comptrollerAddr, amount);
+        .withArgs(comptrollerAddr, forwardAmount);
 
-      expect((await baseAsset.balanceOf(destAddr)).sub(before)).to.equal(amount);
-      expect(await baseAsset.balanceOf(buyback.address)).to.equal(0);
+      expect((await baseAsset.balanceOf(destAddr)).sub(before)).to.equal(forwardAmount);
+      expect(await baseAsset.balanceOf(buyback.address)).to.equal(deposit.sub(forwardAmount));
       expect(riskFund.updatePoolState).to.not.have.been.called;
     });
 
-    it("RiskFund: transfers and calls updatePoolState", async () => {
+    it("RiskFund: transfers and calls updatePoolState with the specified amount", async () => {
       const amount = parseUnits("300", 6);
       await baseAsset.transfer(buybackRiskFund.address, amount);
       const comptrollerAddr = await comptroller.getAddress();
 
-      await buybackRiskFund.forwardBaseAsset(comptrollerAddr);
+      await buybackRiskFund.forwardBaseAsset(comptrollerAddr, amount);
 
       expect(riskFund.updatePoolState).to.have.been.calledOnceWith(comptrollerAddr, baseAsset.address, amount);
+    });
+
+    // POC: PSR can deliver BASE_ASSET from multiple pools between cron runs (both pools
+    // route the same token as BASE_ASSET and TokenBuyback is a shared IncomeDestination).
+    // The pre-fix forwardBaseAsset(comptroller) drained the full balance and credited it
+    // entirely to the single comptroller arg, leaving every other contributor with
+    // poolAssetsFunds[*][BASE_ASSET] == 0 — InsufficientPoolReserve revert at auction time.
+    // The amount parameter lets the operator split attribution using AssetsReceived deltas.
+    it("per-pool attribution: amount parameter partitions credit across comptrollers (regression)", async () => {
+      const comptrollerA = await comptroller.getAddress();
+      const comptrollerB = await nonOwner.getAddress();
+      const poolADeposit = parseUnits("100", 6);
+      const poolBDeposit = parseUnits("200", 6);
+
+      // PSR delivers BASE_ASSET for pool A, then pool B, without a cron drain in between
+      await baseAsset.transfer(buybackRiskFund.address, poolADeposit);
+      await buybackRiskFund.updateAssetsState(comptrollerA, baseAsset.address);
+      await baseAsset.transfer(buybackRiskFund.address, poolBDeposit);
+      await buybackRiskFund.updateAssetsState(comptrollerB, baseAsset.address);
+
+      // Cron reads AssetsReceived event deltas and forwards each pool's contribution
+      // with its own attribution in a dedicated call
+      await expect(buybackRiskFund.forwardBaseAsset(comptrollerA, poolADeposit))
+        .to.emit(buybackRiskFund, "BaseAssetForwarded")
+        .withArgs(comptrollerA, poolADeposit);
+
+      await expect(buybackRiskFund.forwardBaseAsset(comptrollerB, poolBDeposit))
+        .to.emit(buybackRiskFund, "BaseAssetForwarded")
+        .withArgs(comptrollerB, poolBDeposit);
+
+      // Pool A and B each get credited their own contribution — not the cumulative 300
+      // to a single pool and zero to the other
+      expect(riskFund.updatePoolState).to.have.been.calledTwice;
+      expect(riskFund.updatePoolState.atCall(0)).to.have.been.calledWith(comptrollerA, baseAsset.address, poolADeposit);
+      expect(riskFund.updatePoolState.atCall(1)).to.have.been.calledWith(comptrollerB, baseAsset.address, poolBDeposit);
+      expect(await baseAsset.balanceOf(buybackRiskFund.address)).to.equal(0);
     });
   });
 });

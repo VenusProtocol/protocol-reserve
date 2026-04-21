@@ -27,9 +27,10 @@ interface ITokenBuyback is IIncomeDestination {
         address comptroller
     ) external;
 
-    /// @notice Forwards accumulated BASE_ASSET directly to DESTINATION without swap
-    /// @param comptroller Address of the comptroller (required when IS_RISK_FUND is true)
-    function forwardBaseAsset(address comptroller) external;
+    /// @notice Forwards a caller-specified portion of accumulated BASE_ASSET to DESTINATION without swap
+    /// @param comptroller Address of the comptroller (required when IS_RISK_FUND is true) credited for this portion
+    /// @param amount Amount of BASE_ASSET to forward and credit to `comptroller`
+    function forwardBaseAsset(address comptroller, uint256 amount) external;
 
     /// @notice Adds or removes a DEX router from the allowlist
     /// @param router Address of the DEX router

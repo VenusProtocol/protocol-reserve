@@ -179,24 +179,33 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         emit BuybackExecuted(tokenIn, amountIn, amountOut, router, comptroller);
     }
 
-    /// @notice Forwards accumulated BASE_ASSET directly to DESTINATION without swap
-    /// @dev Handles BASE_ASSET that lands in the contract via PSR distribution (when PSR
-    ///      routes the same token as BASE_ASSET to this instance) or direct transfers.
-    ///      Transfers entire BASE_ASSET balance. No-op when balance is zero.
+    /// @notice Forwards a caller-specified portion of accumulated BASE_ASSET to DESTINATION without swap
+    /// @dev BASE_ASSET can land here from multiple pools (PSR delivers per pool), so attribution
+    ///      must happen per call — `amount` lets the operator partition the balance across
+    ///      comptrollers using the deltas reported by `AssetsReceived` events. Calling with the
+    ///      full balance credited to a single pool would silently starve every other contributor
+    ///      at the downstream `RiskFundV2.poolAssetsFunds[comptroller][BASE_ASSET]` mapping.
+    ///      No-op when `amount` is zero.
     /// @param comptroller Comptroller address for RiskFund pool attribution (required when IS_RISK_FUND is true)
-    /// @custom:event BaseAssetForwarded emits when balance > 0
+    /// @param amount Amount of BASE_ASSET to forward and credit to `comptroller`
+    /// @custom:event BaseAssetForwarded emits when amount > 0
     /// @custom:error ComptrollerRequired when IS_RISK_FUND is true but comptroller is zero
+    /// @custom:error InsufficientBalance when amount exceeds BASE_ASSET balance
     /// @custom:access Restricted by ACM
-    function forwardBaseAsset(address comptroller) external nonReentrant {
-        _checkAccessAllowed("forwardBaseAsset(address)");
+    function forwardBaseAsset(address comptroller, uint256 amount) external nonReentrant {
+        _checkAccessAllowed("forwardBaseAsset(address,uint256)");
 
         if (IS_RISK_FUND && comptroller == address(0)) {
             revert ComptrollerRequired();
         }
 
-        uint256 amount = IERC20Upgradeable(BASE_ASSET).balanceOf(address(this));
         if (amount == 0) {
             return;
+        }
+
+        uint256 balance = IERC20Upgradeable(BASE_ASSET).balanceOf(address(this));
+        if (amount > balance) {
+            revert InsufficientBalance(BASE_ASSET, amount, balance);
         }
 
         IERC20Upgradeable(BASE_ASSET).safeTransfer(DESTINATION, amount);

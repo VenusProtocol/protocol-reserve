@@ -38,7 +38,7 @@ const WHALE = "0xF977814e90dA44bFA03b6295A0616a897441aceC"; // Binance hot walle
 
 // ACM function signatures to grant
 const EXECUTE_BUYBACK_SIG = "executeBuyback(address,uint256,uint256,uint256,address,bytes,address)";
-const FORWARD_BASE_ASSET_SIG = "forwardBaseAsset(address)";
+const FORWARD_BASE_ASSET_SIG = "forwardBaseAsset(address,uint256)";
 const UPDATE_POOL_STATE_SIG = "updatePoolState(address,address,uint256)";
 
 // PancakeSwap V2 Router minimal ABI
@@ -217,7 +217,7 @@ forking(FORK_BLOCK, () => {
         const usdtBefore = await usdt.balanceOf(RISK_FUND_V2);
         const poolBefore = await riskFundV2.poolAssetsFunds(comptrollerAddr, USDT);
 
-        await expect(riskFundBuyback.forwardBaseAsset(comptrollerAddr))
+        await expect(riskFundBuyback.forwardBaseAsset(comptrollerAddr, forwardAmount))
           .to.emit(riskFundBuyback, "BaseAssetForwarded")
           .withArgs(comptrollerAddr, forwardAmount);
 
@@ -350,10 +350,9 @@ forking(FORK_BLOCK, () => {
             .executeBuyback(BTCB, BTCB_IN, 0, deadline, PANCAKE_V2_ROUTER, calldata, comptrollerAddr),
         ).to.be.revertedWithCustomError(riskFundBuyback, "Unauthorized");
 
-        await expect(riskFundBuyback.connect(outsider).forwardBaseAsset(comptrollerAddr)).to.be.revertedWithCustomError(
-          riskFundBuyback,
-          "Unauthorized",
-        );
+        await expect(
+          riskFundBuyback.connect(outsider).forwardBaseAsset(comptrollerAddr, parseUnits("1", 18)),
+        ).to.be.revertedWithCustomError(riskFundBuyback, "Unauthorized");
       });
 
       it("guards against output-redirect: router sends output to attacker, contract balance-diff = 0, SlippageExceeded", async () => {
@@ -472,7 +471,7 @@ forking(FORK_BLOCK, () => {
 
         const primeBefore = await usdt.balanceOf(PRIME_LIQUIDITY_PROVIDER);
 
-        await expect(primeBuyback.forwardBaseAsset(hre.ethers.constants.AddressZero))
+        await expect(primeBuyback.forwardBaseAsset(hre.ethers.constants.AddressZero, forwardAmount))
           .to.emit(primeBuyback, "BaseAssetForwarded")
           .withArgs(hre.ethers.constants.AddressZero, forwardAmount);
 
@@ -568,17 +567,16 @@ forking(FORK_BLOCK, () => {
       });
 
       it("forwardBaseAsset reverts ComptrollerRequired when IS_RISK_FUND and comptroller is zero", async () => {
-        await expect(buyback.forwardBaseAsset(hre.ethers.constants.AddressZero)).to.be.revertedWithCustomError(
-          buyback,
-          "ComptrollerRequired",
-        );
+        await expect(
+          buyback.forwardBaseAsset(hre.ethers.constants.AddressZero, parseUnits("1", 18)),
+        ).to.be.revertedWithCustomError(buyback, "ComptrollerRequired");
       });
 
-      it("forwardBaseAsset is a no-op when BASE_ASSET balance is zero", async () => {
+      it("forwardBaseAsset is a no-op when amount is zero", async () => {
         expect(await usdt.balanceOf(buyback.address)).to.equal(0);
         const destBefore = await usdt.balanceOf(RISK_FUND_V2);
 
-        const tx = await buyback.forwardBaseAsset(comptrollerAddr);
+        const tx = await buyback.forwardBaseAsset(comptrollerAddr, 0);
         const receipt = await tx.wait();
 
         expect(receipt.events?.some((e: { event?: string }) => e.event === "BaseAssetForwarded")).to.equal(false);
