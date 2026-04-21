@@ -19,8 +19,15 @@ const CORE_POOL_COMPTROLLER = "0xfd36e2c2a6789db23113685031d7f16329158384";
 
 // BSC mainnet — tokens
 const USDT = "0x55d398326f99059fF775485246999027B3197955";
+const USDC = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
 const BTCB = "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c";
+const ETH = "0x2170Ed0880ac9A755fd29B2688956BD959F933F8";
 const WBNB = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
+const XVS = "0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63";
+
+// BSC mainnet — additional destinations
+const XVS_VAULT_TREASURY = "0x269ff7818DB317f60E386D2be0B259e1a324a40a";
+const V_TREASURY = "0xF322942f644A996A617BD29c16bd7d231d9F35E9";
 
 // BSC mainnet — DEX
 const PANCAKE_V2_ROUTER = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
@@ -267,6 +274,162 @@ forking(FORK_BLOCK, () => {
           ),
         ).to.be.revertedWithCustomError(riskFundBuyback, "SlippageExceeded");
       });
+
+      it("reverts InvalidTokenIn when tokenIn equals BASE_ASSET", async () => {
+        await acquireUsdt(riskFundBuyback.address, parseUnits("0.001", 18));
+
+        const deadline = Math.floor(Date.now() / 1000) + 3600;
+        const calldata = await pancakeCalldata(
+          USDT,
+          parseUnits("1", 18),
+          0,
+          [USDT, BTCB],
+          riskFundBuyback.address,
+          deadline,
+        );
+
+        await expect(
+          riskFundBuyback.executeBuyback(
+            USDT,
+            parseUnits("1", 18),
+            0,
+            deadline,
+            PANCAKE_V2_ROUTER,
+            calldata,
+            comptrollerAddr,
+          ),
+        )
+          .to.be.revertedWithCustomError(riskFundBuyback, "InvalidTokenIn")
+          .withArgs(USDT);
+      });
+
+      it("reverts InsufficientBalance when amountIn exceeds contract balance", async () => {
+        // Fresh deploy; no BTCB held
+        const fresh = await deployBuyback(RISK_FUND_V2, USDT, true);
+        await fresh.setAllowedRouter(PANCAKE_V2_ROUTER, true);
+        await grantAcm(fresh.address, EXECUTE_BUYBACK_SIG, deployerAddr);
+
+        const deadline = Math.floor(Date.now() / 1000) + 3600;
+        const calldata = await pancakeCalldata(BTCB, BTCB_IN, 0, [BTCB, WBNB, USDT], fresh.address, deadline);
+
+        await expect(
+          fresh.executeBuyback(BTCB, BTCB_IN, 0, deadline, PANCAKE_V2_ROUTER, calldata, comptrollerAddr),
+        ).to.be.revertedWithCustomError(fresh, "InsufficientBalance");
+      });
+
+      it("reverts ComptrollerRequired on executeBuyback when IS_RISK_FUND and comptroller is zero", async () => {
+        await btcb.connect(whale).transfer(riskFundBuyback.address, BTCB_IN);
+
+        const deadline = Math.floor(Date.now() / 1000) + 3600;
+        const calldata = await pancakeCalldata(BTCB, BTCB_IN, 0, [BTCB, WBNB, USDT], riskFundBuyback.address, deadline);
+
+        await expect(
+          riskFundBuyback.executeBuyback(
+            BTCB,
+            BTCB_IN,
+            0,
+            deadline,
+            PANCAKE_V2_ROUTER,
+            calldata,
+            hre.ethers.constants.AddressZero,
+          ),
+        ).to.be.revertedWithCustomError(riskFundBuyback, "ComptrollerRequired");
+      });
+
+      it("reverts Unauthorized when caller lacks ACM permission", async () => {
+        const [, outsider] = await hre.ethers.getSigners();
+
+        await btcb.connect(whale).transfer(riskFundBuyback.address, BTCB_IN);
+
+        const deadline = Math.floor(Date.now() / 1000) + 3600;
+        const calldata = await pancakeCalldata(BTCB, BTCB_IN, 0, [BTCB, WBNB, USDT], riskFundBuyback.address, deadline);
+
+        await expect(
+          riskFundBuyback
+            .connect(outsider)
+            .executeBuyback(BTCB, BTCB_IN, 0, deadline, PANCAKE_V2_ROUTER, calldata, comptrollerAddr),
+        ).to.be.revertedWithCustomError(riskFundBuyback, "Unauthorized");
+
+        await expect(riskFundBuyback.connect(outsider).forwardBaseAsset(comptrollerAddr)).to.be.revertedWithCustomError(
+          riskFundBuyback,
+          "Unauthorized",
+        );
+      });
+
+      it("guards against output-redirect: router sends output to attacker, contract balance-diff = 0, SlippageExceeded", async () => {
+        const [, attacker] = await hre.ethers.getSigners();
+        const attackerAddr = await attacker.getAddress();
+
+        await btcb.connect(whale).transfer(riskFundBuyback.address, BTCB_IN);
+
+        const path = [BTCB, WBNB, USDT];
+        const quoted = await pancakeRouter.getAmountsOut(BTCB_IN, path);
+        const minOut = quoted[quoted.length - 1].mul(99).div(100);
+        const deadline = Math.floor(Date.now() / 1000) + 3600;
+
+        // Malicious calldata: swap proceeds sent to attacker, not to buyback contract
+        const calldata = await pancakeCalldata(BTCB, BTCB_IN, 0, path, attackerAddr, deadline);
+
+        await expect(
+          riskFundBuyback.executeBuyback(BTCB, BTCB_IN, minOut, deadline, PANCAKE_V2_ROUTER, calldata, comptrollerAddr),
+        ).to.be.revertedWithCustomError(riskFundBuyback, "SlippageExceeded");
+      });
+
+      it("donation-inflation protection: pre-donated BASE_ASSET excluded from amountOut", async () => {
+        const buybackUsdtStart = await usdt.balanceOf(riskFundBuyback.address);
+        const donation = await acquireUsdt(riskFundBuyback.address, parseUnits("0.002", 18));
+        expect(donation).to.be.gt(0);
+
+        await btcb.connect(whale).transfer(riskFundBuyback.address, BTCB_IN);
+
+        const path = [BTCB, WBNB, USDT];
+        const quoted = await pancakeRouter.getAmountsOut(BTCB_IN, path);
+        const minOut = quoted[quoted.length - 1].mul(99).div(100);
+        const deadline = Math.floor(Date.now() / 1000) + 3600;
+        const calldata = await pancakeCalldata(BTCB, BTCB_IN, minOut, path, riskFundBuyback.address, deadline);
+
+        const destBefore = await usdt.balanceOf(RISK_FUND_V2);
+
+        await riskFundBuyback.executeBuyback(
+          BTCB,
+          BTCB_IN,
+          minOut,
+          deadline,
+          PANCAKE_V2_ROUTER,
+          calldata,
+          comptrollerAddr,
+        );
+
+        const destDelta = (await usdt.balanceOf(RISK_FUND_V2)).sub(destBefore);
+        // Only swap output transferred to DESTINATION; pre-swap donation + residual stays in buyback
+        expect(destDelta).to.be.gte(minOut);
+        expect(destDelta).to.be.lt(minOut.add(donation));
+        expect(await usdt.balanceOf(riskFundBuyback.address)).to.equal(buybackUsdtStart.add(donation));
+      });
+
+      it("supports sequential buybacks (approval reset between calls)", async () => {
+        const btcbStart = await btcb.balanceOf(riskFundBuyback.address);
+        await btcb.connect(whale).transfer(riskFundBuyback.address, BTCB_IN.mul(2));
+
+        const path = [BTCB, WBNB, USDT];
+        const deadline = Math.floor(Date.now() / 1000) + 3600;
+
+        for (let i = 0; i < 2; i++) {
+          const calldata = await pancakeCalldata(BTCB, BTCB_IN, 0, path, riskFundBuyback.address, deadline);
+          await riskFundBuyback.executeBuyback(
+            BTCB,
+            BTCB_IN,
+            0,
+            deadline,
+            PANCAKE_V2_ROUTER,
+            calldata,
+            comptrollerAddr,
+          );
+          expect(await btcb.allowance(riskFundBuyback.address, PANCAKE_V2_ROUTER)).to.equal(0);
+        }
+        // Two swaps of BTCB_IN each consumed the BTCB_IN * 2 we added; residual is unchanged
+        expect(await btcb.balanceOf(riskFundBuyback.address)).to.equal(btcbStart);
+      });
     });
 
     describe("PrimeBuyback_USDT E2E (IS_RISK_FUND=false)", () => {
@@ -314,6 +477,193 @@ forking(FORK_BLOCK, () => {
           .withArgs(hre.ethers.constants.AddressZero, forwardAmount);
 
         expect((await usdt.balanceOf(PRIME_LIQUIDITY_PROVIDER)).sub(primeBefore)).to.equal(forwardAmount);
+      });
+    });
+
+    describe("Admin + edge cases", () => {
+      let buyback: Contract;
+
+      before(async () => {
+        buyback = await deployBuyback(RISK_FUND_V2, USDT, true);
+        await grantAcm(buyback.address, FORWARD_BASE_ASSET_SIG, deployerAddr);
+      });
+
+      it("setAllowedRouter toggles on and off, emits RouterAllowlisted", async () => {
+        await expect(buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true))
+          .to.emit(buyback, "RouterAllowlisted")
+          .withArgs(PANCAKE_V2_ROUTER, true);
+        expect(await buyback.allowedRouters(PANCAKE_V2_ROUTER)).to.equal(true);
+
+        await expect(buyback.setAllowedRouter(PANCAKE_V2_ROUTER, false))
+          .to.emit(buyback, "RouterAllowlisted")
+          .withArgs(PANCAKE_V2_ROUTER, false);
+        expect(await buyback.allowedRouters(PANCAKE_V2_ROUTER)).to.equal(false);
+
+        // Re-enable for downstream tests
+        await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
+      });
+
+      it("setAllowedRouter reverts ZeroAddressNotAllowed for zero router", async () => {
+        await expect(buyback.setAllowedRouter(hre.ethers.constants.AddressZero, true)).to.be.revertedWithCustomError(
+          buyback,
+          "ZeroAddressNotAllowed",
+        );
+      });
+
+      it("setAllowedRouter reverts for non-owner caller", async () => {
+        const [, outsider] = await hre.ethers.getSigners();
+        await expect(buyback.connect(outsider).setAllowedRouter(PANCAKE_V2_ROUTER, true)).to.be.revertedWith(
+          "Ownable: caller is not the owner",
+        );
+      });
+
+      it("sweepToken transfers tokens and emits SweepToken", async () => {
+        await btcb.connect(whale).transfer(buyback.address, BTCB_IN);
+        const [, recipient] = await hre.ethers.getSigners();
+        const recipientAddr = await recipient.getAddress();
+        const recipientBefore = await btcb.balanceOf(recipientAddr);
+
+        await expect(buyback.sweepToken(BTCB, recipientAddr, BTCB_IN))
+          .to.emit(buyback, "SweepToken")
+          .withArgs(BTCB, recipientAddr, BTCB_IN);
+
+        expect((await btcb.balanceOf(recipientAddr)).sub(recipientBefore)).to.equal(BTCB_IN);
+        expect(await btcb.balanceOf(buyback.address)).to.equal(0);
+      });
+
+      it("sweepToken reverts for non-owner caller", async () => {
+        const [, outsider] = await hre.ethers.getSigners();
+        await expect(
+          buyback.connect(outsider).sweepToken(BTCB, await outsider.getAddress(), BTCB_IN),
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+      });
+
+      it("sweepToken reverts ZeroAddressNotAllowed for zero token or recipient", async () => {
+        await expect(
+          buyback.sweepToken(hre.ethers.constants.AddressZero, deployerAddr, 1),
+        ).to.be.revertedWithCustomError(buyback, "ZeroAddressNotAllowed");
+
+        await expect(buyback.sweepToken(BTCB, hre.ethers.constants.AddressZero, 1)).to.be.revertedWithCustomError(
+          buyback,
+          "ZeroAddressNotAllowed",
+        );
+      });
+
+      it("sweepToken reverts ZeroValueNotAllowed for zero amount", async () => {
+        await expect(buyback.sweepToken(BTCB, deployerAddr, 0)).to.be.revertedWithCustomError(
+          buyback,
+          "ZeroValueNotAllowed",
+        );
+      });
+
+      it("updateAssetsState emits AssetsReceived with contract token balance", async () => {
+        await btcb.connect(whale).transfer(buyback.address, BTCB_IN);
+
+        await expect(buyback.updateAssetsState(comptrollerAddr, BTCB))
+          .to.emit(buyback, "AssetsReceived")
+          .withArgs(comptrollerAddr, BTCB, BTCB_IN);
+
+        // Cleanup for subsequent tests
+        await buyback.sweepToken(BTCB, deployerAddr, BTCB_IN);
+      });
+
+      it("forwardBaseAsset reverts ComptrollerRequired when IS_RISK_FUND and comptroller is zero", async () => {
+        await expect(buyback.forwardBaseAsset(hre.ethers.constants.AddressZero)).to.be.revertedWithCustomError(
+          buyback,
+          "ComptrollerRequired",
+        );
+      });
+
+      it("forwardBaseAsset is a no-op when BASE_ASSET balance is zero", async () => {
+        expect(await usdt.balanceOf(buyback.address)).to.equal(0);
+        const destBefore = await usdt.balanceOf(RISK_FUND_V2);
+
+        const tx = await buyback.forwardBaseAsset(comptrollerAddr);
+        const receipt = await tx.wait();
+
+        expect(receipt.events?.some((e: { event?: string }) => e.event === "BaseAssetForwarded")).to.equal(false);
+        expect(await usdt.balanceOf(RISK_FUND_V2)).to.equal(destBefore);
+      });
+    });
+
+    describe("Instance coverage (one happy-path swap per instance)", () => {
+      async function runBuyback(
+        buyback: Contract,
+        destination: string,
+        baseAsset: string,
+        baseAssetContract: Contract,
+        tokenIn: string,
+        tokenInAmount: BigNumber,
+        path: string[],
+        comptrollerOverride?: string,
+      ): Promise<void> {
+        const destBefore = await baseAssetContract.balanceOf(destination);
+
+        const quoted = await pancakeRouter.getAmountsOut(tokenInAmount, path);
+        const minOut = quoted[quoted.length - 1].mul(99).div(100);
+        const deadline = Math.floor(Date.now() / 1000) + 3600;
+        const calldata = await pancakeCalldata(tokenIn, tokenInAmount, minOut, path, buyback.address, deadline);
+
+        const ctr = comptrollerOverride ?? hre.ethers.constants.AddressZero;
+        await buyback.executeBuyback(tokenIn, tokenInAmount, minOut, deadline, PANCAKE_V2_ROUTER, calldata, ctr);
+
+        const destAfter = await baseAssetContract.balanceOf(destination);
+        expect(destAfter.sub(destBefore)).to.be.gte(minOut);
+        expect(await baseAssetContract.balanceOf(buyback.address)).to.equal(0);
+        expect(await (await hre.ethers.getContractAt(ERC20_ABI, tokenIn)).balanceOf(buyback.address)).to.equal(0);
+
+        // baseAsset unused indirectly here but kept for API symmetry with the call site
+        expect(baseAsset).to.equal(await buyback.BASE_ASSET());
+      }
+
+      it("USDCPrimeBuyback: BTCB -> USDC via PancakeSwap forwards to PrimeLiquidityProvider", async () => {
+        const usdc = await hre.ethers.getContractAt(ERC20_ABI, USDC);
+        const buyback = await deployBuyback(PRIME_LIQUIDITY_PROVIDER, USDC, false);
+        await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
+        await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
+
+        await btcb.connect(whale).transfer(buyback.address, BTCB_IN);
+        await runBuyback(buyback, PRIME_LIQUIDITY_PROVIDER, USDC, usdc, BTCB, BTCB_IN, [BTCB, WBNB, USDC]);
+      });
+
+      it("BTCBPrimeBuyback: USDT -> BTCB via PancakeSwap forwards to PrimeLiquidityProvider", async () => {
+        const buyback = await deployBuyback(PRIME_LIQUIDITY_PROVIDER, BTCB, false);
+        await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
+        await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
+
+        const usdtIn = await acquireUsdt(buyback.address, parseUnits("0.02", 18));
+        expect(usdtIn).to.be.gt(0);
+
+        await runBuyback(buyback, PRIME_LIQUIDITY_PROVIDER, BTCB, btcb, USDT, usdtIn, [USDT, WBNB, BTCB]);
+      });
+
+      it("ETHPrimeBuyback: BTCB -> ETH via PancakeSwap forwards to PrimeLiquidityProvider", async () => {
+        const eth = await hre.ethers.getContractAt(ERC20_ABI, ETH);
+        const buyback = await deployBuyback(PRIME_LIQUIDITY_PROVIDER, ETH, false);
+        await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
+        await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
+
+        await btcb.connect(whale).transfer(buyback.address, BTCB_IN);
+        await runBuyback(buyback, PRIME_LIQUIDITY_PROVIDER, ETH, eth, BTCB, BTCB_IN, [BTCB, WBNB, ETH]);
+      });
+
+      it("XVSBuyback: BTCB -> XVS via PancakeSwap forwards to XVSVaultTreasury", async () => {
+        const xvs = await hre.ethers.getContractAt(ERC20_ABI, XVS);
+        const buyback = await deployBuyback(XVS_VAULT_TREASURY, XVS, false);
+        await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
+        await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
+
+        await btcb.connect(whale).transfer(buyback.address, BTCB_IN);
+        await runBuyback(buyback, XVS_VAULT_TREASURY, XVS, xvs, BTCB, BTCB_IN, [BTCB, WBNB, XVS]);
+      });
+
+      it("TreasuryBuyback: BTCB -> USDT via PancakeSwap forwards to VTreasury", async () => {
+        const buyback = await deployBuyback(V_TREASURY, USDT, false);
+        await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
+        await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
+
+        await btcb.connect(whale).transfer(buyback.address, BTCB_IN);
+        await runBuyback(buyback, V_TREASURY, USDT, usdt, BTCB, BTCB_IN, [BTCB, WBNB, USDT]);
       });
     });
   });
