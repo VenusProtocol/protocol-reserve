@@ -33,6 +33,12 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     bool public immutable IS_RISK_FUND;
 
+    /// @notice Only legitimate caller of updateAssetsState. PSR is the single upstream
+    ///         income source so pinning the caller here prevents spoofed AssetsReceived
+    ///         events that could mis-attribute inflows to arbitrary comptrollers.
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address public immutable PROTOCOL_SHARE_RESERVE;
+
     /// @notice DEX router allowlist
     mapping(address => bool) public allowedRouters;
 
@@ -84,19 +90,26 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     /// @notice Thrown when IS_RISK_FUND is true but comptroller is zero
     error ComptrollerRequired();
 
+    /// @notice Thrown when updateAssetsState is called by any address other than PROTOCOL_SHARE_RESERVE
+    error UnauthorizedCaller(address caller);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     /// @param destination_ Address where buyback proceeds land
     /// @param baseAsset_ Token being bought (output of every swap)
+    /// @param protocolShareReserve_ Only address permitted to call updateAssetsState
     /// @param isRiskFund_ If true, call RiskFundV2.updatePoolState() after each buyback
     constructor(
         address destination_,
         address baseAsset_,
+        address protocolShareReserve_,
         bool isRiskFund_
     ) {
         ensureNonzeroAddress(destination_);
         ensureNonzeroAddress(baseAsset_);
+        ensureNonzeroAddress(protocolShareReserve_);
         DESTINATION = destination_;
         BASE_ASSET = baseAsset_;
+        PROTOCOL_SHARE_RESERVE = protocolShareReserve_;
         IS_RISK_FUND = isRiskFund_;
 
         _disableInitializers();
@@ -116,7 +129,11 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     /// @param comptroller Address of the pool's comptroller
     /// @param asset Address of the token transferred
     /// @custom:event AssetsReceived emits the received amount
+    /// @custom:error UnauthorizedCaller when msg.sender is not PROTOCOL_SHARE_RESERVE
     function updateAssetsState(address comptroller, address asset) external override nonReentrant {
+        if (msg.sender != PROTOCOL_SHARE_RESERVE) {
+            revert UnauthorizedCaller(msg.sender);
+        }
         uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
         uint256 previousBalance = assetsReserves[asset];
         uint256 balanceDifference;

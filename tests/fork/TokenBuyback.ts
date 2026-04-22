@@ -16,6 +16,7 @@ const RISK_FUND_V2 = "0xdF31a28D68A2AB381D42b380649Ead7ae2A76E42";
 const DEFAULT_PROXY_ADMIN = "0x6beb6D2695B67FEb73ad4f172E8E2975497187e4";
 const PRIME_LIQUIDITY_PROVIDER = "0x23c4F844ffDdC6161174eB32c770D4D8C07833F2";
 const CORE_POOL_COMPTROLLER = "0xfd36e2c2a6789db23113685031d7f16329158384";
+const PROTOCOL_SHARE_RESERVE = "0xCa01D5A9A248a830E9D93231e791B1afFed7c446";
 
 // BSC mainnet — tokens
 const USDT = "0x55d398326f99059fF775485246999027B3197955";
@@ -67,6 +68,7 @@ forking(FORK_BLOCK, () => {
     let timelock: Signer;
     let whale: Signer;
     let deployer: Signer;
+    let psr: Signer;
     let deployerAddr: string;
     let comptrollerAddr: string;
 
@@ -85,7 +87,7 @@ forking(FORK_BLOCK, () => {
       const factory = await hre.ethers.getContractFactory("TokenBuyback");
       // @ts-expect-error hardhat-upgrades attaches `upgrades` at runtime via plugin
       const proxy = await hre.upgrades.deployProxy(factory, [ACM], {
-        constructorArgs: [destination, baseAsset, isRiskFund],
+        constructorArgs: [destination, baseAsset, PROTOCOL_SHARE_RESERVE, isRiskFund],
         unsafeAllow: ["constructor", "state-variable-immutable"],
       });
       await proxy.deployed();
@@ -133,11 +135,13 @@ forking(FORK_BLOCK, () => {
 
       timelock = await initMainnetUser(NORMAL_TIMELOCK);
       whale = await initMainnetUser(WHALE);
+      psr = await initMainnetUser(PROTOCOL_SHARE_RESERVE);
 
       // Fund impersonated accounts with gas via hardhat_setBalance
       const hexTen = "0x8ac7230489e80000"; // 10 BNB
       await hre.network.provider.send("hardhat_setBalance", [NORMAL_TIMELOCK, hexTen]);
       await hre.network.provider.send("hardhat_setBalance", [WHALE, hexTen]);
+      await hre.network.provider.send("hardhat_setBalance", [PROTOCOL_SHARE_RESERVE, hexTen]);
 
       acm = await hre.ethers.getContractAt("IAccessControlManagerV8", ACM);
       riskFundV2 = await hre.ethers.getContractAt("RiskFundV2", RISK_FUND_V2);
@@ -555,15 +559,38 @@ forking(FORK_BLOCK, () => {
         );
       });
 
-      it("updateAssetsState emits AssetsReceived with contract token balance", async () => {
+      it("updateAssetsState emits AssetsReceived with first-deposit delta when called by PSR", async () => {
         await btcb.connect(whale).transfer(buyback.address, BTCB_IN);
 
-        await expect(buyback.updateAssetsState(comptrollerAddr, BTCB))
+        await expect(buyback.connect(psr).updateAssetsState(comptrollerAddr, BTCB))
           .to.emit(buyback, "AssetsReceived")
           .withArgs(comptrollerAddr, BTCB, BTCB_IN);
 
         // Cleanup for subsequent tests
         await buyback.sweepToken(BTCB, deployerAddr, BTCB_IN);
+      });
+
+      it("updateAssetsState reverts UnauthorizedCaller when caller is not PSR", async () => {
+        await expect(buyback.connect(deployer).updateAssetsState(comptrollerAddr, BTCB))
+          .to.be.revertedWithCustomError(buyback, "UnauthorizedCaller")
+          .withArgs(deployerAddr);
+      });
+
+      // Donation-spoof regression: attacker transfers D tokens and tries to forge
+      // per-pool attribution via updateAssetsState. With PROTOCOL_SHARE_RESERVE gate
+      // the call reverts before any AssetsReceived event is emitted.
+      it("updateAssetsState blocks donation-spoof attribution attack from arbitrary EOA", async () => {
+        const [, attacker] = await hre.ethers.getSigners();
+        const attackerAddr = await attacker.getAddress();
+        const donation = parseUnits("0.001", 18);
+        await btcb.connect(whale).transfer(buyback.address, donation);
+
+        await expect(buyback.connect(attacker).updateAssetsState(attackerAddr, BTCB))
+          .to.be.revertedWithCustomError(buyback, "UnauthorizedCaller")
+          .withArgs(attackerAddr);
+
+        // Cleanup
+        await buyback.sweepToken(BTCB, deployerAddr, donation);
       });
 
       it("forwardBaseAsset reverts ComptrollerRequired when IS_RISK_FUND and comptroller is zero", async () => {

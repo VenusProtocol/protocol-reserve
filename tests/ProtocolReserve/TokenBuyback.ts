@@ -34,6 +34,7 @@ let owner: Signer;
 let nonOwner: Signer;
 let destinationEOA: Signer;
 let comptroller: Signer;
+let psr: Signer;
 
 const BUYBACK_SIG = "executeBuyback(address,uint256,uint256,uint256,address,bytes,address)";
 const FORWARD_SIG = "forwardBaseAsset(address,uint256)";
@@ -41,7 +42,7 @@ const FORWARD_SIG = "forwardBaseAsset(address,uint256)";
 async function deployBuyback(destination: string, isRiskFund: boolean): Promise<MockContract<TokenBuyback>> {
   const TokenBuybackFactory = await smock.mock<TokenBuyback__factory>("TokenBuyback");
   return upgrades.deployProxy(TokenBuybackFactory, [accessControl.address], {
-    constructorArgs: [destination, baseAsset.address, isRiskFund],
+    constructorArgs: [destination, baseAsset.address, await psr.getAddress(), isRiskFund],
   });
 }
 
@@ -60,7 +61,7 @@ function futureDeadline(): number {
 }
 
 async function fixture(): Promise<void> {
-  [owner, nonOwner, destinationEOA, comptroller] = await ethers.getSigners();
+  [owner, nonOwner, destinationEOA, comptroller, psr] = await ethers.getSigners();
 
   accessControl = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
   accessControl.isAllowedToCall.returns(true);
@@ -109,7 +110,7 @@ describe("TokenBuyback", () => {
       const TokenBuybackFactory = await smock.mock<TokenBuyback__factory>("TokenBuyback");
       await expect(
         upgrades.deployProxy(TokenBuybackFactory, [accessControl.address], {
-          constructorArgs: [constants.AddressZero, baseAsset.address, false],
+          constructorArgs: [constants.AddressZero, baseAsset.address, await psr.getAddress(), false],
         }),
       ).to.be.reverted;
     });
@@ -118,9 +119,22 @@ describe("TokenBuyback", () => {
       const TokenBuybackFactory = await smock.mock<TokenBuyback__factory>("TokenBuyback");
       await expect(
         upgrades.deployProxy(TokenBuybackFactory, [accessControl.address], {
-          constructorArgs: [await destinationEOA.getAddress(), constants.AddressZero, false],
+          constructorArgs: [await destinationEOA.getAddress(), constants.AddressZero, await psr.getAddress(), false],
         }),
       ).to.be.reverted;
+    });
+
+    it("constructor reverts on zero protocol share reserve", async () => {
+      const TokenBuybackFactory = await smock.mock<TokenBuyback__factory>("TokenBuyback");
+      await expect(
+        upgrades.deployProxy(TokenBuybackFactory, [accessControl.address], {
+          constructorArgs: [await destinationEOA.getAddress(), baseAsset.address, constants.AddressZero, false],
+        }),
+      ).to.be.reverted;
+    });
+
+    it("exposes PROTOCOL_SHARE_RESERVE immutable", async () => {
+      expect(await buyback.PROTOCOL_SHARE_RESERVE()).to.equal(await psr.getAddress());
     });
 
     it("reverts on double initialize", async () => {
@@ -135,16 +149,40 @@ describe("TokenBuyback", () => {
       await tokenIn.transfer(buyback.address, AMOUNT_IN);
       const comptrollerAddr = await comptroller.getAddress();
 
-      await expect(buyback.updateAssetsState(comptrollerAddr, tokenIn.address))
+      await expect(buyback.connect(psr).updateAssetsState(comptrollerAddr, tokenIn.address))
         .to.emit(buyback, "AssetsReceived")
         .withArgs(comptrollerAddr, tokenIn.address, AMOUNT_IN);
 
       expect(await buyback.assetsReserves(tokenIn.address)).to.equal(AMOUNT_IN);
     });
 
-    it("callable by any account", async () => {
-      await expect(buyback.connect(nonOwner).updateAssetsState(await comptroller.getAddress(), tokenIn.address)).to.not
-        .be.reverted;
+    it("reverts UnauthorizedCaller when msg.sender is not PROTOCOL_SHARE_RESERVE", async () => {
+      await expect(buyback.connect(nonOwner).updateAssetsState(await comptroller.getAddress(), tokenIn.address))
+        .to.be.revertedWithCustomError(buyback, "UnauthorizedCaller")
+        .withArgs(await nonOwner.getAddress());
+    });
+
+    it("reverts UnauthorizedCaller when owner calls it (PSR is the only permitted caller)", async () => {
+      await expect(buyback.connect(owner).updateAssetsState(await comptroller.getAddress(), tokenIn.address))
+        .to.be.revertedWithCustomError(buyback, "UnauthorizedCaller")
+        .withArgs(await owner.getAddress());
+    });
+
+    // Regression: attacker with no permissions attempts to forge per-pool attribution
+    // by donating D tokens and then calling updateAssetsState for a spoofed comptroller.
+    // With the PROTOCOL_SHARE_RESERVE gate the call reverts before any AssetsReceived
+    // event is emitted, so off-chain ledgers can trust the event feed.
+    it("reverts donation-spoof attribution attack from arbitrary EOA", async () => {
+      const donation = parseUnits("50", 18);
+      const fakeComptroller = await nonOwner.getAddress();
+      await tokenIn.transfer(buyback.address, donation);
+
+      await expect(buyback.connect(nonOwner).updateAssetsState(fakeComptroller, tokenIn.address))
+        .to.be.revertedWithCustomError(buyback, "UnauthorizedCaller")
+        .withArgs(fakeComptroller);
+
+      // Watermark untouched, donation remains recoverable via sweepToken
+      expect(await buyback.assetsReserves(tokenIn.address)).to.equal(0);
     });
 
     // POC: PSR.releaseFunds calls safeTransfer+updateAssetsState per-pool-per-asset.
@@ -158,12 +196,12 @@ describe("TokenBuyback", () => {
       const secondDelivery = parseUnits("200", 18);
 
       await tokenIn.transfer(buyback.address, firstDelivery);
-      await expect(buyback.updateAssetsState(comptrollerA, tokenIn.address))
+      await expect(buyback.connect(psr).updateAssetsState(comptrollerA, tokenIn.address))
         .to.emit(buyback, "AssetsReceived")
         .withArgs(comptrollerA, tokenIn.address, firstDelivery);
 
       await tokenIn.transfer(buyback.address, secondDelivery);
-      await expect(buyback.updateAssetsState(comptrollerB, tokenIn.address))
+      await expect(buyback.connect(psr).updateAssetsState(comptrollerB, tokenIn.address))
         .to.emit(buyback, "AssetsReceived")
         .withArgs(comptrollerB, tokenIn.address, secondDelivery);
 
@@ -173,9 +211,9 @@ describe("TokenBuyback", () => {
     it("emits zero delta on a no-op call with no new inflow", async () => {
       const comptrollerAddr = await comptroller.getAddress();
       await tokenIn.transfer(buyback.address, AMOUNT_IN);
-      await buyback.updateAssetsState(comptrollerAddr, tokenIn.address);
+      await buyback.connect(psr).updateAssetsState(comptrollerAddr, tokenIn.address);
 
-      await expect(buyback.updateAssetsState(comptrollerAddr, tokenIn.address))
+      await expect(buyback.connect(psr).updateAssetsState(comptrollerAddr, tokenIn.address))
         .to.emit(buyback, "AssetsReceived")
         .withArgs(comptrollerAddr, tokenIn.address, 0);
     });
@@ -192,7 +230,7 @@ describe("TokenBuyback", () => {
       await tokenIn.transfer(buyback.address, dust);
       await tokenIn.transfer(buyback.address, delivery);
 
-      await expect(buyback.updateAssetsState(comptrollerAddr, tokenIn.address))
+      await expect(buyback.connect(psr).updateAssetsState(comptrollerAddr, tokenIn.address))
         .to.emit(buyback, "AssetsReceived")
         .withArgs(comptrollerAddr, tokenIn.address, dust.add(delivery));
     });
@@ -204,7 +242,7 @@ describe("TokenBuyback", () => {
       const secondDelivery = parseUnits("50", 18);
 
       await tokenIn.transfer(buyback.address, firstDelivery);
-      await buyback.updateAssetsState(comptrollerA, tokenIn.address);
+      await buyback.connect(psr).updateAssetsState(comptrollerA, tokenIn.address);
 
       const calldata = await encodeSwap(firstDelivery, AMOUNT_OUT, buyback.address);
       await buyback.executeBuyback(
@@ -220,7 +258,7 @@ describe("TokenBuyback", () => {
       expect(await buyback.assetsReserves(tokenIn.address)).to.equal(0);
 
       await tokenIn.transfer(buyback.address, secondDelivery);
-      await expect(buyback.updateAssetsState(comptrollerB, tokenIn.address))
+      await expect(buyback.connect(psr).updateAssetsState(comptrollerB, tokenIn.address))
         .to.emit(buyback, "AssetsReceived")
         .withArgs(comptrollerB, tokenIn.address, secondDelivery);
     });
@@ -232,13 +270,13 @@ describe("TokenBuyback", () => {
       const topUp = parseUnits("10", 18);
 
       await tokenIn.transfer(buyback.address, delivery);
-      await buyback.updateAssetsState(comptrollerAddr, tokenIn.address);
+      await buyback.connect(psr).updateAssetsState(comptrollerAddr, tokenIn.address);
 
       await buyback.sweepToken(tokenIn.address, await owner.getAddress(), sweepAmount);
       expect(await buyback.assetsReserves(tokenIn.address)).to.equal(delivery.sub(sweepAmount));
 
       await tokenIn.transfer(buyback.address, topUp);
-      await expect(buyback.updateAssetsState(comptrollerAddr, tokenIn.address))
+      await expect(buyback.connect(psr).updateAssetsState(comptrollerAddr, tokenIn.address))
         .to.emit(buyback, "AssetsReceived")
         .withArgs(comptrollerAddr, tokenIn.address, topUp);
     });
@@ -249,14 +287,14 @@ describe("TokenBuyback", () => {
       const secondDrop = parseUnits("100", 6);
 
       await baseAsset.transfer(buyback.address, firstDrop);
-      await buyback.updateAssetsState(comptrollerAddr, baseAsset.address);
+      await buyback.connect(psr).updateAssetsState(comptrollerAddr, baseAsset.address);
       expect(await buyback.assetsReserves(baseAsset.address)).to.equal(firstDrop);
 
       await buyback.forwardBaseAsset(comptrollerAddr, firstDrop);
       expect(await buyback.assetsReserves(baseAsset.address)).to.equal(0);
 
       await baseAsset.transfer(buyback.address, secondDrop);
-      await expect(buyback.updateAssetsState(comptrollerAddr, baseAsset.address))
+      await expect(buyback.connect(psr).updateAssetsState(comptrollerAddr, baseAsset.address))
         .to.emit(buyback, "AssetsReceived")
         .withArgs(comptrollerAddr, baseAsset.address, secondDrop);
     });
@@ -659,9 +697,9 @@ describe("TokenBuyback", () => {
 
       // PSR delivers BASE_ASSET for pool A, then pool B, without a cron drain in between
       await baseAsset.transfer(buybackRiskFund.address, poolADeposit);
-      await buybackRiskFund.updateAssetsState(comptrollerA, baseAsset.address);
+      await buybackRiskFund.connect(psr).updateAssetsState(comptrollerA, baseAsset.address);
       await baseAsset.transfer(buybackRiskFund.address, poolBDeposit);
-      await buybackRiskFund.updateAssetsState(comptrollerB, baseAsset.address);
+      await buybackRiskFund.connect(psr).updateAssetsState(comptrollerB, baseAsset.address);
 
       // Cron reads AssetsReceived event deltas and forwards each pool's contribution
       // with its own attribution in a dedicated call

@@ -11,6 +11,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const acmAddress = (await deployments.get("AccessControlManager")).address;
   const plpAddress = (await deployments.get("PrimeLiquidityProvider")).address;
+  const psrAddress = (await deployments.get("ProtocolShareReserve")).address;
 
   const baseAssets: Record<string, string> = {
     USDTPrimeBuyback: (await deployments.get("USDT")).address,
@@ -33,7 +34,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       log: true,
       deterministicDeployment: false,
       contract: "TokenBuyback",
-      args: [plpAddress, baseAsset, false],
+      args: [plpAddress, baseAsset, psrAddress, false],
       proxy: {
         owner: proxyAdminOwner,
         proxyContract: "OptimizedTransparentUpgradeableProxy",

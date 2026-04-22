@@ -12,6 +12,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const acmAddress = (await deployments.get("AccessControlManager")).address;
   const riskFundAddress = (await deployments.get("RiskFundV2")).address;
   const usdtAddress = (await deployments.get("USDT")).address;
+  const psrAddress = (await deployments.get("ProtocolShareReserve")).address;
 
   const proxyAdminOwner = await getContractAddressOrNullAddress(deployments, "NormalTimelock");
 
@@ -24,7 +25,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     deterministicDeployment: false,
     contract: "TokenBuyback",
-    args: [riskFundAddress, usdtAddress, true],
+    args: [riskFundAddress, usdtAddress, psrAddress, true],
     proxy: {
       owner: proxyAdminOwner,
       proxyContract: "OptimizedTransparentUpgradeableProxy",
