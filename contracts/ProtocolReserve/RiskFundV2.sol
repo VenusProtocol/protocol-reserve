@@ -104,20 +104,6 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
         return amount;
     }
 
-    /// @notice Returns the RiskFund reserves attributed to a comptroller.
-    /// @dev Kept on the ABI for compatibility with `Shortfall.sol` which reads this
-    ///      value during auction sizing. Per-pool accounting was removed alongside the
-    ///      `poolAssetsFunds` mapping, so this always returns 0 — Shortfall auctions
-    ///      for isolated pools are not expected to fire post-migration, and returning
-    ///      0 is safer than the raw contract balance (prevents any zombie auction
-    ///      from over-sizing its seizedRiskFund against the global pool).
-    /// @param comptroller Comptroller address (unused; retained for ABI parity)
-    /// @return Always 0
-    function getPoolsBaseAssetReserves(address comptroller) external view returns (uint256) {
-        comptroller; // silence unused-parameter warning
-        return 0;
-    }
-
     /// @notice Function to sweep any token held by this contract
     /// @param tokenAddress Address of the asset(token)
     /// @param to Address to which assets will be transferred
@@ -141,6 +127,20 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
         token.safeTransfer(to, amount);
 
         emit SweepToken(tokenAddress, to, amount);
+    }
+
+    /// @notice Returns the RiskFund reserves attributed to a comptroller.
+    /// @dev Kept on the ABI for compatibility with `Shortfall.sol` which reads this
+    ///      value during auction sizing. Per-pool accounting was removed alongside the
+    ///      `poolAssetsFunds` mapping, so this always returns 0 — Shortfall auctions
+    ///      for isolated pools are not expected to fire post-migration, and returning
+    ///      0 is safer than the raw contract balance (prevents any zombie auction
+    ///      from over-sizing its seizedRiskFund against the global pool).
+    /// @param comptroller Comptroller address (unused; retained for ABI parity)
+    /// @return Always 0
+    function getPoolsBaseAssetReserves(address comptroller) external view returns (uint256) {
+        comptroller; // silence unused-parameter warning
+        return 0;
     }
 
     /// @dev Operations to perform before sweeping tokens
