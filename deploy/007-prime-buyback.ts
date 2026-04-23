@@ -15,9 +15,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const baseAssets: Record<string, string> = {
     USDTPrimeBuyback: (await deployments.get("USDT")).address,
-    USDCPrimeBuyback: (await deployments.get("USDC")).address,
-    BTCBPrimeBuyback: (await deployments.get(hre.network.name === "hardhat" ? "MockBTCB" : "BTCB")).address,
-    ETHPrimeBuyback: (await deployments.get("ETH")).address,
+    UPrimeBuyback: (await deployments.get("U")).address,
   };
 
   const proxyAdminOwner = await getContractAddressOrNullAddress(deployments, "NormalTimelock");
