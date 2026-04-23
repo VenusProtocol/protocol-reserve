@@ -20,9 +20,6 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
     /// @notice Emitted when convertible base asset address is updated
     event ConvertibleBaseAssetUpdated(address indexed oldConvertibleBaseAsset, address indexed newConvertibleBaseAsset);
 
-    /// @notice Emitted when risk fund converter address is updated
-    event RiskFundConverterUpdated(address indexed oldRiskFundConverter, address indexed newRiskFundConverter);
-
     /// @notice Emitted when shortfall contract address is updated
     event ShortfallContractUpdated(address indexed oldShortfallContract, address indexed newShortfallContract);
 
@@ -47,17 +44,6 @@ contract RiskFundV2 is AccessControlledV8, RiskFundV2Storage, IRiskFund {
         ensureNonzeroAddress(convertibleBaseAsset_);
         emit ConvertibleBaseAssetUpdated(convertibleBaseAsset, convertibleBaseAsset_);
         convertibleBaseAsset = convertibleBaseAsset_;
-    }
-
-    /// @dev Risk fund converter setter
-    /// @param riskFundConverter_ Address of the risk fund converter
-    /// @custom:event RiskFundConverterUpdated emit on success
-    /// @custom:error ZeroAddressNotAllowed is thrown when risk fund converter address is zero
-    /// @custom:access Only Governance
-    function setRiskFundConverter(address riskFundConverter_) external onlyOwner {
-        ensureNonzeroAddress(riskFundConverter_);
-        emit RiskFundConverterUpdated(riskFundConverter, riskFundConverter_);
-        riskFundConverter = riskFundConverter_;
     }
 
     /// @dev Shortfall contract address setter

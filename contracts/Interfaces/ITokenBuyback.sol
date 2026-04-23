@@ -16,7 +16,7 @@ interface ITokenBuyback is IIncomeDestination {
     /// @param deadline Unix timestamp after which the swap reverts
     /// @param router Address of the DEX router to use
     /// @param routerCalldata Encoded calldata for the router swap call (must send output to this contract)
-    /// @param comptroller Address of the comptroller (used for RiskFund pool attribution)
+    /// @param comptroller Address of the pool's comptroller, echoed in the BuybackExecuted event for off-chain attribution
     function executeBuyback(
         address tokenIn,
         uint256 amountIn,
@@ -28,8 +28,8 @@ interface ITokenBuyback is IIncomeDestination {
     ) external;
 
     /// @notice Forwards a caller-specified portion of accumulated BASE_ASSET to DESTINATION without swap
-    /// @param comptroller Address of the comptroller (required when IS_RISK_FUND is true) credited for this portion
-    /// @param amount Amount of BASE_ASSET to forward and credit to `comptroller`
+    /// @param comptroller Pool comptroller echoed in the BaseAssetForwarded event for off-chain attribution
+    /// @param amount Amount of BASE_ASSET to forward
     function forwardBaseAsset(address comptroller, uint256 amount) external;
 
     /// @notice Adds or removes a DEX router from the allowlist

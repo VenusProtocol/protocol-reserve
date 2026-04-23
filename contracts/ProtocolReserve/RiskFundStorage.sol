@@ -64,6 +64,10 @@ contract RiskFundV1Storage is ReserveHelpersStorage, MaxLoopsLimitHelpersStorage
 /// @dev Risk fund V2 storage
 /// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 contract RiskFundV2Storage is RiskFundV1Storage, ReentrancyGuardUpgradeable {
-    /// @notice Risk fund converter address
+    /// @notice Deprecated. Previously held the RiskFundConverter address used for
+    ///         per-pool accounting callbacks; the converter callback path was removed
+    ///         and this slot is retained only to preserve the upgradeable storage
+    ///         layout. The setter was dropped — value is frozen at whatever was last
+    ///         written pre-upgrade and is not read by any contract code.
     address public riskFundConverter;
 }

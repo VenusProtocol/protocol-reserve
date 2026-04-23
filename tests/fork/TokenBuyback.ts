@@ -25,6 +25,7 @@ const BTCB = "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c";
 const ETH = "0x2170Ed0880ac9A755fd29B2688956BD959F933F8";
 const WBNB = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
 const XVS = "0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63";
+const U = "0xcE24439F2D9C6a2289F741120FE202248B666666";
 
 // BSC mainnet — additional destinations
 const XVS_VAULT_TREASURY = "0x269ff7818DB317f60E386D2be0B259e1a324a40a";
@@ -605,38 +606,19 @@ forking(FORK_BLOCK, () => {
         expect(baseAsset).to.equal(await buyback.BASE_ASSET());
       }
 
-      it("USDCPrimeBuyback: BTCB -> USDC via PancakeSwap forwards to PrimeLiquidityProvider", async () => {
-        const usdc = await hre.ethers.getContractAt(ERC20_ABI, USDC);
-        const buyback = await deployBuyback(PRIME_LIQUIDITY_PROVIDER, USDC);
+      // PrimeBuyback(USDT base) is covered in the dedicated PrimeBuyback_USDT E2E
+      // describe block above. Additional Prime instances per the 10-instance topology:
+      it("PrimeBuyback(U base): BTCB -> U via PancakeSwap forwards to PrimeLiquidityProvider", async () => {
+        const uToken = await hre.ethers.getContractAt(ERC20_ABI, U);
+        const buyback = await deployBuyback(PRIME_LIQUIDITY_PROVIDER, U);
         await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
         await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
 
         await btcb.connect(whale).transfer(buyback.address, BTCB_IN);
-        await runBuyback(buyback, PRIME_LIQUIDITY_PROVIDER, USDC, usdc, BTCB, BTCB_IN, [BTCB, WBNB, USDC]);
+        await runBuyback(buyback, PRIME_LIQUIDITY_PROVIDER, U, uToken, BTCB, BTCB_IN, [BTCB, WBNB, U]);
       });
 
-      it("BTCBPrimeBuyback: USDT -> BTCB via PancakeSwap forwards to PrimeLiquidityProvider", async () => {
-        const buyback = await deployBuyback(PRIME_LIQUIDITY_PROVIDER, BTCB);
-        await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
-        await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
-
-        const usdtIn = await acquireUsdt(buyback.address, parseUnits("0.02", 18));
-        expect(usdtIn).to.be.gt(0);
-
-        await runBuyback(buyback, PRIME_LIQUIDITY_PROVIDER, BTCB, btcb, USDT, usdtIn, [USDT, WBNB, BTCB]);
-      });
-
-      it("ETHPrimeBuyback: BTCB -> ETH via PancakeSwap forwards to PrimeLiquidityProvider", async () => {
-        const eth = await hre.ethers.getContractAt(ERC20_ABI, ETH);
-        const buyback = await deployBuyback(PRIME_LIQUIDITY_PROVIDER, ETH);
-        await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
-        await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
-
-        await btcb.connect(whale).transfer(buyback.address, BTCB_IN);
-        await runBuyback(buyback, PRIME_LIQUIDITY_PROVIDER, ETH, eth, BTCB, BTCB_IN, [BTCB, WBNB, ETH]);
-      });
-
-      it("XVSBuyback: BTCB -> XVS via PancakeSwap forwards to XVSVaultTreasury", async () => {
+      it("XVSBuyback(XVS base): BTCB -> XVS via PancakeSwap forwards to XVSVaultTreasury", async () => {
         const xvs = await hre.ethers.getContractAt(ERC20_ABI, XVS);
         const buyback = await deployBuyback(XVS_VAULT_TREASURY, XVS);
         await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
@@ -646,13 +628,64 @@ forking(FORK_BLOCK, () => {
         await runBuyback(buyback, XVS_VAULT_TREASURY, XVS, xvs, BTCB, BTCB_IN, [BTCB, WBNB, XVS]);
       });
 
-      it("TreasuryBuyback: BTCB -> USDT via PancakeSwap forwards to VTreasury", async () => {
+      it("TreasuryBuyback(U base): BTCB -> U via PancakeSwap forwards to VTreasury", async () => {
+        const uToken = await hre.ethers.getContractAt(ERC20_ABI, U);
+        const buyback = await deployBuyback(V_TREASURY, U);
+        await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
+        await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
+
+        await btcb.connect(whale).transfer(buyback.address, BTCB_IN);
+        await runBuyback(buyback, V_TREASURY, U, uToken, BTCB, BTCB_IN, [BTCB, WBNB, U]);
+      });
+
+      it("TreasuryBuyback(BTCB base): USDT -> BTCB via PancakeSwap forwards to VTreasury", async () => {
+        const buyback = await deployBuyback(V_TREASURY, BTCB);
+        await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
+        await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
+
+        const usdtIn = await acquireUsdt(buyback.address, parseUnits("0.02", 18));
+        expect(usdtIn).to.be.gt(0);
+
+        await runBuyback(buyback, V_TREASURY, BTCB, btcb, USDT, usdtIn, [USDT, WBNB, BTCB]);
+      });
+
+      it("TreasuryBuyback(ETH base): BTCB -> ETH via PancakeSwap forwards to VTreasury", async () => {
+        const eth = await hre.ethers.getContractAt(ERC20_ABI, ETH);
+        const buyback = await deployBuyback(V_TREASURY, ETH);
+        await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
+        await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
+
+        await btcb.connect(whale).transfer(buyback.address, BTCB_IN);
+        await runBuyback(buyback, V_TREASURY, ETH, eth, BTCB, BTCB_IN, [BTCB, WBNB, ETH]);
+      });
+
+      it("TreasuryBuyback(USDT base): BTCB -> USDT via PancakeSwap forwards to VTreasury", async () => {
         const buyback = await deployBuyback(V_TREASURY, USDT);
         await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
         await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
 
         await btcb.connect(whale).transfer(buyback.address, BTCB_IN);
         await runBuyback(buyback, V_TREASURY, USDT, usdt, BTCB, BTCB_IN, [BTCB, WBNB, USDT]);
+      });
+
+      it("TreasuryBuyback(USDC base): BTCB -> USDC via PancakeSwap forwards to VTreasury", async () => {
+        const usdc = await hre.ethers.getContractAt(ERC20_ABI, USDC);
+        const buyback = await deployBuyback(V_TREASURY, USDC);
+        await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
+        await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
+
+        await btcb.connect(whale).transfer(buyback.address, BTCB_IN);
+        await runBuyback(buyback, V_TREASURY, USDC, usdc, BTCB, BTCB_IN, [BTCB, WBNB, USDC]);
+      });
+
+      it("TreasuryBuyback(XVS base): BTCB -> XVS via PancakeSwap forwards to VTreasury", async () => {
+        const xvs = await hre.ethers.getContractAt(ERC20_ABI, XVS);
+        const buyback = await deployBuyback(V_TREASURY, XVS);
+        await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
+        await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
+
+        await btcb.connect(whale).transfer(buyback.address, BTCB_IN);
+        await runBuyback(buyback, V_TREASURY, XVS, xvs, BTCB, BTCB_IN, [BTCB, WBNB, XVS]);
       });
     });
   });

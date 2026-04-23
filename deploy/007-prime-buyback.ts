@@ -4,6 +4,13 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getContractAddressOrNullAddress } from "../helpers/deploymentConfig";
 
+// U token is not registered in `@venusprotocol/venus-protocol` external deployments.
+// Hard-coded per-network so TokenBuyback's immutable BASE_ASSET can be set at deploy.
+const U_ADDRESSES: Record<string, string> = {
+  bsctestnet: "0x180Bc1a9843A65D4116e44886FD3558515a56A49",
+  bscmainnet: "0xcE24439F2D9C6a2289F741120FE202248B666666",
+};
+
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
@@ -15,7 +22,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const baseAssets: Record<string, string> = {
     USDTPrimeBuyback: (await deployments.get("USDT")).address,
-    UPrimeBuyback: (await deployments.get("U")).address,
+    UPrimeBuyback: U_ADDRESSES[hre.network.name],
   };
 
   const proxyAdminOwner = await getContractAddressOrNullAddress(deployments, "NormalTimelock");

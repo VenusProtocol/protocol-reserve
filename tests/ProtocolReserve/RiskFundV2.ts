@@ -80,29 +80,6 @@ describe("Risk Fund: Tests", function () {
       });
     });
 
-    describe("setRiskFundConverter", async function () {
-      it("reverts on invalid converter address", async function () {
-        await expect(riskFund.setRiskFundConverter(constants.AddressZero)).to.be.revertedWithCustomError(
-          riskFund,
-          "ZeroAddressNotAllowed",
-        );
-      });
-
-      it("fails if called by a non-owner", async function () {
-        await expect(riskFund.connect(nonAdmin).setRiskFundConverter(riskFundConverter.address)).to.be.revertedWith(
-          "Ownable: caller is not the owner",
-        );
-      });
-
-      it("emits RiskFundConverterUpdated event", async function () {
-        const newConverter = await smock.fake<RiskFundConverter>("RiskFundConverter");
-        const tx = riskFund.setRiskFundConverter(newConverter.address);
-        await expect(tx)
-          .to.emit(riskFund, "RiskFundConverterUpdated")
-          .withArgs(riskFundConverter.address, newConverter.address);
-      });
-    });
-
     describe("setShortfallContractAddress", async function () {
       it("Reverts on invalid Auction contract address", async function () {
         await expect(riskFund.setShortfallContractAddress(constants.AddressZero)).to.be.revertedWithCustomError(
