@@ -28,7 +28,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     deterministicDeployment: false,
     contract: "TokenBuyback",
-    args: [vTreasuryAddress, baseAssetAddress, psrAddress, false],
+    args: [vTreasuryAddress, baseAssetAddress, psrAddress],
     proxy: {
       owner: proxyAdminOwner,
       proxyContract: "OptimizedTransparentUpgradeableProxy",
