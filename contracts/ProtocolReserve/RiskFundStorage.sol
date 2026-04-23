@@ -12,9 +12,11 @@ contract ReserveHelpersStorage is Ownable2StepUpgradeable {
     /// @notice Deprecated slot for assetReserves mapping
     bytes32 private __deprecatedSlot1;
 
-    /// @notice Available asset's fund per pool in RiskFund
-    /// Comptroller(pool) -> Asset -> amount
-    mapping(address => mapping(address => uint256)) public poolAssetsFunds;
+    /// @notice Deprecated slot for the former poolAssetsFunds mapping. The per-pool
+    ///         accounting ledger was removed: isolated pools are wound down on BSC
+    ///         and core pool does not auction via Shortfall, so funds now live as a
+    ///         single balance on this contract and are governed via sweepToken.
+    bytes32 private __deprecatedSlotPoolAssetsFunds;
 
     /// @notice Deprecated slot for poolRegistry address
     bytes32 private __deprecatedSlot2;

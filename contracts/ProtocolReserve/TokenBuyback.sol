@@ -9,7 +9,6 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { ensureNonzeroAddress, ensureNonzeroValue } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 
 import { ITokenBuyback } from "../Interfaces/ITokenBuyback.sol";
-import { IRiskFund } from "../Interfaces/IRiskFund.sol";
 
 /// @title TokenBuyback
 /// @author Venus
@@ -28,10 +27,6 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     /// @notice Token that every swap converts into (output of every buyback)
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable BASE_ASSET;
-
-    /// @notice When true, calls RiskFundV2.updatePoolState() after each buyback
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    bool public immutable IS_RISK_FUND;
 
     /// @notice Only legitimate caller of updateAssetsState. PSR is the single upstream
     ///         income source so pinning the caller here prevents spoofed AssetsReceived
@@ -87,9 +82,6 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     /// @notice Thrown when tokenIn equals BASE_ASSET (no swap needed)
     error InvalidTokenIn(address tokenIn);
 
-    /// @notice Thrown when IS_RISK_FUND is true but comptroller is zero
-    error ComptrollerRequired();
-
     /// @notice Thrown when updateAssetsState is called by any address other than PROTOCOL_SHARE_RESERVE
     error UnauthorizedCaller(address caller);
 
@@ -97,12 +89,10 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     /// @param destination_ Address where buyback proceeds land
     /// @param baseAsset_ Token being bought (output of every swap)
     /// @param protocolShareReserve_ Only address permitted to call updateAssetsState
-    /// @param isRiskFund_ If true, call RiskFundV2.updatePoolState() after each buyback
     constructor(
         address destination_,
         address baseAsset_,
-        address protocolShareReserve_,
-        bool isRiskFund_
+        address protocolShareReserve_
     ) {
         ensureNonzeroAddress(destination_);
         ensureNonzeroAddress(baseAsset_);
@@ -110,7 +100,6 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         DESTINATION = destination_;
         BASE_ASSET = baseAsset_;
         PROTOCOL_SHARE_RESERVE = protocolShareReserve_;
-        IS_RISK_FUND = isRiskFund_;
 
         _disableInitializers();
     }
@@ -153,11 +142,10 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     /// @param deadline Unix timestamp after which the swap reverts
     /// @param router Address of the DEX router (must be on allowlist)
     /// @param routerCalldata Encoded calldata for the router swap call (MUST send output to address(this))
-    /// @param comptroller Comptroller address for RiskFund pool attribution (required when IS_RISK_FUND is true)
+    /// @param comptroller Comptroller address echoed in the BuybackExecuted event for off-chain attribution
     /// @custom:event BuybackExecuted emits on success
     /// @custom:error DeadlineExpired when block.timestamp > deadline
     /// @custom:error InvalidTokenIn when tokenIn equals BASE_ASSET
-    /// @custom:error ComptrollerRequired when IS_RISK_FUND is true but comptroller is zero
     /// @custom:error RouterNotAllowed when router is not on the allowlist
     /// @custom:error InsufficientBalance when amountIn exceeds the contract's tokenIn balance
     /// @custom:error SlippageExceeded when amountOut is less than minAmountOut
@@ -172,7 +160,7 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         address comptroller
     ) external override nonReentrant {
         _checkAccessAllowed("executeBuyback(address,uint256,uint256,uint256,address,bytes,address)");
-        _validateBuyback(tokenIn, amountIn, deadline, router, comptroller);
+        _validateBuyback(tokenIn, amountIn, deadline, router);
 
         // Measure BASE_ASSET balance on this contract (not DESTINATION) to prevent
         // donation-based amountOut inflation. Router calldata MUST send swap output here.
@@ -188,7 +176,9 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
             revert SlippageExceeded(minAmountOut, amountOut);
         }
 
-        _settleBuyback(amountOut, comptroller);
+        if (amountOut != 0) {
+            IERC20Upgradeable(BASE_ASSET).safeTransfer(DESTINATION, amountOut);
+        }
 
         assetsReserves[tokenIn] = IERC20Upgradeable(tokenIn).balanceOf(address(this));
         assetsReserves[BASE_ASSET] = IERC20Upgradeable(BASE_ASSET).balanceOf(address(this));
@@ -197,24 +187,16 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     }
 
     /// @notice Forwards a caller-specified portion of accumulated BASE_ASSET to DESTINATION without swap
-    /// @dev BASE_ASSET can land here from multiple pools (PSR delivers per pool), so attribution
-    ///      must happen per call — `amount` lets the operator partition the balance across
-    ///      comptrollers using the deltas reported by `AssetsReceived` events. Calling with the
-    ///      full balance credited to a single pool would silently starve every other contributor
-    ///      at the downstream `RiskFundV2.poolAssetsFunds[comptroller][BASE_ASSET]` mapping.
+    /// @dev BASE_ASSET can land here from multiple pools (PSR delivers per pool), so `amount`
+    ///      lets the operator partition the balance and attribute each portion via the event.
     ///      No-op when `amount` is zero.
-    /// @param comptroller Comptroller address for RiskFund pool attribution (required when IS_RISK_FUND is true)
-    /// @param amount Amount of BASE_ASSET to forward and credit to `comptroller`
+    /// @param comptroller Comptroller address echoed in the BaseAssetForwarded event for off-chain attribution
+    /// @param amount Amount of BASE_ASSET to forward
     /// @custom:event BaseAssetForwarded emits when amount > 0
-    /// @custom:error ComptrollerRequired when IS_RISK_FUND is true but comptroller is zero
     /// @custom:error InsufficientBalance when amount exceeds BASE_ASSET balance
     /// @custom:access Restricted by ACM
     function forwardBaseAsset(address comptroller, uint256 amount) external nonReentrant {
         _checkAccessAllowed("forwardBaseAsset(address,uint256)");
-
-        if (IS_RISK_FUND && comptroller == address(0)) {
-            revert ComptrollerRequired();
-        }
 
         if (amount == 0) {
             return;
@@ -227,10 +209,6 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
 
         IERC20Upgradeable(BASE_ASSET).safeTransfer(DESTINATION, amount);
         assetsReserves[BASE_ASSET] = IERC20Upgradeable(BASE_ASSET).balanceOf(address(this));
-
-        if (IS_RISK_FUND) {
-            IRiskFund(DESTINATION).updatePoolState(comptroller, BASE_ASSET, amount);
-        }
 
         emit BaseAssetForwarded(comptroller, amount);
     }
@@ -270,33 +248,18 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         emit SweepToken(token, to, amount);
     }
 
-    /// @dev Transfers swap output to DESTINATION and notifies RiskFund if applicable
-    function _settleBuyback(uint256 amountOut, address comptroller) internal {
-        if (amountOut == 0) {
-            return;
-        }
-        IERC20Upgradeable(BASE_ASSET).safeTransfer(DESTINATION, amountOut);
-        if (IS_RISK_FUND) {
-            IRiskFund(DESTINATION).updatePoolState(comptroller, BASE_ASSET, amountOut);
-        }
-    }
-
     /// @dev Validates executeBuyback inputs before router interaction
     function _validateBuyback(
         address tokenIn,
         uint256 amountIn,
         uint256 deadline,
-        address router,
-        address comptroller
+        address router
     ) internal view {
         if (block.timestamp > deadline) {
             revert DeadlineExpired(deadline, block.timestamp);
         }
         if (tokenIn == BASE_ASSET) {
             revert InvalidTokenIn(tokenIn);
-        }
-        if (IS_RISK_FUND && comptroller == address(0)) {
-            revert ComptrollerRequired();
         }
         if (!allowedRouters[router]) {
             revert RouterNotAllowed(router);
