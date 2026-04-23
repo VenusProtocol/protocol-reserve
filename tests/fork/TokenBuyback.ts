@@ -40,7 +40,6 @@ const WHALE = "0xF977814e90dA44bFA03b6295A0616a897441aceC"; // Binance hot walle
 // ACM function signatures to grant
 const EXECUTE_BUYBACK_SIG = "executeBuyback(address,uint256,uint256,uint256,address,bytes,address)";
 const FORWARD_BASE_ASSET_SIG = "forwardBaseAsset(address,uint256)";
-const UPDATE_POOL_STATE_SIG = "updatePoolState(address,address,uint256)";
 
 // PancakeSwap V2 Router minimal ABI
 const PANCAKE_V2_ABI = [
@@ -73,7 +72,6 @@ forking(FORK_BLOCK, () => {
     let comptrollerAddr: string;
 
     let acm: Contract;
-    let riskFundV2: Contract;
     let btcb: Contract;
     let usdt: Contract;
     let pancakeRouter: Contract;
@@ -83,11 +81,11 @@ forking(FORK_BLOCK, () => {
 
     const BTCB_IN = parseUnits("0.01", 18); // ~$600 at most blocks
 
-    async function deployBuyback(destination: string, baseAsset: string, isRiskFund: boolean): Promise<Contract> {
+    async function deployBuyback(destination: string, baseAsset: string): Promise<Contract> {
       const factory = await hre.ethers.getContractFactory("TokenBuyback");
       // @ts-expect-error hardhat-upgrades attaches `upgrades` at runtime via plugin
       const proxy = await hre.upgrades.deployProxy(factory, [ACM], {
-        constructorArgs: [destination, baseAsset, PROTOCOL_SHARE_RESERVE, isRiskFund],
+        constructorArgs: [destination, baseAsset, PROTOCOL_SHARE_RESERVE],
         unsafeAllow: ["constructor", "state-variable-immutable"],
       });
       await proxy.deployed();
@@ -144,13 +142,12 @@ forking(FORK_BLOCK, () => {
       await hre.network.provider.send("hardhat_setBalance", [PROTOCOL_SHARE_RESERVE, hexTen]);
 
       acm = await hre.ethers.getContractAt("IAccessControlManagerV8", ACM);
-      riskFundV2 = await hre.ethers.getContractAt("RiskFundV2", RISK_FUND_V2);
       btcb = await hre.ethers.getContractAt(ERC20_ABI, BTCB);
       usdt = await hre.ethers.getContractAt(ERC20_ABI, USDT);
       pancakeRouter = await hre.ethers.getContractAt(PANCAKE_V2_ABI, PANCAKE_V2_ROUTER);
 
-      // Upgrade RiskFundV2 on fork so it has the new ACM-gated updatePoolState.
-      // Mainnet impl still has the old `msg.sender == riskFundConverter` guard.
+      // Upgrade RiskFundV2 on fork so it runs the new impl (per-pool accounting
+      // removed; transferReserveForAuction uses a raw balance check).
       const RiskFundV2Factory = await hre.ethers.getContractFactory("RiskFundV2");
       const newImpl = await RiskFundV2Factory.deploy();
       await newImpl.deployed();
@@ -163,20 +160,18 @@ forking(FORK_BLOCK, () => {
 
     describe("RiskFundBuyback E2E", () => {
       before(async () => {
-        riskFundBuyback = await deployBuyback(RISK_FUND_V2, USDT, true);
+        riskFundBuyback = await deployBuyback(RISK_FUND_V2, USDT);
 
         // Allowlist PancakeSwap router
         await riskFundBuyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
 
         // ACM grants:
         //  - deployer can call executeBuyback / forwardBaseAsset
-        //  - riskFundBuyback can call updatePoolState on RiskFundV2
         await grantAcm(riskFundBuyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
         await grantAcm(riskFundBuyback.address, FORWARD_BASE_ASSET_SIG, deployerAddr);
-        await grantAcm(RISK_FUND_V2, UPDATE_POOL_STATE_SIG, riskFundBuyback.address);
       });
 
-      it("swaps BTCB -> USDT via PancakeSwap, forwards to RiskFundV2, updates pool state", async () => {
+      it("swaps BTCB -> USDT via PancakeSwap and forwards to RiskFundV2", async () => {
         // Fund buyback with BTCB from whale (simulates PSR delivery)
         await btcb.connect(whale).transfer(riskFundBuyback.address, BTCB_IN);
 
@@ -189,7 +184,6 @@ forking(FORK_BLOCK, () => {
         const calldata = await pancakeCalldata(BTCB, BTCB_IN, minOut, path, riskFundBuyback.address, deadline);
 
         const usdtBeforeDest = await usdt.balanceOf(RISK_FUND_V2);
-        const poolBefore = await riskFundV2.poolAssetsFunds(comptrollerAddr, USDT);
 
         const tx = riskFundBuyback.executeBuyback(
           BTCB,
@@ -203,30 +197,25 @@ forking(FORK_BLOCK, () => {
 
         await expect(tx).to.emit(riskFundBuyback, "BuybackExecuted");
 
-        const usdtAfterDest = await usdt.balanceOf(RISK_FUND_V2);
-        const poolAfter = await riskFundV2.poolAssetsFunds(comptrollerAddr, USDT);
-        const delta = usdtAfterDest.sub(usdtBeforeDest);
+        const delta = (await usdt.balanceOf(RISK_FUND_V2)).sub(usdtBeforeDest);
 
         expect(delta).to.be.gte(minOut);
-        expect(poolAfter.sub(poolBefore)).to.equal(delta);
         expect(await btcb.balanceOf(riskFundBuyback.address)).to.equal(0);
         expect(await usdt.balanceOf(riskFundBuyback.address)).to.equal(0);
         expect(await btcb.allowance(riskFundBuyback.address, PANCAKE_V2_ROUTER)).to.equal(0);
       });
 
-      it("forwardBaseAsset moves USDT directly to RiskFundV2 and updates pool state", async () => {
+      it("forwardBaseAsset moves USDT directly to RiskFundV2", async () => {
         const forwardAmount = await acquireUsdt(riskFundBuyback.address, parseUnits("0.005", 18));
         expect(forwardAmount).to.be.gt(0);
 
         const usdtBefore = await usdt.balanceOf(RISK_FUND_V2);
-        const poolBefore = await riskFundV2.poolAssetsFunds(comptrollerAddr, USDT);
 
         await expect(riskFundBuyback.forwardBaseAsset(comptrollerAddr, forwardAmount))
           .to.emit(riskFundBuyback, "BaseAssetForwarded")
           .withArgs(comptrollerAddr, forwardAmount);
 
         expect((await usdt.balanceOf(RISK_FUND_V2)).sub(usdtBefore)).to.equal(forwardAmount);
-        expect((await riskFundV2.poolAssetsFunds(comptrollerAddr, USDT)).sub(poolBefore)).to.equal(forwardAmount);
         expect(await usdt.balanceOf(riskFundBuyback.address)).to.equal(0);
       });
 
@@ -242,7 +231,7 @@ forking(FORK_BLOCK, () => {
       });
 
       it("reverts when router not allowlisted", async () => {
-        const rogue = await deployBuyback(RISK_FUND_V2, USDT, true);
+        const rogue = await deployBuyback(RISK_FUND_V2, USDT);
         await grantAcm(rogue.address, EXECUTE_BUYBACK_SIG, deployerAddr);
 
         await btcb.connect(whale).transfer(rogue.address, BTCB_IN);
@@ -309,7 +298,7 @@ forking(FORK_BLOCK, () => {
 
       it("reverts InsufficientBalance when amountIn exceeds contract balance", async () => {
         // Fresh deploy; no BTCB held
-        const fresh = await deployBuyback(RISK_FUND_V2, USDT, true);
+        const fresh = await deployBuyback(RISK_FUND_V2, USDT);
         await fresh.setAllowedRouter(PANCAKE_V2_ROUTER, true);
         await grantAcm(fresh.address, EXECUTE_BUYBACK_SIG, deployerAddr);
 
@@ -319,25 +308,6 @@ forking(FORK_BLOCK, () => {
         await expect(
           fresh.executeBuyback(BTCB, BTCB_IN, 0, deadline, PANCAKE_V2_ROUTER, calldata, comptrollerAddr),
         ).to.be.revertedWithCustomError(fresh, "InsufficientBalance");
-      });
-
-      it("reverts ComptrollerRequired on executeBuyback when IS_RISK_FUND and comptroller is zero", async () => {
-        await btcb.connect(whale).transfer(riskFundBuyback.address, BTCB_IN);
-
-        const deadline = Math.floor(Date.now() / 1000) + 3600;
-        const calldata = await pancakeCalldata(BTCB, BTCB_IN, 0, [BTCB, WBNB, USDT], riskFundBuyback.address, deadline);
-
-        await expect(
-          riskFundBuyback.executeBuyback(
-            BTCB,
-            BTCB_IN,
-            0,
-            deadline,
-            PANCAKE_V2_ROUTER,
-            calldata,
-            hre.ethers.constants.AddressZero,
-          ),
-        ).to.be.revertedWithCustomError(riskFundBuyback, "ComptrollerRequired");
       });
 
       it("reverts Unauthorized when caller lacks ACM permission", async () => {
@@ -435,15 +405,15 @@ forking(FORK_BLOCK, () => {
       });
     });
 
-    describe("PrimeBuyback_USDT E2E (IS_RISK_FUND=false)", () => {
+    describe("PrimeBuyback_USDT E2E", () => {
       before(async () => {
-        primeBuyback = await deployBuyback(PRIME_LIQUIDITY_PROVIDER, USDT, false);
+        primeBuyback = await deployBuyback(PRIME_LIQUIDITY_PROVIDER, USDT);
         await primeBuyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
         await grantAcm(primeBuyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
         await grantAcm(primeBuyback.address, FORWARD_BASE_ASSET_SIG, deployerAddr);
       });
 
-      it("swaps BTCB -> USDT, forwards to PrimeLiquidityProvider, no updatePoolState call", async () => {
+      it("swaps BTCB -> USDT and forwards to PrimeLiquidityProvider", async () => {
         await btcb.connect(whale).transfer(primeBuyback.address, BTCB_IN);
 
         const path = [BTCB, WBNB, USDT];
@@ -461,7 +431,7 @@ forking(FORK_BLOCK, () => {
           deadline,
           PANCAKE_V2_ROUTER,
           calldata,
-          hre.ethers.constants.AddressZero, // comptroller unused when IS_RISK_FUND=false
+          hre.ethers.constants.AddressZero,
         );
 
         const primeAfter = await usdt.balanceOf(PRIME_LIQUIDITY_PROVIDER);
@@ -469,7 +439,7 @@ forking(FORK_BLOCK, () => {
         expect(await usdt.balanceOf(primeBuyback.address)).to.equal(0);
       });
 
-      it("forwardBaseAsset with AddressZero comptroller when not RiskFund", async () => {
+      it("forwardBaseAsset with AddressZero comptroller", async () => {
         const forwardAmount = await acquireUsdt(primeBuyback.address, parseUnits("0.005", 18));
         expect(forwardAmount).to.be.gt(0);
 
@@ -487,7 +457,7 @@ forking(FORK_BLOCK, () => {
       let buyback: Contract;
 
       before(async () => {
-        buyback = await deployBuyback(RISK_FUND_V2, USDT, true);
+        buyback = await deployBuyback(RISK_FUND_V2, USDT);
         await grantAcm(buyback.address, FORWARD_BASE_ASSET_SIG, deployerAddr);
       });
 
@@ -593,12 +563,6 @@ forking(FORK_BLOCK, () => {
         await buyback.sweepToken(BTCB, deployerAddr, donation);
       });
 
-      it("forwardBaseAsset reverts ComptrollerRequired when IS_RISK_FUND and comptroller is zero", async () => {
-        await expect(
-          buyback.forwardBaseAsset(hre.ethers.constants.AddressZero, parseUnits("1", 18)),
-        ).to.be.revertedWithCustomError(buyback, "ComptrollerRequired");
-      });
-
       it("forwardBaseAsset is a no-op when amount is zero", async () => {
         expect(await usdt.balanceOf(buyback.address)).to.equal(0);
         const destBefore = await usdt.balanceOf(RISK_FUND_V2);
@@ -643,7 +607,7 @@ forking(FORK_BLOCK, () => {
 
       it("USDCPrimeBuyback: BTCB -> USDC via PancakeSwap forwards to PrimeLiquidityProvider", async () => {
         const usdc = await hre.ethers.getContractAt(ERC20_ABI, USDC);
-        const buyback = await deployBuyback(PRIME_LIQUIDITY_PROVIDER, USDC, false);
+        const buyback = await deployBuyback(PRIME_LIQUIDITY_PROVIDER, USDC);
         await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
         await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
 
@@ -652,7 +616,7 @@ forking(FORK_BLOCK, () => {
       });
 
       it("BTCBPrimeBuyback: USDT -> BTCB via PancakeSwap forwards to PrimeLiquidityProvider", async () => {
-        const buyback = await deployBuyback(PRIME_LIQUIDITY_PROVIDER, BTCB, false);
+        const buyback = await deployBuyback(PRIME_LIQUIDITY_PROVIDER, BTCB);
         await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
         await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
 
@@ -664,7 +628,7 @@ forking(FORK_BLOCK, () => {
 
       it("ETHPrimeBuyback: BTCB -> ETH via PancakeSwap forwards to PrimeLiquidityProvider", async () => {
         const eth = await hre.ethers.getContractAt(ERC20_ABI, ETH);
-        const buyback = await deployBuyback(PRIME_LIQUIDITY_PROVIDER, ETH, false);
+        const buyback = await deployBuyback(PRIME_LIQUIDITY_PROVIDER, ETH);
         await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
         await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
 
@@ -674,7 +638,7 @@ forking(FORK_BLOCK, () => {
 
       it("XVSBuyback: BTCB -> XVS via PancakeSwap forwards to XVSVaultTreasury", async () => {
         const xvs = await hre.ethers.getContractAt(ERC20_ABI, XVS);
-        const buyback = await deployBuyback(XVS_VAULT_TREASURY, XVS, false);
+        const buyback = await deployBuyback(XVS_VAULT_TREASURY, XVS);
         await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
         await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
 
@@ -683,7 +647,7 @@ forking(FORK_BLOCK, () => {
       });
 
       it("TreasuryBuyback: BTCB -> USDT via PancakeSwap forwards to VTreasury", async () => {
-        const buyback = await deployBuyback(V_TREASURY, USDT, false);
+        const buyback = await deployBuyback(V_TREASURY, USDT);
         await buyback.setAllowedRouter(PANCAKE_V2_ROUTER, true);
         await grantAcm(buyback.address, EXECUTE_BUYBACK_SIG, deployerAddr);
 
