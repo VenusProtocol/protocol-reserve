@@ -119,6 +119,7 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     /// @param asset Address of the token transferred
     /// @custom:event AssetsReceived emits the received amount
     /// @custom:error UnauthorizedCaller when msg.sender is not PROTOCOL_SHARE_RESERVE
+    /// @custom:access Only callable by PROTOCOL_SHARE_RESERVE
     function updateAssetsState(address comptroller, address asset) external override nonReentrant {
         if (msg.sender != PROTOCOL_SHARE_RESERVE) {
             revert UnauthorizedCaller(msg.sender);
