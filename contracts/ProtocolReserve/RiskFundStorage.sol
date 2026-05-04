@@ -69,5 +69,5 @@ contract RiskFundV2Storage is RiskFundV1Storage, ReentrancyGuardUpgradeable {
     ///         and this slot is retained only to preserve the upgradeable storage
     ///         layout. The setter was dropped — value is frozen at whatever was last
     ///         written pre-upgrade and is not read by any contract code.
-    address public riskFundConverter;
+    address private riskFundConverter;
 }
