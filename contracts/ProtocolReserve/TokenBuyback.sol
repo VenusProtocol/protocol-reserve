@@ -125,14 +125,14 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         }
         uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
         uint256 previousBalance = assetsReserves[asset];
-        uint256 balanceDifference;
         if (currentBalance > previousBalance) {
+            uint256 balanceDifference;
             unchecked {
                 balanceDifference = currentBalance - previousBalance;
             }
             assetsReserves[asset] = currentBalance;
+            emit AssetsReceived(comptroller, asset, balanceDifference);
         }
-        emit AssetsReceived(comptroller, asset, balanceDifference);
     }
 
     /// @notice Executes a buyback by swapping accumulated tokens via a DEX router
