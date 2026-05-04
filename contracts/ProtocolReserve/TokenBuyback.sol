@@ -165,6 +165,7 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         // Measure BASE_ASSET balance on this contract (not DESTINATION) to prevent
         // donation-based amountOut inflation. Router calldata MUST send swap output here.
         uint256 balanceBefore = IERC20Upgradeable(BASE_ASSET).balanceOf(address(this));
+        uint256 tokenInBefore = assetsReserves[tokenIn];
 
         IERC20Upgradeable(tokenIn).forceApprove(router, amountIn);
         router.functionCall(routerCalldata);
@@ -183,7 +184,8 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         assetsReserves[tokenIn] = IERC20Upgradeable(tokenIn).balanceOf(address(this));
         assetsReserves[BASE_ASSET] = IERC20Upgradeable(BASE_ASSET).balanceOf(address(this));
 
-        emit BuybackExecuted(tokenIn, amountIn, amountOut, router, comptroller);
+        uint256 actualAmountIn = tokenInBefore - assetsReserves[tokenIn];
+        emit BuybackExecuted(tokenIn, actualAmountIn, amountOut, router, comptroller);
     }
 
     /// @notice Forwards a caller-specified portion of accumulated BASE_ASSET to DESTINATION without swap
