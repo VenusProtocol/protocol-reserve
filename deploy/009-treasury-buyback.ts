@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { getContractAddressOrNullAddress } from "../helpers/deploymentConfig";
+import { TOKEN_BUYBACK_DEFAULTS, getContractAddressOrNullAddress } from "../helpers/deploymentConfig";
 
 // U token is not registered in `@venusprotocol/venus-protocol` external deployments.
 // Hard-coded per-network so TokenBuyback's immutable BASE_ASSET can be set at deploy.
@@ -19,6 +19,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const acmAddress = (await deployments.get("AccessControlManager")).address;
   const vTreasuryAddress = (await deployments.get("VTreasury")).address;
   const psrAddress = (await deployments.get("ProtocolShareReserve")).address;
+  const oracleAddress = (await deployments.get("ResilientOracle")).address;
 
   const baseAssets: Record<string, string> = {
     UTreasuryBuyback: U_ADDRESSES[hre.network.name],
@@ -43,13 +44,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       log: true,
       deterministicDeployment: false,
       contract: "TokenBuyback",
-      args: [vTreasuryAddress, baseAsset, psrAddress],
+      args: [vTreasuryAddress, baseAsset, psrAddress, oracleAddress],
       proxy: {
         owner: proxyAdminOwner,
         proxyContract: "OptimizedTransparentUpgradeableProxy",
         execute: {
           methodName: "initialize",
-          args: [acmAddress],
+          args: [
+            acmAddress,
+            TOKEN_BUYBACK_DEFAULTS.dailyCapUsd,
+            TOKEN_BUYBACK_DEFAULTS.perBlockCapUsd,
+            TOKEN_BUYBACK_DEFAULTS.slippageEventUsd,
+          ],
         },
         viaAdminContract: {
           name: "DefaultProxyAdmin",

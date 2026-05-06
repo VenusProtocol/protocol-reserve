@@ -46,4 +46,13 @@ interface ITokenBuyback is IIncomeDestination {
         address to,
         uint256 amount
     ) external;
+
+    /// @notice Updates the daily USD cap on tokenIn consumption (1e18-scaled)
+    function setDailyCapUsd(uint256 newCap) external;
+
+    /// @notice Updates the per-block USD cap on tokenIn consumption (1e18-scaled)
+    function setPerBlockCapUsd(uint256 newCap) external;
+
+    /// @notice Updates the absolute USD slippage threshold for AbnormalSlippage (1e18-scaled)
+    function setSlippageEventUsd(uint256 newThreshold) external;
 }

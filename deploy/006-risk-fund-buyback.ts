@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { getContractAddressOrNullAddress } from "../helpers/deploymentConfig";
+import { TOKEN_BUYBACK_DEFAULTS, getContractAddressOrNullAddress } from "../helpers/deploymentConfig";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -13,6 +13,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const riskFundAddress = (await deployments.get("RiskFundV2")).address;
   const usdtAddress = (await deployments.get("USDT")).address;
   const psrAddress = (await deployments.get("ProtocolShareReserve")).address;
+  const oracleAddress = (await deployments.get("ResilientOracle")).address;
 
   const proxyAdminOwner = await getContractAddressOrNullAddress(deployments, "NormalTimelock");
 
@@ -25,13 +26,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     deterministicDeployment: false,
     contract: "TokenBuyback",
-    args: [riskFundAddress, usdtAddress, psrAddress],
+    args: [riskFundAddress, usdtAddress, psrAddress, oracleAddress],
     proxy: {
       owner: proxyAdminOwner,
       proxyContract: "OptimizedTransparentUpgradeableProxy",
       execute: {
         methodName: "initialize",
-        args: [acmAddress],
+        args: [
+          acmAddress,
+          TOKEN_BUYBACK_DEFAULTS.dailyCapUsd,
+          TOKEN_BUYBACK_DEFAULTS.perBlockCapUsd,
+          TOKEN_BUYBACK_DEFAULTS.slippageEventUsd,
+        ],
       },
       viaAdminContract: {
         name: "DefaultProxyAdmin",
