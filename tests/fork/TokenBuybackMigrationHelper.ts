@@ -173,7 +173,9 @@ const erc20 = (token: string) => new ethers.Contract(token, ERC20_ABI, ethers.pr
 const ownable = (addr: string) => new ethers.Contract(addr, OWNABLE2_ABI, ethers.provider);
 const converter = (addr: string) => new ethers.Contract(addr, CONVERTER_ABI, ethers.provider);
 
-describe("TokenBuybackMigrationHelper (BSC mainnet fork)", function () {
+const FORK_MAINNET = process.env.FORK === "true" && process.env.FORKED_NETWORK === "bscmainnet";
+
+(FORK_MAINNET ? describe : describe.skip)("TokenBuybackMigrationHelper (BSC mainnet fork)", function () {
   let helper: Contract;
   let timelock: any;
   const balanceBefore = new Map<string, BigNumber>(); // key: token:recipient
