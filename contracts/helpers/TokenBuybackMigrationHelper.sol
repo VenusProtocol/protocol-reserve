@@ -136,8 +136,8 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
     address private constant ONEINCH_ROUTER = 0x1111111254EEB25477B68fb85Ed929f73A960582;
     address private constant UNIV2_SWAP_ROUTER_02 = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
     address private constant UNIV3_SWAP_ROUTER_02 = 0xB971eF87ede563556b2ED4b1C0b0019111Dd85d2;
-    address private constant UNIV4_SWAP_ROUTER = 0x8b844f885672f333bc0042cb669255f93a4c1e6b;
-    address private constant UNI_UNIVERSAL_ROUTER = 0x1906c1d672b88cd1b9ac7593301ca990f94eae07;
+    address private constant UNIV4_SWAP_ROUTER = 0x8B844f885672f333Bc0042cB669255f93a4C1E6b;
+    address private constant UNI_UNIVERSAL_ROUTER = 0x1906c1d672b88cD1B9aC7593301cA990F94Eae07;
 
     bool public executed;
 
@@ -274,63 +274,6 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
                 ++i;
             }
         }
-    }
-
-    /// @dev The universal BSC core-pool ERC20 list. Order is irrelevant: every
-    ///      entry is independently checked against each converter's live balance.
-    function _coreTokens() internal pure returns (address[] memory tokens) {
-        tokens = new address[](47);
-        // Stables / fiat-pegged (11)
-        tokens[0] = 0x55d398326f99059fF775485246999027B3197955; // USDT
-        tokens[1] = 0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d; // USDC
-        tokens[2] = 0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56; // BUSD
-        tokens[3] = 0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3; // DAI
-        tokens[4] = 0x40af3827F39D0EAcBF4A168f8D4ee67c121D11c9; // TUSD
-        tokens[5] = 0x14016E85a25aeb13065688cAFB43044C2ef86784; // TUSDOLD
-        tokens[6] = 0xc5f0f7b66764F6ec8C8Dff7BA683102295E16409; // FDUSD
-        tokens[7] = 0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34; // USDe
-        tokens[8] = 0x211Cc4DD073734dA055fbF44a2b4667d5E5fE5d2; // sUSDe
-        tokens[9] = 0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d; // USD1
-        tokens[10] = 0x0782b6d8c4551B9760e74c0545a9bCD90bdc41E5; // lisUSD
-        // L1 / L2 majors (26)
-        tokens[11] = 0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c; // BTCB
-        tokens[12] = 0x2170Ed0880ac9A755fd29B2688956BD959F933F8; // ETH
-        tokens[13] = 0x4338665CBB7B2485A8855A139b75D5e34AB0DB94; // LTC
-        tokens[14] = 0x1D2F0da169ceB9fC7B3144628dB156f3F6c60dBE; // XRP
-        tokens[15] = 0x8fF795a6F4D97E7887C79beA79aba5cc76444aDf; // BCH
-        tokens[16] = 0x7083609fCE4d1d8Dc0C979AAb8c869Ea2C873402; // DOT
-        tokens[17] = 0xF8A0BF9cF54Bb92F17374d9e9A321E6a111a51bD; // LINK
-        tokens[18] = 0x0D8Ce2A99Bb6e3B7Db580eD848240e4a0F9aE153; // FIL
-        tokens[19] = 0x3EE2200Efb3400fAbB9AacF31297cBdD1d435D47; // ADA
-        tokens[20] = 0xbA2aE424d960c26247Dd6c32edC70B295c744C43; // DOGE
-        tokens[21] = 0xCC42724C6683B7E57334c4E856f4c9965ED682bD; // MATIC
-        tokens[22] = 0xCE7de646e7208a4Ef112cb6ed5038FA6cC6b12e3; // TRX
-        tokens[23] = 0x85EAC5Ac2F758618dFa09bDbe0cf174e7d574D5B; // TRXOLD
-        tokens[24] = 0x570A5D26f7765Ecb712C0924E4De545B89fD43dF; // SOL
-        tokens[25] = 0xBf5140A22578168FD562DCcF235E5D43A02ce9B1; // UNI
-        tokens[26] = 0xfb6115445Bff7b52FeB98650C87f44907E58f802; // AAVE
-        tokens[27] = 0x47BEAd2563dCBf3bF2c9407fEa4dC236fAbA485A; // SXP
-        tokens[28] = 0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63; // XVS
-        tokens[29] = 0x20bff4bbEDa07536FF00e073bd8359E5D80D733d; // CAN
-        tokens[30] = 0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82; // CAKE
-        tokens[31] = 0x4B0F1812e5Df2A09796481Ff14017e6005508003; // TWT
-        tokens[32] = 0xF4C8E32EaDEC4BFe97E0F595AdD0f4450a863a11; // THE
-        tokens[33] = 0xcE24439F2D9C6a2289F741120FE202248B666666; // U
-        tokens[34] = 0x23AE4fd8E7844cdBc97775496eBd0E8248656028; // XAUM
-        tokens[35] = 0x3d4350cD54aeF9f9b2C29435e0fa809957B3F30a; // UST
-        tokens[36] = 0x156ab3346823B651294766e23e6Cf87254d68962; // LUNA
-        // BNB-related / liquid staking (5)
-        tokens[37] = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c; // WBNB
-        tokens[38] = 0x250632378E573c6Be1AC2f97Fcdf00515d0Aa91B; // BETH
-        tokens[39] = 0xa2E3356610840701BDf5611a53974510Ae27E2e1; // WBETH
-        tokens[40] = 0xB0b84D294e0C75A6abe60171b70edEb2EFd14A1B; // slisBNB
-        tokens[41] = 0x77734e70b6E88b4d82fE632a168EDf6e700912b6; // asBNB
-        // BTC LSTs + Pendle PT (5)
-        tokens[42] = 0x4aae823a6a0b376De6A78e74eCC5b079d38cBCf7; // SolvBTC
-        tokens[43] = 0x1346b618dC92810EC74163e4c27004c921D446a5; // xSolvBTC
-        tokens[44] = 0xDD809435ba6c9d6903730f923038801781cA66ce; // PT_sUSDE_26JUN2025
-        tokens[45] = 0x607C834cfb7FCBbb341Cbe23f77A6E83bCf3F55c; // PT_USDe_30OCT2025
-        tokens[46] = 0xe052823b4aefc6e230FAf46231A57d0905E30AE0; // PT_clisBNB_25JUN2026
     }
 
     function _sweepIfNonzero(
@@ -509,5 +452,62 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
         IOwnable2Step(BTCB_PRIME_CONVERTER).transferOwnership(NORMAL_TIMELOCK);
         IOwnable2Step(ETH_PRIME_CONVERTER).transferOwnership(NORMAL_TIMELOCK);
         IOwnable2Step(XVS_VAULT_CONVERTER).transferOwnership(NORMAL_TIMELOCK);
+    }
+
+    /// @dev The universal BSC core-pool ERC20 list. Order is irrelevant: every
+    ///      entry is independently checked against each converter's live balance.
+    function _coreTokens() internal pure returns (address[] memory tokens) {
+        tokens = new address[](47);
+        // Stables / fiat-pegged (11)
+        tokens[0] = 0x55d398326f99059fF775485246999027B3197955; // USDT
+        tokens[1] = 0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d; // USDC
+        tokens[2] = 0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56; // BUSD
+        tokens[3] = 0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3; // DAI
+        tokens[4] = 0x40af3827F39D0EAcBF4A168f8D4ee67c121D11c9; // TUSD
+        tokens[5] = 0x14016E85a25aeb13065688cAFB43044C2ef86784; // TUSDOLD
+        tokens[6] = 0xc5f0f7b66764F6ec8C8Dff7BA683102295E16409; // FDUSD
+        tokens[7] = 0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34; // USDe
+        tokens[8] = 0x211Cc4DD073734dA055fbF44a2b4667d5E5fE5d2; // sUSDe
+        tokens[9] = 0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d; // USD1
+        tokens[10] = 0x0782b6d8c4551B9760e74c0545a9bCD90bdc41E5; // lisUSD
+        // L1 / L2 majors (26)
+        tokens[11] = 0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c; // BTCB
+        tokens[12] = 0x2170Ed0880ac9A755fd29B2688956BD959F933F8; // ETH
+        tokens[13] = 0x4338665CBB7B2485A8855A139b75D5e34AB0DB94; // LTC
+        tokens[14] = 0x1D2F0da169ceB9fC7B3144628dB156f3F6c60dBE; // XRP
+        tokens[15] = 0x8fF795a6F4D97E7887C79beA79aba5cc76444aDf; // BCH
+        tokens[16] = 0x7083609fCE4d1d8Dc0C979AAb8c869Ea2C873402; // DOT
+        tokens[17] = 0xF8A0BF9cF54Bb92F17374d9e9A321E6a111a51bD; // LINK
+        tokens[18] = 0x0D8Ce2A99Bb6e3B7Db580eD848240e4a0F9aE153; // FIL
+        tokens[19] = 0x3EE2200Efb3400fAbB9AacF31297cBdD1d435D47; // ADA
+        tokens[20] = 0xbA2aE424d960c26247Dd6c32edC70B295c744C43; // DOGE
+        tokens[21] = 0xCC42724C6683B7E57334c4E856f4c9965ED682bD; // MATIC
+        tokens[22] = 0xCE7de646e7208a4Ef112cb6ed5038FA6cC6b12e3; // TRX
+        tokens[23] = 0x85EAC5Ac2F758618dFa09bDbe0cf174e7d574D5B; // TRXOLD
+        tokens[24] = 0x570A5D26f7765Ecb712C0924E4De545B89fD43dF; // SOL
+        tokens[25] = 0xBf5140A22578168FD562DCcF235E5D43A02ce9B1; // UNI
+        tokens[26] = 0xfb6115445Bff7b52FeB98650C87f44907E58f802; // AAVE
+        tokens[27] = 0x47BEAd2563dCBf3bF2c9407fEa4dC236fAbA485A; // SXP
+        tokens[28] = 0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63; // XVS
+        tokens[29] = 0x20bff4bbEDa07536FF00e073bd8359E5D80D733d; // CAN
+        tokens[30] = 0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82; // CAKE
+        tokens[31] = 0x4B0F1812e5Df2A09796481Ff14017e6005508003; // TWT
+        tokens[32] = 0xF4C8E32EaDEC4BFe97E0F595AdD0f4450a863a11; // THE
+        tokens[33] = 0xcE24439F2D9C6a2289F741120FE202248B666666; // U
+        tokens[34] = 0x23AE4fd8E7844cdBc97775496eBd0E8248656028; // XAUM
+        tokens[35] = 0x3d4350cD54aeF9f9b2C29435e0fa809957B3F30a; // UST
+        tokens[36] = 0x156ab3346823B651294766e23e6Cf87254d68962; // LUNA
+        // BNB-related / liquid staking (5)
+        tokens[37] = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c; // WBNB
+        tokens[38] = 0x250632378E573c6Be1AC2f97Fcdf00515d0Aa91B; // BETH
+        tokens[39] = 0xa2E3356610840701BDf5611a53974510Ae27E2e1; // WBETH
+        tokens[40] = 0xB0b84D294e0C75A6abe60171b70edEb2EFd14A1B; // slisBNB
+        tokens[41] = 0x77734e70b6E88b4d82fE632a168EDf6e700912b6; // asBNB
+        // BTC LSTs + Pendle PT (5)
+        tokens[42] = 0x4aae823a6a0b376De6A78e74eCC5b079d38cBCf7; // SolvBTC
+        tokens[43] = 0x1346b618dC92810EC74163e4c27004c921D446a5; // xSolvBTC
+        tokens[44] = 0xDD809435ba6c9d6903730f923038801781cA66ce; // PT_sUSDE_26JUN2025
+        tokens[45] = 0x607C834cfb7FCBbb341Cbe23f77A6E83bCf3F55c; // PT_USDe_30OCT2025
+        tokens[46] = 0xe052823b4aefc6e230FAf46231A57d0905E30AE0; // PT_clisBNB_25JUN2026
     }
 }
