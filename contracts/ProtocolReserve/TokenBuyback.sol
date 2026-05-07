@@ -48,6 +48,14 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     ///         on each updateAssetsState call. Resynced after every outflow
     ///         (executeBuyback, forwardBaseAsset, sweepToken) so inflow deltas
     ///         stay correct across interleaved deposits and withdrawals.
+    /// @dev Reflects observed `balanceOf(this)` deltas rather than an authenticated
+    ///      source-of-funds record. Tokens transferred directly to the contract
+    ///      outside the PSR flow are not distinguished from authenticated PSR
+    ///      inflows: they get merged into the next AssetsReceived event, can be
+    ///      consumed by executeBuyback / forwardBaseAsset, and are absorbed into
+    ///      this watermark when sweepToken resyncs to the post-transfer balance.
+    ///      Off-chain integrators relying on `AssetsReceived` for source-of-funds
+    ///      attribution must treat the value as a balance delta only.
     mapping(address => uint256) public assetsReserves;
 
     /// @notice Maximum cumulative USD value of tokenIn consumed via executeBuyback
@@ -176,6 +184,14 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     ///      via safeTransfer before calling this function. The contract passively holds
     ///      tokens until the cron calls executeBuyback. The emitted event is monitored
     ///      by the cron to track which tokens arrived from which pool.
+    ///      The reported `balanceDifference` is computed as `balanceOf(this) -
+    ///      assetsReserves[asset]` and therefore reflects the observed balance delta
+    ///      since the last accounting update, not an authenticated record of PSR
+    ///      transfer amounts. Tokens transferred directly to the contract outside the
+    ///      PSR flow will be merged into a subsequent AssetsReceived event under
+    ///      whichever comptroller PSR happens to be processing at the time. The bias
+    ///      is one-shot (the watermark resyncs to `balanceOf(this)` on the same call)
+    ///      and the donated tokens remain recoverable via `sweepToken`.
     /// @param comptroller Address of the pool's comptroller
     /// @param asset Address of the token transferred
     /// @custom:event AssetsReceived emits the received amount
@@ -295,6 +311,11 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     }
 
     /// @notice Transfers tokens out of the contract (emergency recovery)
+    /// @dev Resyncs `assetsReserves[token]` to the post-transfer balance after the
+    ///      sweep. This is also the canonical recovery path for tokens transferred
+    ///      directly to the contract outside the PSR flow: such tokens are not
+    ///      distinguished from PSR-delivered balances on-chain, so governance can
+    ///      use this function to drain unsolicited inflows when needed.
     /// @param token Address of the token to sweep
     /// @param to Recipient address
     /// @param amount Amount to transfer
