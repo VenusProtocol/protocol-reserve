@@ -4,7 +4,7 @@ pragma solidity 0.8.25;
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-interface IAccessControlManagerV8 {
+interface IACMForMigration {
     function giveCallPermission(
         address contractAddress,
         string calldata functionSig,
@@ -34,7 +34,7 @@ interface ITokenBuyback is IOwnable2Step {
     function setAllowedRouter(address router, bool allowed) external;
 }
 
-interface IAbstractTokenConverter is IOwnable2Step {
+interface ITokenConverterForMigration is IOwnable2Step {
     function sweepToken(
         address tokenAddress,
         address to,
@@ -44,7 +44,7 @@ interface IAbstractTokenConverter is IOwnable2Step {
     function pauseConversion() external;
 }
 
-interface IProtocolShareReserve {
+interface IPsrForMigration {
     /// @dev Schema is uint8 in the on-chain ABI: 0 = PROTOCOL_RESERVES, 1 = ADDITIONAL_REVENUE.
     struct DistributionConfig {
         uint8 schema;
@@ -195,7 +195,7 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
 
         // Step 10: relinquish the helper's `DEFAULT_ADMIN_ROLE` on the ACM so
         //          no residual privilege survives this transaction.
-        IAccessControlManagerV8(ACM).renounceRole(DEFAULT_ADMIN_ROLE, address(this));
+        IACMForMigration(ACM).renounceRole(DEFAULT_ADMIN_ROLE, address(this));
 
         emit Executed();
     }
@@ -233,7 +233,7 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
     }
 
     function _selfGrantTransientAcmPermissions() internal {
-        IAccessControlManagerV8 acm = IAccessControlManagerV8(ACM);
+        IACMForMigration acm = IACMForMigration(ACM);
         // PSR rewiring (used in `_rewireProtocolShareReserve`).
         acm.giveCallPermission(PSR, "addOrUpdateDistributionConfigs(DistributionConfig[])", address(this));
         acm.giveCallPermission(PSR, "removeDistributionConfig(Schema,address)", address(this));
@@ -283,7 +283,7 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
     ) internal {
         uint256 bal = IERC20(token).balanceOf(converter);
         if (bal > 0) {
-            IAbstractTokenConverter(converter).sweepToken(token, recipient, bal);
+            ITokenConverterForMigration(converter).sweepToken(token, recipient, bal);
         }
     }
 
@@ -326,7 +326,7 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
     }
 
     function _grantOperatorPermissions() internal {
-        IAccessControlManagerV8 acm = IAccessControlManagerV8(ACM);
+        IACMForMigration acm = IACMForMigration(ACM);
         address[10] memory buybacks = [
             RISK_FUND_BUYBACK,
             USDT_PRIME_BUYBACK,
@@ -353,62 +353,62 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
     }
 
     function _pauseAllTimelockOwnedConverters() internal {
-        IAbstractTokenConverter(RISK_FUND_CONVERTER).pauseConversion();
-        IAbstractTokenConverter(USDT_PRIME_CONVERTER).pauseConversion();
-        IAbstractTokenConverter(USDC_PRIME_CONVERTER).pauseConversion();
-        IAbstractTokenConverter(BTCB_PRIME_CONVERTER).pauseConversion();
-        IAbstractTokenConverter(ETH_PRIME_CONVERTER).pauseConversion();
-        IAbstractTokenConverter(XVS_VAULT_CONVERTER).pauseConversion();
+        ITokenConverterForMigration(RISK_FUND_CONVERTER).pauseConversion();
+        ITokenConverterForMigration(USDT_PRIME_CONVERTER).pauseConversion();
+        ITokenConverterForMigration(USDC_PRIME_CONVERTER).pauseConversion();
+        ITokenConverterForMigration(BTCB_PRIME_CONVERTER).pauseConversion();
+        ITokenConverterForMigration(ETH_PRIME_CONVERTER).pauseConversion();
+        ITokenConverterForMigration(XVS_VAULT_CONVERTER).pauseConversion();
     }
 
     function _rewireProtocolShareReserve() internal {
-        IProtocolShareReserve psr = IProtocolShareReserve(PSR);
+        IPsrForMigration psr = IPsrForMigration(PSR);
 
         // 18 new buyback rows + 12 stale rows zeroed atomically. The PSR's
         // `_ensurePercentages()` validates the per-schema sum (1e4 or 0) at the end
         // of this single call; bundling new + zeroing in one batch keeps the
         // invariant valid.
-        IProtocolShareReserve.DistributionConfig[] memory configs = new IProtocolShareReserve.DistributionConfig[](30);
+        IPsrForMigration.DistributionConfig[] memory configs = new IPsrForMigration.DistributionConfig[](30);
 
         // ---- Schema 0 (PROTOCOL_RESERVES = spread) — sums to 10000 ----
         // treasury group total: 4000 (was VTREASURY 4000)
-        configs[0] = IProtocolShareReserve.DistributionConfig(0, 1200, U_TREASURY_BUYBACK);
-        configs[1] = IProtocolShareReserve.DistributionConfig(0, 600, BTCB_TREASURY_BUYBACK);
-        configs[2] = IProtocolShareReserve.DistributionConfig(0, 600, ETH_TREASURY_BUYBACK);
-        configs[3] = IProtocolShareReserve.DistributionConfig(0, 600, USDT_TREASURY_BUYBACK);
-        configs[4] = IProtocolShareReserve.DistributionConfig(0, 600, USDC_TREASURY_BUYBACK);
-        configs[5] = IProtocolShareReserve.DistributionConfig(0, 400, XVS_TREASURY_BUYBACK);
+        configs[0] = IPsrForMigration.DistributionConfig(0, 1200, U_TREASURY_BUYBACK);
+        configs[1] = IPsrForMigration.DistributionConfig(0, 600, BTCB_TREASURY_BUYBACK);
+        configs[2] = IPsrForMigration.DistributionConfig(0, 600, ETH_TREASURY_BUYBACK);
+        configs[3] = IPsrForMigration.DistributionConfig(0, 600, USDT_TREASURY_BUYBACK);
+        configs[4] = IPsrForMigration.DistributionConfig(0, 600, USDC_TREASURY_BUYBACK);
+        configs[5] = IPsrForMigration.DistributionConfig(0, 400, XVS_TREASURY_BUYBACK);
         // prime group total: 2000 (was USDT_PRIME_CONVERTER 2000)
-        configs[6] = IProtocolShareReserve.DistributionConfig(0, 1000, USDT_PRIME_BUYBACK);
-        configs[7] = IProtocolShareReserve.DistributionConfig(0, 1000, U_PRIME_BUYBACK);
+        configs[6] = IPsrForMigration.DistributionConfig(0, 1000, USDT_PRIME_BUYBACK);
+        configs[7] = IPsrForMigration.DistributionConfig(0, 1000, U_PRIME_BUYBACK);
         // riskFund group total: 2000
-        configs[8] = IProtocolShareReserve.DistributionConfig(0, 2000, RISK_FUND_BUYBACK);
+        configs[8] = IPsrForMigration.DistributionConfig(0, 2000, RISK_FUND_BUYBACK);
         // xvsStore group total: 2000
-        configs[9] = IProtocolShareReserve.DistributionConfig(0, 2000, XVS_BUYBACK);
+        configs[9] = IPsrForMigration.DistributionConfig(0, 2000, XVS_BUYBACK);
 
         // ---- Schema 1 (ADDITIONAL_REVENUE = liquidation) — sums to 10000 ----
-        configs[10] = IProtocolShareReserve.DistributionConfig(1, 1800, U_TREASURY_BUYBACK);
-        configs[11] = IProtocolShareReserve.DistributionConfig(1, 900, BTCB_TREASURY_BUYBACK);
-        configs[12] = IProtocolShareReserve.DistributionConfig(1, 900, ETH_TREASURY_BUYBACK);
-        configs[13] = IProtocolShareReserve.DistributionConfig(1, 900, USDT_TREASURY_BUYBACK);
-        configs[14] = IProtocolShareReserve.DistributionConfig(1, 900, USDC_TREASURY_BUYBACK);
-        configs[15] = IProtocolShareReserve.DistributionConfig(1, 600, XVS_TREASURY_BUYBACK);
-        configs[16] = IProtocolShareReserve.DistributionConfig(1, 2000, RISK_FUND_BUYBACK);
-        configs[17] = IProtocolShareReserve.DistributionConfig(1, 2000, XVS_BUYBACK);
+        configs[10] = IPsrForMigration.DistributionConfig(1, 1800, U_TREASURY_BUYBACK);
+        configs[11] = IPsrForMigration.DistributionConfig(1, 900, BTCB_TREASURY_BUYBACK);
+        configs[12] = IPsrForMigration.DistributionConfig(1, 900, ETH_TREASURY_BUYBACK);
+        configs[13] = IPsrForMigration.DistributionConfig(1, 900, USDT_TREASURY_BUYBACK);
+        configs[14] = IPsrForMigration.DistributionConfig(1, 900, USDC_TREASURY_BUYBACK);
+        configs[15] = IPsrForMigration.DistributionConfig(1, 600, XVS_TREASURY_BUYBACK);
+        configs[16] = IPsrForMigration.DistributionConfig(1, 2000, RISK_FUND_BUYBACK);
+        configs[17] = IPsrForMigration.DistributionConfig(1, 2000, XVS_BUYBACK);
 
         // ---- Stale rows zeroed (12) ----
-        configs[18] = IProtocolShareReserve.DistributionConfig(0, 0, VTREASURY);
-        configs[19] = IProtocolShareReserve.DistributionConfig(0, 0, XVS_VAULT_CONVERTER);
-        configs[20] = IProtocolShareReserve.DistributionConfig(0, 0, USDT_PRIME_CONVERTER);
-        configs[21] = IProtocolShareReserve.DistributionConfig(0, 0, RISK_FUND_CONVERTER);
-        configs[22] = IProtocolShareReserve.DistributionConfig(0, 0, USDC_PRIME_CONVERTER);
-        configs[23] = IProtocolShareReserve.DistributionConfig(0, 0, BTCB_PRIME_CONVERTER);
-        configs[24] = IProtocolShareReserve.DistributionConfig(0, 0, ETH_PRIME_CONVERTER);
-        configs[25] = IProtocolShareReserve.DistributionConfig(0, 0, WBNB_BURN_CONVERTER);
-        configs[26] = IProtocolShareReserve.DistributionConfig(1, 0, VTREASURY);
-        configs[27] = IProtocolShareReserve.DistributionConfig(1, 0, XVS_VAULT_CONVERTER);
-        configs[28] = IProtocolShareReserve.DistributionConfig(1, 0, RISK_FUND_CONVERTER);
-        configs[29] = IProtocolShareReserve.DistributionConfig(1, 0, WBNB_BURN_CONVERTER);
+        configs[18] = IPsrForMigration.DistributionConfig(0, 0, VTREASURY);
+        configs[19] = IPsrForMigration.DistributionConfig(0, 0, XVS_VAULT_CONVERTER);
+        configs[20] = IPsrForMigration.DistributionConfig(0, 0, USDT_PRIME_CONVERTER);
+        configs[21] = IPsrForMigration.DistributionConfig(0, 0, RISK_FUND_CONVERTER);
+        configs[22] = IPsrForMigration.DistributionConfig(0, 0, USDC_PRIME_CONVERTER);
+        configs[23] = IPsrForMigration.DistributionConfig(0, 0, BTCB_PRIME_CONVERTER);
+        configs[24] = IPsrForMigration.DistributionConfig(0, 0, ETH_PRIME_CONVERTER);
+        configs[25] = IPsrForMigration.DistributionConfig(0, 0, WBNB_BURN_CONVERTER);
+        configs[26] = IPsrForMigration.DistributionConfig(1, 0, VTREASURY);
+        configs[27] = IPsrForMigration.DistributionConfig(1, 0, XVS_VAULT_CONVERTER);
+        configs[28] = IPsrForMigration.DistributionConfig(1, 0, RISK_FUND_CONVERTER);
+        configs[29] = IPsrForMigration.DistributionConfig(1, 0, WBNB_BURN_CONVERTER);
 
         psr.addOrUpdateDistributionConfigs(configs);
 
@@ -423,7 +423,7 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
     }
 
     function _revokeTransientAcmPermissions() internal {
-        IAccessControlManagerV8 acm = IAccessControlManagerV8(ACM);
+        IACMForMigration acm = IACMForMigration(ACM);
         acm.revokeCallPermission(PSR, "addOrUpdateDistributionConfigs(DistributionConfig[])", address(this));
         acm.revokeCallPermission(PSR, "removeDistributionConfig(Schema,address)", address(this));
         acm.revokeCallPermission(RISK_FUND_CONVERTER, "pauseConversion()", address(this));
