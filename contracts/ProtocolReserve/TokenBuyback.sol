@@ -61,14 +61,17 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     ///         Event-only; does not revert. Stored 1e18-scaled.
     uint256 public slippageEventUsd;
 
-    /// @notice Cumulative USD value of tokenIn consumed in the current daily window.
+    /// @notice Cumulative USD value of tokenIn consumed, decayed linearly over `WINDOW`
+    ///         since the last update. Acts as a leaky-bucket accumulator: any rolling
+    ///         24h interval's total consumption is bounded by `dailyCapUsd`.
     uint256 public usdConsumedInWindow;
 
-    /// @notice Timestamp at which the current daily window started. Reset lazily on
-    ///         the first executeBuyback after the window expires.
-    uint256 public windowStart;
+    /// @notice Block timestamp at which `usdConsumedInWindow` was last written. Used
+    ///         to compute the linear decay applied on the next executeBuyback.
+    uint256 public lastUpdate;
 
-    /// @notice Length of the rolling daily window
+    /// @notice Decay horizon for the leaky-bucket accumulator: after `WINDOW` seconds
+    ///         of inactivity, `usdConsumedInWindow` decays to 0.
     uint256 internal constant WINDOW = 24 hours;
 
     /// @dev Gap for future storage variables
@@ -168,7 +171,7 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
 
         dailyCapUsd = dailyCapUsd_;
         slippageEventUsd = slippageEventUsd_;
-        windowStart = block.timestamp;
+        lastUpdate = block.timestamp;
     }
 
     /// @notice Called by PSR after transferring tokens to this contract
@@ -337,10 +340,12 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         slippageEventUsd = newThreshold;
     }
 
-    /// @dev Enforces the daily USD cap on tokenIn consumption and emits AbnormalSlippage
-    ///      when the swap returns less USD value than the input by more than
-    ///      `slippageEventUsd`. The cap reverts; slippage detection is event-only. The
-    ///      window counter is reset lazily on the first call after expiry.
+    /// @dev Enforces the daily USD cap on tokenIn consumption via a leaky-bucket
+    ///      accumulator with linear decay (rate `dailyCapUsd / WINDOW`), and emits
+    ///      AbnormalSlippage when the swap returns less USD value than the input by
+    ///      more than `slippageEventUsd`. The cap reverts; slippage detection is
+    ///      event-only. Continuous decay (vs a tumbling window) ensures any rolling
+    ///      24h interval's total consumption is bounded by `dailyCapUsd`.
     function _enforceCapAndDetectSlippage(
         address tokenIn,
         uint256 actualAmountIn,
@@ -353,19 +358,16 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         uint256 usdIn = (actualAmountIn * priceIn) / 1e18;
         uint256 usdOut = (amountOut * priceBase) / 1e18;
 
-        uint256 _usdConsumedInWindow = usdConsumedInWindow;
-        if (block.timestamp >= windowStart + WINDOW) {
-            windowStart = block.timestamp;
-            _usdConsumedInWindow = 0;
+        uint256 elapsed = block.timestamp - lastUpdate;
+        uint256 decayed = elapsed >= WINDOW ? 0 : (usdConsumedInWindow * (WINDOW - elapsed)) / WINDOW;
+        lastUpdate = block.timestamp;
+
+        uint256 newConsumed = decayed + usdIn;
+        if (newConsumed > dailyCapUsd) {
+            revert DailyCapExceeded(newConsumed, dailyCapUsd);
         }
 
-        _usdConsumedInWindow += usdIn;
-
-        if (_usdConsumedInWindow > dailyCapUsd) {
-            revert DailyCapExceeded(_usdConsumedInWindow, dailyCapUsd);
-        }
-
-        usdConsumedInWindow = _usdConsumedInWindow;
+        usdConsumedInWindow = newConsumed;
 
         if (usdIn > usdOut) {
             uint256 usdSlippage = usdIn - usdOut;

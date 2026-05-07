@@ -127,7 +127,7 @@ describe("TokenBuyback", () => {
     it("seeds cap config and window start from initialize", async () => {
       expect(await buyback.dailyCapUsd()).to.equal(TEST_DAILY_CAP_USD);
       expect(await buyback.slippageEventUsd()).to.equal(TEST_SLIPPAGE_EVENT_USD);
-      expect(await buyback.windowStart()).to.be.gt(0);
+      expect(await buyback.lastUpdate()).to.be.gt(0);
     });
 
     it("constructor reverts on zero destination", async () => {
@@ -782,8 +782,12 @@ describe("TokenBuyback", () => {
       await runSwap(parseUnits("100", 18), parseUnits("100", 6));
       expect(await buyback.usdConsumedInWindow()).to.equal(parseUnits("100", 18));
 
+      // Leaky-bucket decay between calls drops the prior $100 by a few ppm before
+      // the new $50 lands. Resulting accumulator sits just below $150.
       await runSwap(parseUnits("50", 18), parseUnits("50", 6));
-      expect(await buyback.usdConsumedInWindow()).to.equal(parseUnits("150", 18));
+      const consumed = await buyback.usdConsumedInWindow();
+      expect(consumed.gt(parseUnits("149", 18))).to.equal(true);
+      expect(consumed.lte(parseUnits("150", 18))).to.equal(true);
     });
 
     it("reverts when daily cap is exceeded", async () => {
@@ -791,7 +795,9 @@ describe("TokenBuyback", () => {
 
       await runSwap(parseUnits("100", 18), parseUnits("100", 6));
 
-      // Second swap of $60 would push window total to $160 > $150 cap
+      // Second swap of $60 pushes the leaky-bucket accumulator past $150 cap. The
+      // exact `attempted` value depends on elapsed time between swaps (decay), so
+      // we only assert the custom-error type, not its args.
       const calldata = await encodeSwap(parseUnits("60", 18), parseUnits("60", 6), buyback.address);
       await expect(
         buyback.executeBuyback(
@@ -803,22 +809,39 @@ describe("TokenBuyback", () => {
           calldata,
           await comptroller.getAddress(),
         ),
-      )
-        .to.be.revertedWithCustomError(buyback, "DailyCapExceeded")
-        .withArgs(parseUnits("160", 18), parseUnits("150", 18));
+      ).to.be.revertedWithCustomError(buyback, "DailyCapExceeded");
     });
 
-    it("daily window resets after WINDOW elapses", async () => {
+    it("usdConsumedInWindow decays to 0 after WINDOW elapses (leaky bucket)", async () => {
       await buyback.setDailyCapUsd(parseUnits("150", 18));
       await runSwap(parseUnits("100", 18), parseUnits("100", 6));
+      expect(await buyback.usdConsumedInWindow()).to.equal(parseUnits("100", 18));
 
-      // Advance time past 24h
+      // Advance time past WINDOW so prior consumption decays fully on next call
       await ethers.provider.send("evm_increaseTime", [24 * 60 * 60 + 1]);
       await ethers.provider.send("evm_mine", []);
 
-      // Window resets, $100 swap fits inside fresh $150 cap
+      // After full-WINDOW decay, $100 swap reflects only the new amount
       await runSwap(parseUnits("100", 18), parseUnits("100", 6));
       expect(await buyback.usdConsumedInWindow()).to.equal(parseUnits("100", 18));
+    });
+
+    it("usdConsumedInWindow decays linearly mid-WINDOW", async () => {
+      await buyback.setDailyCapUsd(parseUnits("200", 18));
+      await runSwap(parseUnits("100", 18), parseUnits("100", 6));
+
+      // Advance exactly half the WINDOW. Decayed value should be ~$50.
+      const HALF_WINDOW = 12 * 60 * 60;
+      await ethers.provider.send("evm_increaseTime", [HALF_WINDOW]);
+      await ethers.provider.send("evm_mine", []);
+
+      // Next swap of $50 lands on top of ~$50 decayed → ~$100. Stays under cap.
+      await runSwap(parseUnits("50", 18), parseUnits("50", 6));
+      const consumed = await buyback.usdConsumedInWindow();
+      // Decayed prior contribution sits between $40 and $60 (allowing for blocks
+      // mined between evm_increaseTime and the swap tx). Plus the new $50 → $90–$110.
+      expect(consumed.gt(parseUnits("90", 18))).to.equal(true);
+      expect(consumed.lt(parseUnits("110", 18))).to.equal(true);
     });
   });
 
