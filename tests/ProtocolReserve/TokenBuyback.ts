@@ -23,10 +23,9 @@ const AMOUNT_IN = parseUnits("100", 18);
 const AMOUNT_OUT = parseUnits("200", 6);
 const MIN_AMOUNT_OUT = parseUnits("190", 6);
 
-// Test caps are intentionally large so the cap path is inert by default; tests that
-// exercise cap behaviour override these via setDailyCapUsd / setPerBlockCapUsd.
+// Test cap is intentionally large so the cap path is inert by default; tests that
+// exercise cap behaviour override this via setDailyCapUsd.
 const TEST_DAILY_CAP_USD = parseUnits("1000000000", 18);
-const TEST_PER_BLOCK_CAP_USD = parseUnits("1000000000", 18);
 const TEST_SLIPPAGE_EVENT_USD = parseUnits("500", 18);
 
 // Oracle prices follow the Venus convention `getPrice(asset)` = USD * 10^(36 - decimals).
@@ -51,14 +50,13 @@ let psr: Signer;
 const BUYBACK_SIG = "executeBuyback(address,uint256,uint256,uint256,address,bytes,address)";
 const FORWARD_SIG = "forwardBaseAsset(address,uint256)";
 const SET_DAILY_CAP_SIG = "setDailyCapUsd(uint256)";
-const SET_PER_BLOCK_CAP_SIG = "setPerBlockCapUsd(uint256)";
 const SET_SLIPPAGE_EVENT_SIG = "setSlippageEventUsd(uint256)";
 
 async function deployBuyback(destination: string): Promise<MockContract<TokenBuyback>> {
   const TokenBuybackFactory = await smock.mock<TokenBuyback__factory>("TokenBuyback");
   return upgrades.deployProxy(
     TokenBuybackFactory,
-    [accessControl.address, TEST_DAILY_CAP_USD, TEST_PER_BLOCK_CAP_USD, TEST_SLIPPAGE_EVENT_USD],
+    [accessControl.address, TEST_DAILY_CAP_USD, TEST_SLIPPAGE_EVENT_USD],
     {
       constructorArgs: [destination, baseAsset.address, await psr.getAddress(), oracle.address],
     },
@@ -128,7 +126,6 @@ describe("TokenBuyback", () => {
 
     it("seeds cap config and window start from initialize", async () => {
       expect(await buyback.dailyCapUsd()).to.equal(TEST_DAILY_CAP_USD);
-      expect(await buyback.perBlockCapUsd()).to.equal(TEST_PER_BLOCK_CAP_USD);
       expect(await buyback.slippageEventUsd()).to.equal(TEST_SLIPPAGE_EVENT_USD);
       expect(await buyback.windowStart()).to.be.gt(0);
     });
@@ -138,7 +135,7 @@ describe("TokenBuyback", () => {
       await expect(
         upgrades.deployProxy(
           TokenBuybackFactory,
-          [accessControl.address, TEST_DAILY_CAP_USD, TEST_PER_BLOCK_CAP_USD, TEST_SLIPPAGE_EVENT_USD],
+          [accessControl.address, TEST_DAILY_CAP_USD, TEST_SLIPPAGE_EVENT_USD],
           {
             constructorArgs: [constants.AddressZero, baseAsset.address, await psr.getAddress(), oracle.address],
           },
@@ -151,7 +148,7 @@ describe("TokenBuyback", () => {
       await expect(
         upgrades.deployProxy(
           TokenBuybackFactory,
-          [accessControl.address, TEST_DAILY_CAP_USD, TEST_PER_BLOCK_CAP_USD, TEST_SLIPPAGE_EVENT_USD],
+          [accessControl.address, TEST_DAILY_CAP_USD, TEST_SLIPPAGE_EVENT_USD],
           {
             constructorArgs: [
               await destinationEOA.getAddress(),
@@ -169,7 +166,7 @@ describe("TokenBuyback", () => {
       await expect(
         upgrades.deployProxy(
           TokenBuybackFactory,
-          [accessControl.address, TEST_DAILY_CAP_USD, TEST_PER_BLOCK_CAP_USD, TEST_SLIPPAGE_EVENT_USD],
+          [accessControl.address, TEST_DAILY_CAP_USD, TEST_SLIPPAGE_EVENT_USD],
           {
             constructorArgs: [
               await destinationEOA.getAddress(),
@@ -187,7 +184,7 @@ describe("TokenBuyback", () => {
       await expect(
         upgrades.deployProxy(
           TokenBuybackFactory,
-          [accessControl.address, TEST_DAILY_CAP_USD, TEST_PER_BLOCK_CAP_USD, TEST_SLIPPAGE_EVENT_USD],
+          [accessControl.address, TEST_DAILY_CAP_USD, TEST_SLIPPAGE_EVENT_USD],
           {
             constructorArgs: [
               await destinationEOA.getAddress(),
@@ -202,7 +199,7 @@ describe("TokenBuyback", () => {
 
     it("reverts on double initialize", async () => {
       await expect(
-        buyback.initialize(accessControl.address, TEST_DAILY_CAP_USD, TEST_PER_BLOCK_CAP_USD, TEST_SLIPPAGE_EVENT_USD),
+        buyback.initialize(accessControl.address, TEST_DAILY_CAP_USD, TEST_SLIPPAGE_EVENT_USD),
       ).to.be.revertedWith("Initializable: contract is already initialized");
     });
   });
@@ -745,22 +742,6 @@ describe("TokenBuyback", () => {
       await expect(buyback.setDailyCapUsd(parseUnits("1", 18))).to.be.revertedWithCustomError(buyback, "Unauthorized");
     });
 
-    it("setPerBlockCapUsd updates state and emits event under ACM", async () => {
-      const newCap = parseUnits("777", 18);
-      await expect(buyback.setPerBlockCapUsd(newCap))
-        .to.emit(buyback, "PerBlockCapUpdated")
-        .withArgs(TEST_PER_BLOCK_CAP_USD, newCap);
-      expect(await buyback.perBlockCapUsd()).to.equal(newCap);
-    });
-
-    it("setPerBlockCapUsd reverts when ACM denies", async () => {
-      accessControl.isAllowedToCall.whenCalledWith(await owner.getAddress(), SET_PER_BLOCK_CAP_SIG).returns(false);
-      await expect(buyback.setPerBlockCapUsd(parseUnits("1", 18))).to.be.revertedWithCustomError(
-        buyback,
-        "Unauthorized",
-      );
-    });
-
     it("setSlippageEventUsd updates state and emits event under ACM", async () => {
       const newThreshold = parseUnits("99", 18);
       await expect(buyback.setSlippageEventUsd(newThreshold))
@@ -778,7 +759,7 @@ describe("TokenBuyback", () => {
     });
   });
 
-  describe("daily and per-block caps", () => {
+  describe("daily cap", () => {
     beforeEach(async () => {
       await tokenIn.transfer(buyback.address, parseUnits("1000", 18));
     });
@@ -806,7 +787,6 @@ describe("TokenBuyback", () => {
     });
 
     it("reverts when daily cap is exceeded", async () => {
-      // Pin per-block cap high so we are exclusively testing daily-cap behavior
       await buyback.setDailyCapUsd(parseUnits("150", 18));
 
       await runSwap(parseUnits("100", 18), parseUnits("100", 6));
@@ -839,53 +819,6 @@ describe("TokenBuyback", () => {
       // Window resets, $100 swap fits inside fresh $150 cap
       await runSwap(parseUnits("100", 18), parseUnits("100", 6));
       expect(await buyback.usdConsumedInWindow()).to.equal(parseUnits("100", 18));
-    });
-
-    it("reverts when per-block cap is exceeded across two swaps in the same block", async () => {
-      // Daily cap high, per-block cap tight. Disable auto-mining so two txs land in
-      // the same block.
-      await buyback.setPerBlockCapUsd(parseUnits("120", 18));
-      await ethers.provider.send("evm_setAutomine", [false]);
-
-      try {
-        const calldata1 = await encodeSwap(parseUnits("100", 18), parseUnits("100", 6), buyback.address);
-        const tx1 = await buyback.executeBuyback(
-          tokenIn.address,
-          parseUnits("100", 18),
-          0,
-          futureDeadline(),
-          router.address,
-          calldata1,
-          await comptroller.getAddress(),
-        );
-
-        const calldata2 = await encodeSwap(parseUnits("50", 18), parseUnits("50", 6), buyback.address);
-        const tx2 = await buyback.executeBuyback(
-          tokenIn.address,
-          parseUnits("50", 18),
-          0,
-          futureDeadline(),
-          router.address,
-          calldata2,
-          await comptroller.getAddress(),
-        );
-
-        await ethers.provider.send("evm_mine", []);
-
-        await tx1.wait(); // first swap succeeds
-        await expect(tx2.wait()).to.be.rejected; // second swap reverts on per-block cap
-      } finally {
-        await ethers.provider.send("evm_setAutomine", [true]);
-      }
-    });
-
-    it("per-block counter resets across blocks", async () => {
-      await buyback.setPerBlockCapUsd(parseUnits("100", 18));
-
-      await runSwap(parseUnits("100", 18), parseUnits("100", 6));
-      // Next block — per-block counter resets, another $100 fits
-      await runSwap(parseUnits("100", 18), parseUnits("100", 6));
-      expect(await buyback.usdConsumedInBlock()).to.equal(parseUnits("100", 18));
     });
   });
 

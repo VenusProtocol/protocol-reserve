@@ -36,8 +36,8 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     address public immutable PROTOCOL_SHARE_RESERVE;
 
     /// @notice ResilientOracle used to USD-price tokenIn and BASE_ASSET when
-    ///         enforcing the daily/per-block consumption caps and detecting
-    ///         abnormal swap slippage in executeBuyback.
+    ///         enforcing the daily consumption cap and detecting abnormal
+    ///         swap slippage in executeBuyback.
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable RESILIENT_ORACLE;
 
@@ -55,12 +55,6 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     ///         is compromised. Stored 1e18-scaled.
     uint256 public dailyCapUsd;
 
-    /// @notice Maximum cumulative USD value of tokenIn consumed via executeBuyback
-    ///         within a single block. Layered with dailyCapUsd so an attacker cannot
-    ///         drain `dailyCapUsd` at the end of one window and again at the start of
-    ///         the next. Stored 1e18-scaled.
-    uint256 public perBlockCapUsd;
-
     /// @notice Absolute USD threshold above which `executeBuyback` emits
     ///         AbnormalSlippage. Detects swap economics that diverge from
     ///         oracle pricing (e.g. swap routed through an attacker pool).
@@ -74,18 +68,11 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     ///         the first executeBuyback after the window expires.
     uint256 public windowStart;
 
-    /// @notice Cumulative USD value of tokenIn consumed in the current block.
-    uint256 public usdConsumedInBlock;
-
-    /// @notice Block number for which `usdConsumedInBlock` is valid. Reset lazily
-    ///         on the first executeBuyback in a new block.
-    uint256 public lastBlockTracked;
-
     /// @notice Length of the rolling daily window
     uint256 internal constant WINDOW = 24 hours;
 
     /// @dev Gap for future storage variables
-    uint256[41] private __gap;
+    uint256[43] private __gap;
 
     /// @notice Emitted when PSR transfers tokens and calls updateAssetsState
     event AssetsReceived(address indexed comptroller, address indexed asset, uint256 amount);
@@ -121,9 +108,6 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     /// @notice Emitted when the daily USD cap is updated
     event DailyCapUpdated(uint256 oldCap, uint256 newCap);
 
-    /// @notice Emitted when the per-block USD cap is updated
-    event PerBlockCapUpdated(uint256 oldCap, uint256 newCap);
-
     /// @notice Emitted when the slippage event threshold is updated
     event SlippageEventUsdUpdated(uint256 oldThreshold, uint256 newThreshold);
 
@@ -147,9 +131,6 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
 
     /// @notice Thrown when executeBuyback would push cumulative USD consumption past the daily cap
     error DailyCapExceeded(uint256 attempted, uint256 cap);
-
-    /// @notice Thrown when executeBuyback would push cumulative USD consumption past the per-block cap
-    error PerBlockCapExceeded(uint256 attempted, uint256 cap);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     /// @param destination_ Address where buyback proceeds land
@@ -176,19 +157,16 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
 
     /// @param accessControlManager_ Access control manager contract address
     /// @param dailyCapUsd_ Initial daily USD cap on tokenIn consumption (1e18-scaled)
-    /// @param perBlockCapUsd_ Initial per-block USD cap on tokenIn consumption (1e18-scaled)
     /// @param slippageEventUsd_ Initial absolute USD slippage threshold for AbnormalSlippage (1e18-scaled)
     function initialize(
         address accessControlManager_,
         uint256 dailyCapUsd_,
-        uint256 perBlockCapUsd_,
         uint256 slippageEventUsd_
     ) public initializer {
         __AccessControlled_init(accessControlManager_);
         __ReentrancyGuard_init();
 
         dailyCapUsd = dailyCapUsd_;
-        perBlockCapUsd = perBlockCapUsd_;
         slippageEventUsd = slippageEventUsd_;
         windowStart = block.timestamp;
     }
@@ -349,16 +327,6 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         dailyCapUsd = newCap;
     }
 
-    /// @notice Updates the per-block USD cap on tokenIn consumption
-    /// @param newCap New cap value (1e18-scaled)
-    /// @custom:event PerBlockCapUpdated emits on success
-    /// @custom:access Restricted by ACM
-    function setPerBlockCapUsd(uint256 newCap) external override {
-        _checkAccessAllowed("setPerBlockCapUsd(uint256)");
-        emit PerBlockCapUpdated(perBlockCapUsd, newCap);
-        perBlockCapUsd = newCap;
-    }
-
     /// @notice Updates the absolute USD slippage threshold above which AbnormalSlippage is emitted
     /// @param newThreshold New threshold value (1e18-scaled)
     /// @custom:event SlippageEventUsdUpdated emits on success
@@ -369,10 +337,10 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         slippageEventUsd = newThreshold;
     }
 
-    /// @dev Enforces the daily and per-block USD caps on tokenIn consumption and emits
-    ///      AbnormalSlippage when the swap returns less USD value than the input by more
-    ///      than `slippageEventUsd`. Caps revert; slippage detection is event-only.
-    ///      Window and block counters are reset lazily on the first call after expiry.
+    /// @dev Enforces the daily USD cap on tokenIn consumption and emits AbnormalSlippage
+    ///      when the swap returns less USD value than the input by more than
+    ///      `slippageEventUsd`. The cap reverts; slippage detection is event-only. The
+    ///      window counter is reset lazily on the first call after expiry.
     function _enforceCapAndDetectSlippage(
         address tokenIn,
         uint256 actualAmountIn,
@@ -391,24 +359,13 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
             _usdConsumedInWindow = 0;
         }
 
-        uint256 _usdConsumedInBlock = usdConsumedInBlock;
-        if (block.number != lastBlockTracked) {
-            lastBlockTracked = block.number;
-            _usdConsumedInBlock = 0;
-        }
-
         _usdConsumedInWindow += usdIn;
-        _usdConsumedInBlock += usdIn;
 
         if (_usdConsumedInWindow > dailyCapUsd) {
             revert DailyCapExceeded(_usdConsumedInWindow, dailyCapUsd);
         }
-        if (_usdConsumedInBlock > perBlockCapUsd) {
-            revert PerBlockCapExceeded(_usdConsumedInBlock, perBlockCapUsd);
-        }
 
         usdConsumedInWindow = _usdConsumedInWindow;
-        usdConsumedInBlock = _usdConsumedInBlock;
 
         if (usdIn > usdOut) {
             uint256 usdSlippage = usdIn - usdOut;

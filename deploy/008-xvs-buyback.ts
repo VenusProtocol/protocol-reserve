@@ -32,12 +32,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       proxyContract: "OptimizedTransparentUpgradeableProxy",
       execute: {
         methodName: "initialize",
-        args: [
-          acmAddress,
-          TOKEN_BUYBACK_DEFAULTS.dailyCapUsd,
-          TOKEN_BUYBACK_DEFAULTS.perBlockCapUsd,
-          TOKEN_BUYBACK_DEFAULTS.slippageEventUsd,
-        ],
+        args: [acmAddress, TOKEN_BUYBACK_DEFAULTS.dailyCapUsd, TOKEN_BUYBACK_DEFAULTS.slippageEventUsd],
       },
       viaAdminContract: {
         name: "DefaultProxyAdmin",
