@@ -31,8 +31,14 @@
 // TokenBuyback proxies and helper. Buyback / OPERATOR / NEW_RISK_FUND_V2_IMPL
 // are TODO until feat/VPD-1087 is deployed.
 import { expect } from "chai";
-import { BigNumber, Contract } from "ethers";
+import { BigNumber, Contract, Signer } from "ethers";
 import { ethers } from "hardhat";
+
+import { forking, initMainnetUser } from "../utils";
+
+// Block at or after VPD-1087's TokenBuyback proxies are deployed on BSC mainnet.
+// Update post-deploy.
+const FORK_BLOCK = 0;
 
 // ------------- Production constants (BSC mainnet) -------------
 const NORMAL_TIMELOCK = "0x939bD8d64c0A9583A7Dcea9933f7b21697ab6396";
@@ -163,127 +169,36 @@ const EXECUTE_BUYBACK_SIG = "executeBuyback(address,uint256,uint256,uint256,addr
 const FORWARD_BASE_ASSET_SIG = "forwardBaseAsset(address,uint256)";
 const DEFAULT_ADMIN_ROLE = "0x" + "00".repeat(32);
 
-async function impersonate(addr: string) {
-  await ethers.provider.send("hardhat_impersonateAccount", [addr]);
-  await ethers.provider.send("hardhat_setBalance", [addr, "0x21e19e0c9bab2400000"]);
-  return ethers.provider.getSigner(addr);
-}
-
 const erc20 = (token: string) => new ethers.Contract(token, ERC20_ABI, ethers.provider);
 const ownable = (addr: string) => new ethers.Contract(addr, OWNABLE2_ABI, ethers.provider);
 const converter = (addr: string) => new ethers.Contract(addr, CONVERTER_ABI, ethers.provider);
 
 const FORK_MAINNET = process.env.FORK === "true" && process.env.FORKED_NETWORK === "bscmainnet";
 
-(FORK_MAINNET ? describe : describe.skip)("TokenBuybackMigrationHelper (BSC mainnet fork)", function () {
-  let helper: Contract;
-  let timelock: any;
-  const balanceBefore = new Map<string, BigNumber>(); // key: token:recipient
+forking(FORK_BLOCK, () => {
+  if (!FORK_MAINNET) return;
 
-  before(async () => {
-    timelock = await impersonate(NORMAL_TIMELOCK);
+  describe("TokenBuybackMigrationHelper (BSC mainnet fork)", function () {
+    let helper: Contract;
+    let timelock: Signer;
+    const balanceBefore = new Map<string, BigNumber>(); // key: token:recipient
 
-    // Deploy helper. All addresses (incl. NORMAL_TIMELOCK, ACM, PSR, VTREASURY,
-    // legacy converters, the 10 new buybacks and OPERATOR) are hardcoded in the
-    // helper source as `address private constant`. The deployer must use a
-    // build of the source where the eleven TODO addresses (10 buybacks +
-    // OPERATOR) have been filled; otherwise the first downstream call inside
-    // execute() that checks a non-zero address will revert.
-    const Factory = await ethers.getContractFactory("TokenBuybackMigrationHelper", timelock);
-    helper = await Factory.deploy();
-    await helper.deployed();
+    before(async () => {
+      timelock = await initMainnetUser(NORMAL_TIMELOCK);
+      await ethers.provider.send("hardhat_setBalance", [NORMAL_TIMELOCK, "0x21e19e0c9bab2400000"]);
 
-    // Snapshot recipient balances per (token, recipient).
-    const drainPlan: { converter: string; tokens: string[]; recipient: string }[] = [
-      { converter: RISK_FUND_CONVERTER, tokens: DRAIN_TOKENS_RISK_FUND, recipient: RISK_FUND_BUYBACK },
-      { converter: USDT_PRIME_CONVERTER, tokens: DRAIN_TOKENS_USDT_PRIME, recipient: U_PRIME_BUYBACK },
-      { converter: USDC_PRIME_CONVERTER, tokens: DRAIN_TOKENS_USDC_PRIME, recipient: U_PRIME_BUYBACK },
-      { converter: BTCB_PRIME_CONVERTER, tokens: DRAIN_TOKENS_BTCB_PRIME, recipient: U_PRIME_BUYBACK },
-      { converter: ETH_PRIME_CONVERTER, tokens: DRAIN_TOKENS_ETH_PRIME, recipient: U_PRIME_BUYBACK },
-      { converter: XVS_VAULT_CONVERTER, tokens: DRAIN_TOKENS_XVS_VAULT, recipient: XVS_BUYBACK },
-    ];
-    for (const p of drainPlan) {
-      for (const t of p.tokens) {
-        const k = `${t.toLowerCase()}:${p.recipient.toLowerCase()}`;
-        if (!balanceBefore.has(k)) {
-          balanceBefore.set(k, await erc20(t).balanceOf(p.recipient));
-        }
-      }
-    }
+      // Deploy helper. All addresses (incl. NORMAL_TIMELOCK, ACM, PSR, VTREASURY,
+      // legacy converters, the 10 new buybacks and OPERATOR) are hardcoded in the
+      // helper source as `address private constant`. The deployer must use a
+      // build of the source where the eleven TODO addresses (10 buybacks +
+      // OPERATOR) have been filled; otherwise the first downstream call inside
+      // execute() that checks a non-zero address will revert.
+      const Factory = await ethers.getContractFactory("TokenBuybackMigrationHelper", timelock);
+      helper = await Factory.deploy();
+      await helper.deployed();
 
-    // Step 1: timelock grants DEFAULT_ADMIN_ROLE to helper.
-    const acm = new ethers.Contract(ACM, ACM_ABI, timelock);
-    await acm.grantRole(DEFAULT_ADMIN_ROLE, helper.address);
-
-    // Step 2: timelock acceptOwnership on each buyback (deploy script set
-    // pendingOwner = NormalTimelock).
-    for (const b of BUYBACKS) {
-      await ownable(b).connect(timelock).acceptOwnership();
-    }
-
-    // Step 3: timelock transferOwnership of buybacks + converters to helper.
-    for (const b of BUYBACKS) {
-      await ownable(b).connect(timelock).transferOwnership(helper.address);
-    }
-    for (const c of TIMELOCK_OWNED_CONVERTERS) {
-      await ownable(c).connect(timelock).transferOwnership(helper.address);
-    }
-
-    // Step 4: helper.execute() — atomic migration. No parameters; every drain
-    // tuple and router address is hardcoded inside the helper source.
-    await helper.connect(timelock).execute();
-
-    // Step 5: timelock acceptOwnership of all 16 contracts (helper handed back).
-    for (const a of [...BUYBACKS, ...TIMELOCK_OWNED_CONVERTERS]) {
-      await ownable(a).connect(timelock).acceptOwnership();
-    }
-  });
-
-  describe("post-execute state", () => {
-    it("helper.executed is true", async () => {
-      expect(await helper.executed()).to.be.true;
-    });
-
-    it("a second execute() reverts with AlreadyExecuted", async () => {
-      await expect(helper.connect(timelock).execute()).to.be.revertedWithCustomError(helper, "AlreadyExecuted");
-    });
-
-    it("helper no longer holds DEFAULT_ADMIN_ROLE on ACM", async () => {
-      const acm = new ethers.Contract(ACM, ACM_ABI, ethers.provider);
-      expect(await acm.hasRole(DEFAULT_ADMIN_ROLE, helper.address)).to.be.false;
-    });
-
-    it("NormalTimelock owns every buyback and timelock-owned converter", async () => {
-      for (const a of [...BUYBACKS, ...TIMELOCK_OWNED_CONVERTERS]) {
-        expect(await ownable(a).owner()).to.equal(NORMAL_TIMELOCK);
-      }
-    });
-
-    it("every timelock-owned converter is paused", async () => {
-      for (const c of TIMELOCK_OWNED_CONVERTERS) {
-        expect(await converter(c).conversionPaused(), c).to.be.true;
-      }
-    });
-
-    it("each timelock-owned converter has zero residual for every drained token", async () => {
-      const matrix: [string, string[]][] = [
-        [RISK_FUND_CONVERTER, DRAIN_TOKENS_RISK_FUND],
-        [USDT_PRIME_CONVERTER, DRAIN_TOKENS_USDT_PRIME],
-        [USDC_PRIME_CONVERTER, DRAIN_TOKENS_USDC_PRIME],
-        [BTCB_PRIME_CONVERTER, DRAIN_TOKENS_BTCB_PRIME],
-        [ETH_PRIME_CONVERTER, DRAIN_TOKENS_ETH_PRIME],
-        [XVS_VAULT_CONVERTER, DRAIN_TOKENS_XVS_VAULT],
-      ];
-      for (const [c, tokens] of matrix) {
-        for (const t of tokens) {
-          expect(await erc20(t).balanceOf(c), `${c}/${t}`).to.equal(0);
-        }
-      }
-    });
-
-    it("recipient buybacks received the drained balances", async () => {
-      // Sum expected delta per (token, recipient) and assert post >= before + delta.
-      const recipients: { converter: string; tokens: string[]; recipient: string }[] = [
+      // Snapshot recipient balances per (token, recipient).
+      const drainPlan: { converter: string; tokens: string[]; recipient: string }[] = [
         { converter: RISK_FUND_CONVERTER, tokens: DRAIN_TOKENS_RISK_FUND, recipient: RISK_FUND_BUYBACK },
         { converter: USDT_PRIME_CONVERTER, tokens: DRAIN_TOKENS_USDT_PRIME, recipient: U_PRIME_BUYBACK },
         { converter: USDC_PRIME_CONVERTER, tokens: DRAIN_TOKENS_USDC_PRIME, recipient: U_PRIME_BUYBACK },
@@ -291,74 +206,164 @@ const FORK_MAINNET = process.env.FORK === "true" && process.env.FORKED_NETWORK =
         { converter: ETH_PRIME_CONVERTER, tokens: DRAIN_TOKENS_ETH_PRIME, recipient: U_PRIME_BUYBACK },
         { converter: XVS_VAULT_CONVERTER, tokens: DRAIN_TOKENS_XVS_VAULT, recipient: XVS_BUYBACK },
       ];
-      for (const r of recipients) {
-        for (const t of r.tokens) {
-          const k = `${t.toLowerCase()}:${r.recipient.toLowerCase()}`;
-          const after = await erc20(t).balanceOf(r.recipient);
-          expect(after, k).to.be.gte(balanceBefore.get(k) ?? BigNumber.from(0));
+      for (const p of drainPlan) {
+        for (const t of p.tokens) {
+          const k = `${t.toLowerCase()}:${p.recipient.toLowerCase()}`;
+          if (!balanceBefore.has(k)) {
+            balanceBefore.set(k, await erc20(t).balanceOf(p.recipient));
+          }
         }
       }
-    });
 
-    it("operator has executeBuyback + forwardBaseAsset perms on every buyback", async () => {
-      const acm = new ethers.Contract(ACM, ACM_ABI, ethers.provider);
+      // Step 1: timelock grants DEFAULT_ADMIN_ROLE to helper.
+      const acm = new ethers.Contract(ACM, ACM_ABI, timelock);
+      await acm.grantRole(DEFAULT_ADMIN_ROLE, helper.address);
+
+      // Step 2: timelock acceptOwnership on each buyback (deploy script set
+      // pendingOwner = NormalTimelock).
       for (const b of BUYBACKS) {
-        expect(await acm.isAllowedToCall(OPERATOR, b, EXECUTE_BUYBACK_SIG), b).to.be.true;
-        expect(await acm.isAllowedToCall(OPERATOR, b, FORWARD_BASE_ASSET_SIG), b).to.be.true;
+        await ownable(b).connect(timelock).acceptOwnership();
       }
-    });
 
-    it("every router is allowlisted on every buyback", async () => {
-      const buybackAbi = ["function allowedRouters(address) view returns (bool)"];
+      // Step 3: timelock transferOwnership of buybacks + converters to helper.
       for (const b of BUYBACKS) {
-        const buyback = new ethers.Contract(b, buybackAbi, ethers.provider);
-        for (const r of ROUTERS) {
-          expect(await buyback.allowedRouters(r), `${b}/${r}`).to.be.true;
-        }
+        await ownable(b).connect(timelock).transferOwnership(helper.address);
+      }
+      for (const c of TIMELOCK_OWNED_CONVERTERS) {
+        await ownable(c).connect(timelock).transferOwnership(helper.address);
+      }
+
+      // Step 4: helper.execute() — atomic migration. No parameters; every drain
+      // tuple and router address is hardcoded inside the helper source.
+      await helper.connect(timelock).execute();
+
+      // Step 5: timelock acceptOwnership of all 16 contracts (helper handed back).
+      for (const a of [...BUYBACKS, ...TIMELOCK_OWNED_CONVERTERS]) {
+        await ownable(a).connect(timelock).acceptOwnership();
       }
     });
 
-    it("PSR rows: every new row present at expected percentage; no stale row remains; per-schema sum == 1e4", async () => {
-      const psr = new ethers.Contract(PSR, PSR_ABI, ethers.provider);
-      const rows: { schema: number; percentage: number; destination: string }[] = [];
-      for (let i = 0; ; i++) {
-        try {
-          const r = await psr.distributionTargets(i);
-          rows.push({
-            schema: Number(r[0]),
-            percentage: Number(r[1]),
-            destination: String(r[2]).toLowerCase(),
-          });
-        } catch {
-          break;
+    describe("post-execute state", () => {
+      it("helper.executed is true", async () => {
+        expect(await helper.executed()).to.be.true;
+      });
+
+      it("a second execute() reverts with AlreadyExecuted", async () => {
+        await expect(helper.connect(timelock).execute()).to.be.revertedWithCustomError(helper, "AlreadyExecuted");
+      });
+
+      it("helper no longer holds DEFAULT_ADMIN_ROLE on ACM", async () => {
+        const acm = new ethers.Contract(ACM, ACM_ABI, ethers.provider);
+        expect(await acm.hasRole(DEFAULT_ADMIN_ROLE, helper.address)).to.be.false;
+      });
+
+      it("NormalTimelock owns every buyback and timelock-owned converter", async () => {
+        for (const a of [...BUYBACKS, ...TIMELOCK_OWNED_CONVERTERS]) {
+          expect(await ownable(a).owner()).to.equal(NORMAL_TIMELOCK);
         }
-      }
+      });
 
-      for (const [schema, percentage, destination] of NEW_PSR_ROWS) {
-        const found = rows.find(r => r.schema === schema && r.destination === destination.toLowerCase());
-        expect(found, `missing schema=${schema} dest=${destination}`).to.not.be.undefined;
-        expect(found!.percentage).to.equal(percentage);
-      }
+      it("every timelock-owned converter is paused", async () => {
+        for (const c of TIMELOCK_OWNED_CONVERTERS) {
+          expect(await converter(c).conversionPaused(), c).to.be.true;
+        }
+      });
 
-      for (const r of rows) {
-        expect(STALE_DESTINATIONS.has(r.destination), `stale row left: ${r.destination}`).to.be.false;
-      }
+      it("each timelock-owned converter has zero residual for every drained token", async () => {
+        const matrix: [string, string[]][] = [
+          [RISK_FUND_CONVERTER, DRAIN_TOKENS_RISK_FUND],
+          [USDT_PRIME_CONVERTER, DRAIN_TOKENS_USDT_PRIME],
+          [USDC_PRIME_CONVERTER, DRAIN_TOKENS_USDC_PRIME],
+          [BTCB_PRIME_CONVERTER, DRAIN_TOKENS_BTCB_PRIME],
+          [ETH_PRIME_CONVERTER, DRAIN_TOKENS_ETH_PRIME],
+          [XVS_VAULT_CONVERTER, DRAIN_TOKENS_XVS_VAULT],
+        ];
+        for (const [c, tokens] of matrix) {
+          for (const t of tokens) {
+            expect(await erc20(t).balanceOf(c), `${c}/${t}`).to.equal(0);
+          }
+        }
+      });
 
-      const totals: Record<number, number> = { 0: 0, 1: 0 };
-      for (const r of rows) totals[r.schema] += r.percentage;
-      expect(totals[0]).to.equal(10000);
-      expect(totals[1]).to.equal(10000);
+      it("recipient buybacks received the drained balances", async () => {
+        // Sum expected delta per (token, recipient) and assert post >= before + delta.
+        const recipients: { converter: string; tokens: string[]; recipient: string }[] = [
+          { converter: RISK_FUND_CONVERTER, tokens: DRAIN_TOKENS_RISK_FUND, recipient: RISK_FUND_BUYBACK },
+          { converter: USDT_PRIME_CONVERTER, tokens: DRAIN_TOKENS_USDT_PRIME, recipient: U_PRIME_BUYBACK },
+          { converter: USDC_PRIME_CONVERTER, tokens: DRAIN_TOKENS_USDC_PRIME, recipient: U_PRIME_BUYBACK },
+          { converter: BTCB_PRIME_CONVERTER, tokens: DRAIN_TOKENS_BTCB_PRIME, recipient: U_PRIME_BUYBACK },
+          { converter: ETH_PRIME_CONVERTER, tokens: DRAIN_TOKENS_ETH_PRIME, recipient: U_PRIME_BUYBACK },
+          { converter: XVS_VAULT_CONVERTER, tokens: DRAIN_TOKENS_XVS_VAULT, recipient: XVS_BUYBACK },
+        ];
+        for (const r of recipients) {
+          for (const t of r.tokens) {
+            const k = `${t.toLowerCase()}:${r.recipient.toLowerCase()}`;
+            const after = await erc20(t).balanceOf(r.recipient);
+            expect(after, k).to.be.gte(balanceBefore.get(k) ?? BigNumber.from(0));
+          }
+        }
+      });
+
+      it("operator has executeBuyback + forwardBaseAsset perms on every buyback", async () => {
+        const acm = new ethers.Contract(ACM, ACM_ABI, ethers.provider);
+        for (const b of BUYBACKS) {
+          expect(await acm.isAllowedToCall(OPERATOR, b, EXECUTE_BUYBACK_SIG), b).to.be.true;
+          expect(await acm.isAllowedToCall(OPERATOR, b, FORWARD_BASE_ASSET_SIG), b).to.be.true;
+        }
+      });
+
+      it("every router is allowlisted on every buyback", async () => {
+        const buybackAbi = ["function allowedRouters(address) view returns (bool)"];
+        for (const b of BUYBACKS) {
+          const buyback = new ethers.Contract(b, buybackAbi, ethers.provider);
+          for (const r of ROUTERS) {
+            expect(await buyback.allowedRouters(r), `${b}/${r}`).to.be.true;
+          }
+        }
+      });
+
+      it("PSR rows: every new row present at expected percentage; no stale row remains; per-schema sum == 1e4", async () => {
+        const psr = new ethers.Contract(PSR, PSR_ABI, ethers.provider);
+        const rows: { schema: number; percentage: number; destination: string }[] = [];
+        for (let i = 0; ; i++) {
+          try {
+            const r = await psr.distributionTargets(i);
+            rows.push({
+              schema: Number(r[0]),
+              percentage: Number(r[1]),
+              destination: String(r[2]).toLowerCase(),
+            });
+          } catch {
+            break;
+          }
+        }
+
+        for (const [schema, percentage, destination] of NEW_PSR_ROWS) {
+          const found = rows.find(r => r.schema === schema && r.destination === destination.toLowerCase());
+          expect(found, `missing schema=${schema} dest=${destination}`).to.not.be.undefined;
+          expect(found!.percentage).to.equal(percentage);
+        }
+
+        for (const r of rows) {
+          expect(STALE_DESTINATIONS.has(r.destination), `stale row left: ${r.destination}`).to.be.false;
+        }
+
+        const totals: Record<number, number> = { 0: 0, 1: 0 };
+        for (const r of rows) totals[r.schema] += r.percentage;
+        expect(totals[0]).to.equal(10000);
+        expect(totals[1]).to.equal(10000);
+      });
     });
-  });
 
-  describe("guards", () => {
-    it("execute() reverts when called by anyone other than NormalTimelock", async () => {
-      // Fresh deployment to test the guard cleanly.
-      const Factory = await ethers.getContractFactory("TokenBuybackMigrationHelper", timelock);
-      const fresh = await Factory.deploy();
-      await fresh.deployed();
-      const [other] = await ethers.getSigners();
-      await expect(fresh.connect(other).execute()).to.be.revertedWithCustomError(fresh, "NotTimelock");
+    describe("guards", () => {
+      it("execute() reverts when called by anyone other than NormalTimelock", async () => {
+        // Fresh deployment to test the guard cleanly.
+        const Factory = await ethers.getContractFactory("TokenBuybackMigrationHelper", timelock);
+        const fresh = await Factory.deploy();
+        await fresh.deployed();
+        const [other] = await ethers.getSigners();
+        await expect(fresh.connect(other).execute()).to.be.revertedWithCustomError(fresh, "NotTimelock");
+      });
     });
   });
 });
