@@ -368,6 +368,8 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         uint256 amountOut
     ) internal {
         ResilientOracleInterface oracle = ResilientOracleInterface(RESILIENT_ORACLE);
+        oracle.updateAssetPrice(tokenIn);
+        oracle.updateAssetPrice(BASE_ASSET);
         uint256 priceIn = oracle.getPrice(tokenIn);
         uint256 priceBase = oracle.getPrice(BASE_ASSET);
 
