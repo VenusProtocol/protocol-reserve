@@ -9943,6 +9943,81 @@
         }
       ]
     },
+    "TokenBuybackMigrationHelper": {
+      "address": "0x34c62aFcF8Bb18614329fC4d3266a9aFd82A8bdc",
+      "abi": [
+        {
+          "inputs": [],
+          "name": "AlreadyExecuted",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "NotTimelock",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "contractAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "expected",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "actual",
+              "type": "address"
+            }
+          ],
+          "name": "PendingOwnerMismatch",
+          "type": "error"
+        },
+        {
+          "anonymous": false,
+          "inputs": [],
+          "name": "Executed",
+          "type": "event"
+        },
+        {
+          "inputs": [],
+          "name": "DEFAULT_ADMIN_ROLE",
+          "outputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "execute",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "executed",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        }
+      ]
+    },
     "USDCPrimeConverter": {
       "address": "0xa758c9C215B6c4198F0a0e3FA46395Fa15Db691b",
       "abi": [
