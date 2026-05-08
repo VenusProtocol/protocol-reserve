@@ -166,6 +166,9 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         uint256 dailyCapUsd_,
         uint256 slippageEventUsd_
     ) public initializer {
+        ensureNonzeroValue(dailyCapUsd_);
+        ensureNonzeroValue(slippageEventUsd_);
+
         __AccessControlled_init(accessControlManager_);
         __ReentrancyGuard_init();
 
@@ -326,6 +329,7 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     /// @custom:access Restricted by ACM
     function setDailyCapUsd(uint256 newCap) external override {
         _checkAccessAllowed("setDailyCapUsd(uint256)");
+        ensureNonzeroValue(newCap);
         emit DailyCapUpdated(dailyCapUsd, newCap);
         dailyCapUsd = newCap;
     }
@@ -336,6 +340,7 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     /// @custom:access Restricted by ACM
     function setSlippageEventUsd(uint256 newThreshold) external override {
         _checkAccessAllowed("setSlippageEventUsd(uint256)");
+        ensureNonzeroValue(newThreshold);
         emit SlippageEventUsdUpdated(slippageEventUsd, newThreshold);
         slippageEventUsd = newThreshold;
     }

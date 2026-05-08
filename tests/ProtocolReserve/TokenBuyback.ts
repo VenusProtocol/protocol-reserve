@@ -202,6 +202,34 @@ describe("TokenBuyback", () => {
         buyback.initialize(accessControl.address, TEST_DAILY_CAP_USD, TEST_SLIPPAGE_EVENT_USD),
       ).to.be.revertedWith("Initializable: contract is already initialized");
     });
+
+    it("initialize reverts on zero dailyCapUsd", async () => {
+      const TokenBuybackFactory = await smock.mock<TokenBuyback__factory>("TokenBuyback");
+      await expect(
+        upgrades.deployProxy(TokenBuybackFactory, [accessControl.address, 0, TEST_SLIPPAGE_EVENT_USD], {
+          constructorArgs: [
+            await destinationEOA.getAddress(),
+            baseAsset.address,
+            await psr.getAddress(),
+            oracle.address,
+          ],
+        }),
+      ).to.be.reverted;
+    });
+
+    it("initialize reverts on zero slippageEventUsd", async () => {
+      const TokenBuybackFactory = await smock.mock<TokenBuyback__factory>("TokenBuyback");
+      await expect(
+        upgrades.deployProxy(TokenBuybackFactory, [accessControl.address, TEST_DAILY_CAP_USD, 0], {
+          constructorArgs: [
+            await destinationEOA.getAddress(),
+            baseAsset.address,
+            await psr.getAddress(),
+            oracle.address,
+          ],
+        }),
+      ).to.be.reverted;
+    });
   });
 
   describe("updateAssetsState", () => {
@@ -756,6 +784,14 @@ describe("TokenBuyback", () => {
         buyback,
         "Unauthorized",
       );
+    });
+
+    it("setDailyCapUsd reverts on zero", async () => {
+      await expect(buyback.setDailyCapUsd(0)).to.be.revertedWithCustomError(buyback, "ZeroValueNotAllowed");
+    });
+
+    it("setSlippageEventUsd reverts on zero", async () => {
+      await expect(buyback.setSlippageEventUsd(0)).to.be.revertedWithCustomError(buyback, "ZeroValueNotAllowed");
     });
   });
 
