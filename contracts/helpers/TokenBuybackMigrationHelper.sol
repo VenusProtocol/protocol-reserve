@@ -361,65 +361,90 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
         ITokenConverterForMigration(XVS_VAULT_CONVERTER).pauseConversion();
     }
 
+    /// @dev PSR enforces `distributionTargets.length <= maxLoopsLimit` (mainnet:
+    ///      20) at the end of every `addOrUpdateDistributionConfigs` call. The
+    ///      18 new rows would push pre-existing length 12 to 30 in one bundled
+    ///      call, breaching the cap. This routine instead splits the rewrite
+    ///      into phases and removes already-zero stale rows between adds, so
+    ///      the array length stays ≤ 20 at every checkpoint while preserving
+    ///      PSR's per-schema sum invariant (1e4 or 0) at the end of each add
+    ///      call. Sequence (mainnet pre-state: schema0 sum=1e4 over 4 nonzero
+    ///      + 4 zero rows; schema1 sum=1e4 over 3 nonzero + 1 zero row):
+    ///        A. Remove 5 pre-existing zero rows               (length 12 → 7)
+    ///        B. Schema 0: zero 4 stale + push 10 new          (length 7  → 17)
+    ///        C. Remove 4 newly-zeroed schema 0 stale          (length 17 → 13)
+    ///        D. Schema 1: zero {XVS_VAULT, RISK_FUND} + push
+    ///           {XVS_BUYBACK, RISK_FUND_BUYBACK}              (length 13 → 15)
+    ///        E. Remove 2 newly-zeroed schema 1 stale          (length 15 → 13)
+    ///        F. Schema 1: zero VTREASURY + push 6 treasury    (length 13 → 19)
+    ///        G. Remove zeroed VTREASURY schema 1              (length 19 → 18)
     function _rewireProtocolShareReserve() internal {
         IPsrForMigration psr = IPsrForMigration(PSR);
 
-        // 18 new buyback rows + 12 stale rows zeroed atomically. The PSR's
-        // `_ensurePercentages()` validates the per-schema sum (1e4 or 0) at the end
-        // of this single call; bundling new + zeroing in one batch keeps the
-        // invariant valid.
-        IPsrForMigration.DistributionConfig[] memory configs = new IPsrForMigration.DistributionConfig[](30);
+        // ---- Phase A: remove pre-existing zero stale rows (5) ----
+        psr.removeDistributionConfig(0, USDC_PRIME_CONVERTER);
+        psr.removeDistributionConfig(0, BTCB_PRIME_CONVERTER);
+        psr.removeDistributionConfig(0, ETH_PRIME_CONVERTER);
+        psr.removeDistributionConfig(0, WBNB_BURN_CONVERTER);
+        psr.removeDistributionConfig(1, WBNB_BURN_CONVERTER);
 
-        // ---- Schema 0 (PROTOCOL_RESERVES = spread) — sums to 10000 ----
-        // treasury group total: 4000 (was VTREASURY 4000)
-        configs[0] = IPsrForMigration.DistributionConfig(0, 1200, U_TREASURY_BUYBACK);
-        configs[1] = IPsrForMigration.DistributionConfig(0, 600, BTCB_TREASURY_BUYBACK);
-        configs[2] = IPsrForMigration.DistributionConfig(0, 600, ETH_TREASURY_BUYBACK);
-        configs[3] = IPsrForMigration.DistributionConfig(0, 600, USDT_TREASURY_BUYBACK);
-        configs[4] = IPsrForMigration.DistributionConfig(0, 600, USDC_TREASURY_BUYBACK);
-        configs[5] = IPsrForMigration.DistributionConfig(0, 400, XVS_TREASURY_BUYBACK);
-        // prime group total: 2000 (was USDT_PRIME_CONVERTER 2000)
-        configs[6] = IPsrForMigration.DistributionConfig(0, 1000, USDT_PRIME_BUYBACK);
-        configs[7] = IPsrForMigration.DistributionConfig(0, 1000, U_PRIME_BUYBACK);
-        // riskFund group total: 2000
-        configs[8] = IPsrForMigration.DistributionConfig(0, 2000, RISK_FUND_BUYBACK);
-        // xvsStore group total: 2000
-        configs[9] = IPsrForMigration.DistributionConfig(0, 2000, XVS_BUYBACK);
-
-        // ---- Schema 1 (ADDITIONAL_REVENUE = liquidation) — sums to 10000 ----
-        configs[10] = IPsrForMigration.DistributionConfig(1, 1800, U_TREASURY_BUYBACK);
-        configs[11] = IPsrForMigration.DistributionConfig(1, 900, BTCB_TREASURY_BUYBACK);
-        configs[12] = IPsrForMigration.DistributionConfig(1, 900, ETH_TREASURY_BUYBACK);
-        configs[13] = IPsrForMigration.DistributionConfig(1, 900, USDT_TREASURY_BUYBACK);
-        configs[14] = IPsrForMigration.DistributionConfig(1, 900, USDC_TREASURY_BUYBACK);
-        configs[15] = IPsrForMigration.DistributionConfig(1, 600, XVS_TREASURY_BUYBACK);
-        configs[16] = IPsrForMigration.DistributionConfig(1, 2000, RISK_FUND_BUYBACK);
-        configs[17] = IPsrForMigration.DistributionConfig(1, 2000, XVS_BUYBACK);
-
-        // ---- Stale rows zeroed (12) ----
-        configs[18] = IPsrForMigration.DistributionConfig(0, 0, VTREASURY);
-        configs[19] = IPsrForMigration.DistributionConfig(0, 0, XVS_VAULT_CONVERTER);
-        configs[20] = IPsrForMigration.DistributionConfig(0, 0, USDT_PRIME_CONVERTER);
-        configs[21] = IPsrForMigration.DistributionConfig(0, 0, RISK_FUND_CONVERTER);
-        configs[22] = IPsrForMigration.DistributionConfig(0, 0, USDC_PRIME_CONVERTER);
-        configs[23] = IPsrForMigration.DistributionConfig(0, 0, BTCB_PRIME_CONVERTER);
-        configs[24] = IPsrForMigration.DistributionConfig(0, 0, ETH_PRIME_CONVERTER);
-        configs[25] = IPsrForMigration.DistributionConfig(0, 0, WBNB_BURN_CONVERTER);
-        configs[26] = IPsrForMigration.DistributionConfig(1, 0, VTREASURY);
-        configs[27] = IPsrForMigration.DistributionConfig(1, 0, XVS_VAULT_CONVERTER);
-        configs[28] = IPsrForMigration.DistributionConfig(1, 0, RISK_FUND_CONVERTER);
-        configs[29] = IPsrForMigration.DistributionConfig(1, 0, WBNB_BURN_CONVERTER);
-
-        psr.addOrUpdateDistributionConfigs(configs);
-
-        // Delete the zeroed array entries so the on-chain `distributionTargets` length
-        // shrinks back to the new-rows-only count.
-        for (uint256 i = 18; i < 30; ) {
-            psr.removeDistributionConfig(configs[i].schema, configs[i].destination);
-            unchecked {
-                ++i;
-            }
+        // ---- Phase B: schema 0 — zero 4 nonzero stale + push 10 new buybacks ----
+        {
+            IPsrForMigration.DistributionConfig[] memory s0 = new IPsrForMigration.DistributionConfig[](14);
+            // updates (no push): drops 10000 from schema 0
+            s0[0] = IPsrForMigration.DistributionConfig(0, 0, VTREASURY);
+            s0[1] = IPsrForMigration.DistributionConfig(0, 0, USDT_PRIME_CONVERTER);
+            s0[2] = IPsrForMigration.DistributionConfig(0, 0, RISK_FUND_CONVERTER);
+            s0[3] = IPsrForMigration.DistributionConfig(0, 0, XVS_VAULT_CONVERTER);
+            // pushes: adds 10000 to schema 0 (sum 10000 preserved)
+            s0[4] = IPsrForMigration.DistributionConfig(0, 1200, U_TREASURY_BUYBACK);
+            s0[5] = IPsrForMigration.DistributionConfig(0, 600, BTCB_TREASURY_BUYBACK);
+            s0[6] = IPsrForMigration.DistributionConfig(0, 600, ETH_TREASURY_BUYBACK);
+            s0[7] = IPsrForMigration.DistributionConfig(0, 600, USDT_TREASURY_BUYBACK);
+            s0[8] = IPsrForMigration.DistributionConfig(0, 600, USDC_TREASURY_BUYBACK);
+            s0[9] = IPsrForMigration.DistributionConfig(0, 400, XVS_TREASURY_BUYBACK);
+            s0[10] = IPsrForMigration.DistributionConfig(0, 1000, USDT_PRIME_BUYBACK);
+            s0[11] = IPsrForMigration.DistributionConfig(0, 1000, U_PRIME_BUYBACK);
+            s0[12] = IPsrForMigration.DistributionConfig(0, 2000, RISK_FUND_BUYBACK);
+            s0[13] = IPsrForMigration.DistributionConfig(0, 2000, XVS_BUYBACK);
+            psr.addOrUpdateDistributionConfigs(s0);
         }
+
+        // ---- Phase C: remove now-zero schema 0 stale rows (4) ----
+        psr.removeDistributionConfig(0, VTREASURY);
+        psr.removeDistributionConfig(0, USDT_PRIME_CONVERTER);
+        psr.removeDistributionConfig(0, RISK_FUND_CONVERTER);
+        psr.removeDistributionConfig(0, XVS_VAULT_CONVERTER);
+
+        // ---- Phase D: schema 1 partial — replace 4000 (XVS_VAULT + RISK_FUND) ----
+        {
+            IPsrForMigration.DistributionConfig[] memory s1a = new IPsrForMigration.DistributionConfig[](4);
+            s1a[0] = IPsrForMigration.DistributionConfig(1, 0, XVS_VAULT_CONVERTER);
+            s1a[1] = IPsrForMigration.DistributionConfig(1, 0, RISK_FUND_CONVERTER);
+            s1a[2] = IPsrForMigration.DistributionConfig(1, 2000, XVS_BUYBACK);
+            s1a[3] = IPsrForMigration.DistributionConfig(1, 2000, RISK_FUND_BUYBACK);
+            psr.addOrUpdateDistributionConfigs(s1a);
+        }
+
+        // ---- Phase E: remove now-zero schema 1 stale rows (2) ----
+        psr.removeDistributionConfig(1, XVS_VAULT_CONVERTER);
+        psr.removeDistributionConfig(1, RISK_FUND_CONVERTER);
+
+        // ---- Phase F: schema 1 treasury — replace VTREASURY 6000 with 6 rows summing 6000 ----
+        {
+            IPsrForMigration.DistributionConfig[] memory s1b = new IPsrForMigration.DistributionConfig[](7);
+            s1b[0] = IPsrForMigration.DistributionConfig(1, 0, VTREASURY);
+            s1b[1] = IPsrForMigration.DistributionConfig(1, 1800, U_TREASURY_BUYBACK);
+            s1b[2] = IPsrForMigration.DistributionConfig(1, 900, BTCB_TREASURY_BUYBACK);
+            s1b[3] = IPsrForMigration.DistributionConfig(1, 900, ETH_TREASURY_BUYBACK);
+            s1b[4] = IPsrForMigration.DistributionConfig(1, 900, USDT_TREASURY_BUYBACK);
+            s1b[5] = IPsrForMigration.DistributionConfig(1, 900, USDC_TREASURY_BUYBACK);
+            s1b[6] = IPsrForMigration.DistributionConfig(1, 600, XVS_TREASURY_BUYBACK);
+            psr.addOrUpdateDistributionConfigs(s1b);
+        }
+
+        // ---- Phase G: remove now-zero VTREASURY schema 1 ----
+        psr.removeDistributionConfig(1, VTREASURY);
     }
 
     function _revokeTransientAcmPermissions() internal {

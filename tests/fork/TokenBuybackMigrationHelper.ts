@@ -36,9 +36,9 @@ import { ethers } from "hardhat";
 
 import { forking, initMainnetUser } from "../utils";
 
-// Block at or after VPD-1087's TokenBuyback proxies are deployed on BSC mainnet.
-// Update post-deploy.
-const FORK_BLOCK = 0;
+// Block at or after VPD-1087's TokenBuyback proxies + the migration helper are
+// deployed on BSC mainnet. Helper deployment block: 97105830.
+const FORK_BLOCK = 97105830;
 
 // ------------- Production constants (BSC mainnet) -------------
 const NORMAL_TIMELOCK = "0x939bD8d64c0A9583A7Dcea9933f7b21697ab6396";
@@ -80,18 +80,18 @@ const ROUTERS = [
   "0x1906c1d672b88cd1b9ac7593301ca990f94eae07", // Uni Universal
 ];
 
-// TODOs filled post-deploy on feat/VPD-1087
-const OPERATOR = ethers.constants.AddressZero;
-const RISK_FUND_BUYBACK = ethers.constants.AddressZero;
-const USDT_PRIME_BUYBACK = ethers.constants.AddressZero;
-const U_PRIME_BUYBACK = ethers.constants.AddressZero;
-const XVS_BUYBACK = ethers.constants.AddressZero;
-const U_TREASURY_BUYBACK = ethers.constants.AddressZero;
-const BTCB_TREASURY_BUYBACK = ethers.constants.AddressZero;
-const ETH_TREASURY_BUYBACK = ethers.constants.AddressZero;
-const USDT_TREASURY_BUYBACK = ethers.constants.AddressZero;
-const USDC_TREASURY_BUYBACK = ethers.constants.AddressZero;
-const XVS_TREASURY_BUYBACK = ethers.constants.AddressZero;
+// Mirror the helper's hardcoded production constants (BSC mainnet).
+const OPERATOR = "0x88ac9ca69A371f47798Df18e5C36449af44526a4";
+const RISK_FUND_BUYBACK = "0xfffB20c23650B27126815994f3F07eF6B46aea60";
+const USDT_PRIME_BUYBACK = "0x0191Bb3CD28A96691F5EC5066ad42A0373ae11C6";
+const U_PRIME_BUYBACK = "0xFd50bd4107705929df73Ac683BD505232BA9E9dB";
+const XVS_BUYBACK = "0xBaAc819aE93b29fA6512a095CA00255a4F05b027";
+const U_TREASURY_BUYBACK = "0xef7cb42a7EBD4b011905D20Fc8038a603c3f22E4";
+const BTCB_TREASURY_BUYBACK = "0x69739FF52e90BC93dCaEd5a2431072b5082d326D";
+const ETH_TREASURY_BUYBACK = "0x9e0543F9E09fb5b8a58F73d11967DC894dbD40a7";
+const USDT_TREASURY_BUYBACK = "0xBF858c95D778022b48E6Ad343D3d644017fb0ca7";
+const USDC_TREASURY_BUYBACK = "0xFB5FA544dBf39983198BDD01e2c26E3AB597e22A";
+const XVS_TREASURY_BUYBACK = "0x01D0f07D389692D386EB8D09Da3bbCa5C83be551";
 
 const BUYBACKS = [
   RISK_FUND_BUYBACK,
@@ -161,7 +161,7 @@ const CONVERTER_ABI = [...OWNABLE2_ABI, "function conversionPaused() view return
 const ACM_ABI = [
   "function grantRole(bytes32 role, address account)",
   "function hasRole(bytes32 role, address account) view returns (bool)",
-  "function isAllowedToCall(address,address,string) view returns (bool)",
+  "function isAllowedToCall(address account, string functionSig) view returns (bool)",
 ];
 const PSR_ABI = ["function distributionTargets(uint256) view returns (uint8,uint16,address)"];
 
@@ -307,8 +307,10 @@ forking(FORK_BLOCK, () => {
       it("operator has executeBuyback + forwardBaseAsset perms on every buyback", async () => {
         const acm = new ethers.Contract(ACM, ACM_ABI, ethers.provider);
         for (const b of BUYBACKS) {
-          expect(await acm.isAllowedToCall(OPERATOR, b, EXECUTE_BUYBACK_SIG), b).to.be.true;
-          expect(await acm.isAllowedToCall(OPERATOR, b, FORWARD_BASE_ASSET_SIG), b).to.be.true;
+          const buybackSigner = await initMainnetUser(b);
+          await ethers.provider.send("hardhat_setBalance", [b, "0xde0b6b3a7640000"]);
+          expect(await acm.connect(buybackSigner).isAllowedToCall(OPERATOR, EXECUTE_BUYBACK_SIG), b).to.be.true;
+          expect(await acm.connect(buybackSigner).isAllowedToCall(OPERATOR, FORWARD_BASE_ASSET_SIG), b).to.be.true;
         }
       });
 
