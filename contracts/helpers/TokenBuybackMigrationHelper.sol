@@ -107,16 +107,16 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
     address private constant OPERATOR = 0x88ac9ca69A371f47798Df18e5C36449af44526a4;
 
     // ----- New TokenBuyback proxies -----
-    address private constant RISK_FUND_BUYBACK = address(0); // TODO: fill before deploy
-    address private constant USDT_PRIME_BUYBACK = address(0); // TODO: fill before deploy
-    address private constant U_PRIME_BUYBACK = address(0); // TODO: fill before deploy
-    address private constant XVS_BUYBACK = address(0); // TODO: fill before deploy
-    address private constant U_TREASURY_BUYBACK = address(0); // TODO: fill before deploy
-    address private constant BTCB_TREASURY_BUYBACK = address(0); // TODO: fill before deploy
-    address private constant ETH_TREASURY_BUYBACK = address(0); // TODO: fill before deploy
-    address private constant USDT_TREASURY_BUYBACK = address(0); // TODO: fill before deploy
-    address private constant USDC_TREASURY_BUYBACK = address(0); // TODO: fill before deploy
-    address private constant XVS_TREASURY_BUYBACK = address(0); // TODO: fill before deploy
+    address private constant RISK_FUND_BUYBACK = 0xfffB20c23650B27126815994f3F07eF6B46aea60;
+    address private constant USDT_PRIME_BUYBACK = 0x0191Bb3CD28A96691F5EC5066ad42A0373ae11C6;
+    address private constant U_PRIME_BUYBACK = 0xFd50bd4107705929df73Ac683BD505232BA9E9dB;
+    address private constant XVS_BUYBACK = 0xBaAc819aE93b29fA6512a095CA00255a4F05b027;
+    address private constant U_TREASURY_BUYBACK = 0xef7cb42a7EBD4b011905D20Fc8038a603c3f22E4;
+    address private constant BTCB_TREASURY_BUYBACK = 0x69739FF52e90BC93dCaEd5a2431072b5082d326D;
+    address private constant ETH_TREASURY_BUYBACK = 0x9e0543F9E09fb5b8a58F73d11967DC894dbD40a7;
+    address private constant USDT_TREASURY_BUYBACK = 0xBF858c95D778022b48E6Ad343D3d644017fb0ca7;
+    address private constant USDC_TREASURY_BUYBACK = 0xFB5FA544dBf39983198BDD01e2c26E3AB597e22A;
+    address private constant XVS_TREASURY_BUYBACK = 0x01D0f07D389692D386EB8D09Da3bbCa5C83be551;
 
     // -------------------------------------------------------------------------
     // BSC core pool ERC20 universe (47 tokens) — every underlying of every
