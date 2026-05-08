@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { TOKEN_BUYBACK_DEFAULTS, getContractAddressOrNullAddress } from "../helpers/deploymentConfig";
+import { TOKEN_BUYBACK_DEFAULTS } from "../helpers/deploymentConfig";
 
 // U token is not registered in `@venusprotocol/venus-protocol` external deployments.
 // Hard-coded per-network so TokenBuyback's immutable BASE_ASSET can be set at deploy.
@@ -20,6 +20,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const vTreasuryAddress = (await deployments.get("VTreasury")).address;
   const psrAddress = (await deployments.get("ProtocolShareReserve")).address;
   const oracleAddress = (await deployments.get("ResilientOracle")).address;
+  const timelockAddress = (await ethers.getContract("NormalTimelock")).address;
 
   const baseAssets: Record<string, string> = {
     UTreasuryBuyback: U_ADDRESSES[hre.network.name],
@@ -29,8 +30,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     USDCTreasuryBuyback: (await deployments.get("USDC")).address,
     XVSTreasuryBuyback: (await deployments.get("XVS")).address,
   };
-
-  const proxyAdminOwner = await getContractAddressOrNullAddress(deployments, "NormalTimelock");
 
   const defaultProxyAdmin = await hre.artifacts.readArtifact(
     "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
@@ -46,7 +45,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       contract: "TokenBuyback",
       args: [vTreasuryAddress, baseAsset, psrAddress, oracleAddress],
       proxy: {
-        owner: proxyAdminOwner,
+        owner: timelockAddress,
         proxyContract: "OptimizedTransparentUpgradeableProxy",
         execute: {
           methodName: "initialize",
@@ -61,7 +60,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     // transfer ownership to timelock
     {
-      const timelockAddress = await getContractAddressOrNullAddress(deployments, "NormalTimelock");
       const buyback = await ethers.getContract(instanceName);
       const currentOwner = (await buyback.owner()).toLowerCase();
       const pendingOwner = (await buyback.pendingOwner()).toLowerCase();

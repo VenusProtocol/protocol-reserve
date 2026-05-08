@@ -13,12 +13,10 @@ import {
   IShortfall,
   MockToken,
   MockToken__factory,
-  RiskFundConverter,
   RiskFundV2,
   RiskFundV2__factory,
 } from "../../typechain";
 
-let riskFundConverter: FakeContract<RiskFundConverter>;
 let shortfall: FakeContract<IShortfall>;
 let riskFund: MockContract<RiskFundV2>;
 let tokenA: MockContract<MockToken>;
@@ -34,7 +32,6 @@ const riskFundFixture = async (): Promise<void> => {
   riskFund = await RiskFund.deploy();
 
   shortfall = await smock.fake<IShortfall>("IShortfall");
-  riskFundConverter = await smock.fake<RiskFundConverter>("RiskFundConverter");
   comptrollerA = await smock.fake<IComptroller>("IComptroller");
   acm = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
 
@@ -43,7 +40,6 @@ const riskFundFixture = async (): Promise<void> => {
   await tokenA.faucet(parseUnits("1000", 18));
 
   await riskFund.setVariable("_owner", await admin.getAddress());
-  await riskFund.setVariable("riskFundConverter", riskFundConverter.address);
   await riskFund.setVariable("shortfall", shortfall.address);
   await riskFund.setVariable("_accessControlManager", acm.address);
 

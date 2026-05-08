@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { TOKEN_BUYBACK_DEFAULTS, getContractAddressOrNullAddress } from "../helpers/deploymentConfig";
+import { TOKEN_BUYBACK_DEFAULTS } from "../helpers/deploymentConfig";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -14,8 +14,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const usdtAddress = (await deployments.get("USDT")).address;
   const psrAddress = (await deployments.get("ProtocolShareReserve")).address;
   const oracleAddress = (await deployments.get("ResilientOracle")).address;
-
-  const proxyAdminOwner = await getContractAddressOrNullAddress(deployments, "NormalTimelock");
+  const timelockAddress = (await ethers.getContract("NormalTimelock")).address;
 
   const defaultProxyAdmin = await hre.artifacts.readArtifact(
     "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
@@ -28,7 +27,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     contract: "TokenBuyback",
     args: [riskFundAddress, usdtAddress, psrAddress, oracleAddress],
     proxy: {
-      owner: proxyAdminOwner,
+      owner: timelockAddress,
       proxyContract: "OptimizedTransparentUpgradeableProxy",
       execute: {
         methodName: "initialize",
@@ -43,7 +42,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   // transfer ownership to timelock
   {
-    const timelockAddress = await getContractAddressOrNullAddress(deployments, "NormalTimelock");
     const riskFundBuyback = await ethers.getContract("RiskFundBuyback");
     const currentOwner = (await riskFundBuyback.owner()).toLowerCase();
     const pendingOwner = (await riskFundBuyback.pendingOwner()).toLowerCase();
