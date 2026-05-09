@@ -11,6 +11,7 @@ import {
   MockRouter__factory,
   MockToken,
   MockToken__factory,
+  ResilientOracleInterface,
   TokenBuyback,
   TokenBuyback__factory,
 } from "../../typechain";
@@ -22,10 +23,21 @@ const AMOUNT_IN = parseUnits("100", 18);
 const AMOUNT_OUT = parseUnits("200", 6);
 const MIN_AMOUNT_OUT = parseUnits("190", 6);
 
+// Test cap is intentionally large so the cap path is inert by default; tests that
+// exercise cap behaviour override this via setDailyCapUsd.
+const TEST_DAILY_CAP_USD = parseUnits("1000000000", 18);
+const TEST_SLIPPAGE_EVENT_USD = parseUnits("500", 18);
+
+// Oracle prices follow the Venus convention `getPrice(asset)` = USD * 10^(36 - decimals).
+// tokenIn has 18 decimals → price = 1e18 represents $1; baseAsset has 6 decimals → 1e30 = $1.
+const TOKEN_IN_PRICE = parseUnits("1", 18);
+const BASE_ASSET_PRICE = parseUnits("1", 30);
+
 let accessControl: FakeContract<IAccessControlManagerV8>;
 let tokenIn: MockContract<MockToken>;
 let baseAsset: MockContract<MockToken>;
 let router: MockRouter;
+let oracle: FakeContract<ResilientOracleInterface>;
 let buyback: MockContract<TokenBuyback>;
 let buybackAlt: MockContract<TokenBuyback>;
 let owner: Signer;
@@ -37,12 +49,18 @@ let psr: Signer;
 
 const BUYBACK_SIG = "executeBuyback(address,uint256,uint256,uint256,address,bytes,address)";
 const FORWARD_SIG = "forwardBaseAsset(address,uint256)";
+const SET_DAILY_CAP_SIG = "setDailyCapUsd(uint256)";
+const SET_SLIPPAGE_EVENT_SIG = "setSlippageEventUsd(uint256)";
 
 async function deployBuyback(destination: string): Promise<MockContract<TokenBuyback>> {
   const TokenBuybackFactory = await smock.mock<TokenBuyback__factory>("TokenBuyback");
-  return upgrades.deployProxy(TokenBuybackFactory, [accessControl.address], {
-    constructorArgs: [destination, baseAsset.address, await psr.getAddress()],
-  });
+  return upgrades.deployProxy(
+    TokenBuybackFactory,
+    [accessControl.address, TEST_DAILY_CAP_USD, TEST_SLIPPAGE_EVENT_USD],
+    {
+      constructorArgs: [destination, baseAsset.address, await psr.getAddress(), oracle.address],
+    },
+  );
 }
 
 async function encodeSwap(amountIn: BigNumber, amountOut: BigNumber, recipient: string): Promise<string> {
@@ -55,8 +73,9 @@ async function encodeSwap(amountIn: BigNumber, amountOut: BigNumber, recipient: 
   ]);
 }
 
-function futureDeadline(): number {
-  return Math.floor(Date.now() / 1000) + 3600;
+async function futureDeadline(): Promise<number> {
+  const block = await ethers.provider.getBlock("latest");
+  return block.timestamp + 3600;
 }
 
 async function fixture(): Promise<void> {
@@ -71,6 +90,10 @@ async function fixture(): Promise<void> {
 
   const RouterFactory = (await ethers.getContractFactory("MockRouter")) as MockRouter__factory;
   router = await RouterFactory.deploy();
+
+  oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+  oracle.getPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
+  oracle.getPrice.whenCalledWith(baseAsset.address).returns(BASE_ASSET_PRICE);
 
   buyback = await deployBuyback(await destinationEOA.getAddress());
   buybackAlt = await deployBuyback(await destinationAltEOA.getAddress());
@@ -97,41 +120,116 @@ describe("TokenBuyback", () => {
       expect(await buyback.DESTINATION()).to.equal(await destinationEOA.getAddress());
       expect(await buyback.BASE_ASSET()).to.equal(baseAsset.address);
       expect(await buyback.PROTOCOL_SHARE_RESERVE()).to.equal(await psr.getAddress());
+      expect(await buyback.RESILIENT_ORACLE()).to.equal(oracle.address);
 
       expect(await buybackAlt.DESTINATION()).to.equal(await destinationAltEOA.getAddress());
+    });
+
+    it("seeds cap config and window start from initialize", async () => {
+      expect(await buyback.dailyCapUsd()).to.equal(TEST_DAILY_CAP_USD);
+      expect(await buyback.slippageEventUsd()).to.equal(TEST_SLIPPAGE_EVENT_USD);
+      expect(await buyback.lastUpdate()).to.be.gt(0);
     });
 
     it("constructor reverts on zero destination", async () => {
       const TokenBuybackFactory = await smock.mock<TokenBuyback__factory>("TokenBuyback");
       await expect(
-        upgrades.deployProxy(TokenBuybackFactory, [accessControl.address], {
-          constructorArgs: [constants.AddressZero, baseAsset.address, await psr.getAddress()],
-        }),
+        upgrades.deployProxy(
+          TokenBuybackFactory,
+          [accessControl.address, TEST_DAILY_CAP_USD, TEST_SLIPPAGE_EVENT_USD],
+          {
+            constructorArgs: [constants.AddressZero, baseAsset.address, await psr.getAddress(), oracle.address],
+          },
+        ),
       ).to.be.reverted;
     });
 
     it("constructor reverts on zero base asset", async () => {
       const TokenBuybackFactory = await smock.mock<TokenBuyback__factory>("TokenBuyback");
       await expect(
-        upgrades.deployProxy(TokenBuybackFactory, [accessControl.address], {
-          constructorArgs: [await destinationEOA.getAddress(), constants.AddressZero, await psr.getAddress()],
-        }),
+        upgrades.deployProxy(
+          TokenBuybackFactory,
+          [accessControl.address, TEST_DAILY_CAP_USD, TEST_SLIPPAGE_EVENT_USD],
+          {
+            constructorArgs: [
+              await destinationEOA.getAddress(),
+              constants.AddressZero,
+              await psr.getAddress(),
+              oracle.address,
+            ],
+          },
+        ),
       ).to.be.reverted;
     });
 
     it("constructor reverts on zero protocol share reserve", async () => {
       const TokenBuybackFactory = await smock.mock<TokenBuyback__factory>("TokenBuyback");
       await expect(
-        upgrades.deployProxy(TokenBuybackFactory, [accessControl.address], {
-          constructorArgs: [await destinationEOA.getAddress(), baseAsset.address, constants.AddressZero],
-        }),
+        upgrades.deployProxy(
+          TokenBuybackFactory,
+          [accessControl.address, TEST_DAILY_CAP_USD, TEST_SLIPPAGE_EVENT_USD],
+          {
+            constructorArgs: [
+              await destinationEOA.getAddress(),
+              baseAsset.address,
+              constants.AddressZero,
+              oracle.address,
+            ],
+          },
+        ),
+      ).to.be.reverted;
+    });
+
+    it("constructor reverts on zero resilient oracle", async () => {
+      const TokenBuybackFactory = await smock.mock<TokenBuyback__factory>("TokenBuyback");
+      await expect(
+        upgrades.deployProxy(
+          TokenBuybackFactory,
+          [accessControl.address, TEST_DAILY_CAP_USD, TEST_SLIPPAGE_EVENT_USD],
+          {
+            constructorArgs: [
+              await destinationEOA.getAddress(),
+              baseAsset.address,
+              await psr.getAddress(),
+              constants.AddressZero,
+            ],
+          },
+        ),
       ).to.be.reverted;
     });
 
     it("reverts on double initialize", async () => {
-      await expect(buyback.initialize(accessControl.address)).to.be.revertedWith(
-        "Initializable: contract is already initialized",
-      );
+      await expect(
+        buyback.initialize(accessControl.address, TEST_DAILY_CAP_USD, TEST_SLIPPAGE_EVENT_USD),
+      ).to.be.revertedWith("Initializable: contract is already initialized");
+    });
+
+    it("initialize reverts on zero dailyCapUsd", async () => {
+      const TokenBuybackFactory = await smock.mock<TokenBuyback__factory>("TokenBuyback");
+      await expect(
+        upgrades.deployProxy(TokenBuybackFactory, [accessControl.address, 0, TEST_SLIPPAGE_EVENT_USD], {
+          constructorArgs: [
+            await destinationEOA.getAddress(),
+            baseAsset.address,
+            await psr.getAddress(),
+            oracle.address,
+          ],
+        }),
+      ).to.be.reverted;
+    });
+
+    it("initialize reverts on zero slippageEventUsd", async () => {
+      const TokenBuybackFactory = await smock.mock<TokenBuyback__factory>("TokenBuyback");
+      await expect(
+        upgrades.deployProxy(TokenBuybackFactory, [accessControl.address, TEST_DAILY_CAP_USD, 0], {
+          constructorArgs: [
+            await destinationEOA.getAddress(),
+            baseAsset.address,
+            await psr.getAddress(),
+            oracle.address,
+          ],
+        }),
+      ).to.be.reverted;
     });
   });
 
@@ -199,14 +297,15 @@ describe("TokenBuyback", () => {
       expect(await buyback.assetsReserves(tokenIn.address)).to.equal(firstDelivery.add(secondDelivery));
     });
 
-    it("emits zero delta on a no-op call with no new inflow", async () => {
+    it("does not emit AssetsReceived on a no-op call with no new inflow", async () => {
       const comptrollerAddr = await comptroller.getAddress();
       await tokenIn.transfer(buyback.address, AMOUNT_IN);
       await buyback.connect(psr).updateAssetsState(comptrollerAddr, tokenIn.address);
 
-      await expect(buyback.connect(psr).updateAssetsState(comptrollerAddr, tokenIn.address))
-        .to.emit(buyback, "AssetsReceived")
-        .withArgs(comptrollerAddr, tokenIn.address, 0);
+      await expect(buyback.connect(psr).updateAssetsState(comptrollerAddr, tokenIn.address)).to.not.emit(
+        buyback,
+        "AssetsReceived",
+      );
     });
 
     it("ignores pre-existing dust when computing the first delta", async () => {
@@ -240,7 +339,7 @@ describe("TokenBuyback", () => {
         tokenIn.address,
         firstDelivery,
         MIN_AMOUNT_OUT,
-        futureDeadline(),
+        await futureDeadline(),
         router.address,
         calldata,
         comptrollerA,
@@ -369,7 +468,7 @@ describe("TokenBuyback", () => {
         tokenIn.address,
         AMOUNT_IN,
         MIN_AMOUNT_OUT,
-        futureDeadline(),
+        await futureDeadline(),
         router.address,
         calldata,
         await comptroller.getAddress(),
@@ -393,7 +492,7 @@ describe("TokenBuyback", () => {
           tokenIn.address,
           AMOUNT_IN,
           MIN_AMOUNT_OUT,
-          futureDeadline(),
+          await futureDeadline(),
           router.address,
           calldata,
           await comptroller.getAddress(),
@@ -423,7 +522,7 @@ describe("TokenBuyback", () => {
           baseAsset.address,
           AMOUNT_IN,
           MIN_AMOUNT_OUT,
-          futureDeadline(),
+          await futureDeadline(),
           router.address,
           calldata,
           await comptroller.getAddress(),
@@ -441,7 +540,7 @@ describe("TokenBuyback", () => {
           tokenIn.address,
           AMOUNT_IN,
           MIN_AMOUNT_OUT,
-          futureDeadline(),
+          await futureDeadline(),
           router.address,
           calldata,
           await comptroller.getAddress(),
@@ -458,7 +557,7 @@ describe("TokenBuyback", () => {
           tokenIn.address,
           0,
           MIN_AMOUNT_OUT,
-          futureDeadline(),
+          await futureDeadline(),
           router.address,
           calldata,
           await comptroller.getAddress(),
@@ -474,7 +573,7 @@ describe("TokenBuyback", () => {
           tokenIn.address,
           tooMuch,
           MIN_AMOUNT_OUT,
-          futureDeadline(),
+          await futureDeadline(),
           router.address,
           calldata,
           await comptroller.getAddress(),
@@ -492,7 +591,7 @@ describe("TokenBuyback", () => {
           tokenIn.address,
           AMOUNT_IN,
           MIN_AMOUNT_OUT,
-          futureDeadline(),
+          await futureDeadline(),
           router.address,
           calldata,
           await comptroller.getAddress(),
@@ -508,7 +607,7 @@ describe("TokenBuyback", () => {
           tokenIn.address,
           AMOUNT_IN,
           MIN_AMOUNT_OUT,
-          futureDeadline(),
+          await futureDeadline(),
           router.address,
           calldata,
           await comptroller.getAddress(),
@@ -529,7 +628,7 @@ describe("TokenBuyback", () => {
         tokenIn.address,
         AMOUNT_IN,
         0,
-        futureDeadline(),
+        await futureDeadline(),
         router.address,
         calldata,
         comptrollerAddr,
@@ -550,7 +649,7 @@ describe("TokenBuyback", () => {
         tokenIn.address,
         AMOUNT_IN,
         MIN_AMOUNT_OUT,
-        futureDeadline(),
+        await futureDeadline(),
         router.address,
         calldata,
         await comptroller.getAddress(),
@@ -575,7 +674,7 @@ describe("TokenBuyback", () => {
         tokenIn.address,
         AMOUNT_IN,
         MIN_AMOUNT_OUT,
-        futureDeadline(),
+        await futureDeadline(),
         router.address,
         calldata,
         await comptroller.getAddress(),
@@ -655,6 +754,211 @@ describe("TokenBuyback", () => {
 
       expect((await baseAsset.balanceOf(destAddr)).sub(destBefore)).to.equal(poolADeposit.add(poolBDeposit));
       expect(await baseAsset.balanceOf(buyback.address)).to.equal(0);
+    });
+  });
+
+  describe("cap and slippage setters", () => {
+    it("setDailyCapUsd updates state and emits event under ACM", async () => {
+      const newCap = parseUnits("12345", 18);
+      await expect(buyback.setDailyCapUsd(newCap))
+        .to.emit(buyback, "DailyCapUpdated")
+        .withArgs(TEST_DAILY_CAP_USD, newCap);
+      expect(await buyback.dailyCapUsd()).to.equal(newCap);
+    });
+
+    it("setDailyCapUsd reverts when ACM denies", async () => {
+      accessControl.isAllowedToCall.whenCalledWith(await owner.getAddress(), SET_DAILY_CAP_SIG).returns(false);
+      await expect(buyback.setDailyCapUsd(parseUnits("1", 18))).to.be.revertedWithCustomError(buyback, "Unauthorized");
+    });
+
+    it("setSlippageEventUsd updates state and emits event under ACM", async () => {
+      const newThreshold = parseUnits("99", 18);
+      await expect(buyback.setSlippageEventUsd(newThreshold))
+        .to.emit(buyback, "SlippageEventUsdUpdated")
+        .withArgs(TEST_SLIPPAGE_EVENT_USD, newThreshold);
+      expect(await buyback.slippageEventUsd()).to.equal(newThreshold);
+    });
+
+    it("setSlippageEventUsd reverts when ACM denies", async () => {
+      accessControl.isAllowedToCall.whenCalledWith(await owner.getAddress(), SET_SLIPPAGE_EVENT_SIG).returns(false);
+      await expect(buyback.setSlippageEventUsd(parseUnits("1", 18))).to.be.revertedWithCustomError(
+        buyback,
+        "Unauthorized",
+      );
+    });
+
+    it("setDailyCapUsd reverts on zero", async () => {
+      await expect(buyback.setDailyCapUsd(0)).to.be.revertedWithCustomError(buyback, "ZeroValueNotAllowed");
+    });
+
+    it("setSlippageEventUsd reverts on zero", async () => {
+      await expect(buyback.setSlippageEventUsd(0)).to.be.revertedWithCustomError(buyback, "ZeroValueNotAllowed");
+    });
+  });
+
+  describe("daily cap", () => {
+    beforeEach(async () => {
+      await tokenIn.transfer(buyback.address, parseUnits("1000", 18));
+    });
+
+    async function runSwap(amountIn: BigNumber, amountOut: BigNumber): Promise<void> {
+      const calldata = await encodeSwap(amountIn, amountOut, buyback.address);
+      await buyback.executeBuyback(
+        tokenIn.address,
+        amountIn,
+        0,
+        await futureDeadline(),
+        router.address,
+        calldata,
+        await comptroller.getAddress(),
+      );
+    }
+
+    it("accumulates usdConsumedInWindow on successful swaps", async () => {
+      // 100 tokenIn @ $1 → $100 USD consumed
+      await runSwap(parseUnits("100", 18), parseUnits("100", 6));
+      expect(await buyback.usdConsumedInWindow()).to.equal(parseUnits("100", 18));
+
+      // Leaky-bucket decay between calls drops the prior $100 by a few ppm before
+      // the new $50 lands. Resulting accumulator sits just below $150.
+      await runSwap(parseUnits("50", 18), parseUnits("50", 6));
+      const consumed = await buyback.usdConsumedInWindow();
+      expect(consumed.gt(parseUnits("149", 18))).to.equal(true);
+      expect(consumed.lte(parseUnits("150", 18))).to.equal(true);
+    });
+
+    it("reverts when daily cap is exceeded", async () => {
+      await buyback.setDailyCapUsd(parseUnits("150", 18));
+
+      await runSwap(parseUnits("100", 18), parseUnits("100", 6));
+
+      // Second swap of $60 pushes the leaky-bucket accumulator past $150 cap. The
+      // exact `attempted` value depends on elapsed time between swaps (decay), so
+      // we only assert the custom-error type, not its args.
+      const calldata = await encodeSwap(parseUnits("60", 18), parseUnits("60", 6), buyback.address);
+      await expect(
+        buyback.executeBuyback(
+          tokenIn.address,
+          parseUnits("60", 18),
+          0,
+          await futureDeadline(),
+          router.address,
+          calldata,
+          await comptroller.getAddress(),
+        ),
+      ).to.be.revertedWithCustomError(buyback, "DailyCapExceeded");
+    });
+
+    it("usdConsumedInWindow decays to 0 after WINDOW elapses (leaky bucket)", async () => {
+      await buyback.setDailyCapUsd(parseUnits("150", 18));
+      await runSwap(parseUnits("100", 18), parseUnits("100", 6));
+      expect(await buyback.usdConsumedInWindow()).to.equal(parseUnits("100", 18));
+
+      // Advance time past WINDOW so prior consumption decays fully on next call
+      await ethers.provider.send("evm_increaseTime", [24 * 60 * 60 + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      // After full-WINDOW decay, $100 swap reflects only the new amount
+      await runSwap(parseUnits("100", 18), parseUnits("100", 6));
+      expect(await buyback.usdConsumedInWindow()).to.equal(parseUnits("100", 18));
+    });
+
+    it("usdConsumedInWindow decays linearly mid-WINDOW", async () => {
+      await buyback.setDailyCapUsd(parseUnits("200", 18));
+      await runSwap(parseUnits("100", 18), parseUnits("100", 6));
+
+      // Advance exactly half the WINDOW. Decayed value should be ~$50.
+      const HALF_WINDOW = 12 * 60 * 60;
+      await ethers.provider.send("evm_increaseTime", [HALF_WINDOW]);
+      await ethers.provider.send("evm_mine", []);
+
+      // Next swap of $50 lands on top of ~$50 decayed → ~$100. Stays under cap.
+      await runSwap(parseUnits("50", 18), parseUnits("50", 6));
+      const consumed = await buyback.usdConsumedInWindow();
+      // Decayed prior contribution sits between $40 and $60 (allowing for blocks
+      // mined between evm_increaseTime and the swap tx). Plus the new $50 → $90–$110.
+      expect(consumed.gt(parseUnits("90", 18))).to.equal(true);
+      expect(consumed.lt(parseUnits("110", 18))).to.equal(true);
+    });
+  });
+
+  describe("AbnormalSlippage event", () => {
+    beforeEach(async () => {
+      await tokenIn.transfer(buyback.address, parseUnits("1000", 18));
+    });
+
+    it("does not emit AbnormalSlippage when swap returns matching USD value", async () => {
+      const calldata = await encodeSwap(parseUnits("100", 18), parseUnits("100", 6), buyback.address);
+      const tx = buyback.executeBuyback(
+        tokenIn.address,
+        parseUnits("100", 18),
+        0,
+        await futureDeadline(),
+        router.address,
+        calldata,
+        await comptroller.getAddress(),
+      );
+      await expect(tx).to.not.emit(buyback, "AbnormalSlippage");
+    });
+
+    it("does not emit AbnormalSlippage when slippage is below threshold", async () => {
+      // $400 slippage on a $500 threshold → silent
+      await buyback.setSlippageEventUsd(parseUnits("500", 18));
+      const calldata = await encodeSwap(parseUnits("1000", 18), parseUnits("600", 6), buyback.address);
+      const tx = buyback.executeBuyback(
+        tokenIn.address,
+        parseUnits("1000", 18),
+        0,
+        await futureDeadline(),
+        router.address,
+        calldata,
+        await comptroller.getAddress(),
+      );
+      await expect(tx).to.not.emit(buyback, "AbnormalSlippage");
+    });
+
+    it("emits AbnormalSlippage when usdIn - usdOut exceeds threshold", async () => {
+      // $1000 in, $400 out → $600 slippage > $500 threshold
+      await buyback.setSlippageEventUsd(parseUnits("500", 18));
+      const calldata = await encodeSwap(parseUnits("1000", 18), parseUnits("400", 6), buyback.address);
+      const tx = buyback.executeBuyback(
+        tokenIn.address,
+        parseUnits("1000", 18),
+        0,
+        await futureDeadline(),
+        router.address,
+        calldata,
+        await comptroller.getAddress(),
+      );
+      await expect(tx)
+        .to.emit(buyback, "AbnormalSlippage")
+        .withArgs(
+          tokenIn.address,
+          parseUnits("1000", 18),
+          parseUnits("400", 6),
+          parseUnits("1000", 18),
+          parseUnits("400", 18),
+        );
+    });
+
+    it("does not block the swap when AbnormalSlippage fires (event-only)", async () => {
+      await buyback.setSlippageEventUsd(parseUnits("500", 18));
+      const destAddr = await destinationEOA.getAddress();
+      const destBefore = await baseAsset.balanceOf(destAddr);
+
+      const calldata = await encodeSwap(parseUnits("1000", 18), parseUnits("400", 6), buyback.address);
+      await buyback.executeBuyback(
+        tokenIn.address,
+        parseUnits("1000", 18),
+        0,
+        await futureDeadline(),
+        router.address,
+        calldata,
+        await comptroller.getAddress(),
+      );
+
+      // Swap output still landed at DESTINATION
+      expect((await baseAsset.balanceOf(destAddr)).sub(destBefore)).to.equal(parseUnits("400", 6));
     });
   });
 });

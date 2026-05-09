@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { getContractAddressOrNullAddress } from "../helpers/deploymentConfig";
+import { TOKEN_BUYBACK_DEFAULTS } from "../helpers/deploymentConfig";
 
 // U token is not registered in `@venusprotocol/venus-protocol` external deployments.
 // Hard-coded per-network so TokenBuyback's immutable BASE_ASSET can be set at deploy.
@@ -19,13 +19,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const acmAddress = (await deployments.get("AccessControlManager")).address;
   const plpAddress = (await deployments.get("PrimeLiquidityProvider")).address;
   const psrAddress = (await deployments.get("ProtocolShareReserve")).address;
+  const oracleAddress = (await deployments.get("ResilientOracle")).address;
+  const timelockAddress = (await ethers.getContract("NormalTimelock")).address;
 
   const baseAssets: Record<string, string> = {
     USDTPrimeBuyback: (await deployments.get("USDT")).address,
     UPrimeBuyback: U_ADDRESSES[hre.network.name],
   };
-
-  const proxyAdminOwner = await getContractAddressOrNullAddress(deployments, "NormalTimelock");
 
   const defaultProxyAdmin = await hre.artifacts.readArtifact(
     "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
@@ -39,13 +39,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       log: true,
       deterministicDeployment: false,
       contract: "TokenBuyback",
-      args: [plpAddress, baseAsset, psrAddress],
+      args: [plpAddress, baseAsset, psrAddress, oracleAddress],
       proxy: {
-        owner: proxyAdminOwner,
+        owner: timelockAddress,
         proxyContract: "OptimizedTransparentUpgradeableProxy",
         execute: {
           methodName: "initialize",
-          args: [acmAddress],
+          args: [acmAddress, TOKEN_BUYBACK_DEFAULTS.dailyCapUsd, TOKEN_BUYBACK_DEFAULTS.slippageEventUsd],
         },
         viaAdminContract: {
           name: "DefaultProxyAdmin",
@@ -56,7 +56,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     // transfer ownership to timelock
     {
-      const timelockAddress = await getContractAddressOrNullAddress(deployments, "NormalTimelock");
       const buyback = await ethers.getContract(instanceName);
       const currentOwner = (await buyback.owner()).toLowerCase();
       const pendingOwner = (await buyback.pendingOwner()).toLowerCase();

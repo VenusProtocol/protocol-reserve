@@ -121,7 +121,6 @@ async function fixture(): Promise<void> {
 
   await accessControl.isAllowedToCall.returns(true);
 
-  await riskFund.riskFundConverter.returns(riskFundConverter.address);
   await riskFund.convertibleBaseAsset.returns(usdt.address);
 
   const converterNetworkFactory = await smock.mock<ConverterNetwork__factory>("ConverterNetwork");

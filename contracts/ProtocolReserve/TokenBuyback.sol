@@ -6,6 +6,7 @@ import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { ensureNonzeroAddress, ensureNonzeroValue } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 
 import { ITokenBuyback } from "../Interfaces/ITokenBuyback.sol";
@@ -34,6 +35,12 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable PROTOCOL_SHARE_RESERVE;
 
+    /// @notice ResilientOracle used to USD-price tokenIn and BASE_ASSET when
+    ///         enforcing the daily consumption cap and detecting abnormal
+    ///         swap slippage in executeBuyback.
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address public immutable RESILIENT_ORACLE;
+
     /// @notice DEX router allowlist
     mapping(address => bool) public allowedRouters;
 
@@ -41,10 +48,42 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     ///         on each updateAssetsState call. Resynced after every outflow
     ///         (executeBuyback, forwardBaseAsset, sweepToken) so inflow deltas
     ///         stay correct across interleaved deposits and withdrawals.
+    /// @dev Reflects observed `balanceOf(this)` deltas rather than an authenticated
+    ///      source-of-funds record. Tokens transferred directly to the contract
+    ///      outside the PSR flow are not distinguished from authenticated PSR
+    ///      inflows: they get merged into the next AssetsReceived event, can be
+    ///      consumed by executeBuyback / forwardBaseAsset, and are absorbed into
+    ///      this watermark when sweepToken resyncs to the post-transfer balance.
+    ///      Off-chain integrators relying on `AssetsReceived` for source-of-funds
+    ///      attribution must treat the value as a balance delta only.
     mapping(address => uint256) public assetsReserves;
 
+    /// @notice Maximum cumulative USD value of tokenIn consumed via executeBuyback
+    ///         within a rolling 24h window. Bounds blast radius if the operator key
+    ///         is compromised. Stored 1e18-scaled.
+    uint256 public dailyCapUsd;
+
+    /// @notice Absolute USD threshold above which `executeBuyback` emits
+    ///         AbnormalSlippage. Detects swap economics that diverge from
+    ///         oracle pricing (e.g. swap routed through an attacker pool).
+    ///         Event-only; does not revert. Stored 1e18-scaled.
+    uint256 public slippageEventUsd;
+
+    /// @notice Cumulative USD value of tokenIn consumed, decayed linearly over `WINDOW`
+    ///         since the last update. Acts as a leaky-bucket accumulator: any rolling
+    ///         24h interval's total consumption is bounded by `dailyCapUsd`.
+    uint256 public usdConsumedInWindow;
+
+    /// @notice Block timestamp at which `usdConsumedInWindow` was last written. Used
+    ///         to compute the linear decay applied on the next executeBuyback.
+    uint256 public lastUpdate;
+
+    /// @notice Decay horizon for the leaky-bucket accumulator: after `WINDOW` seconds
+    ///         of inactivity, `usdConsumedInWindow` decays to 0.
+    uint256 internal constant WINDOW = 24 hours;
+
     /// @dev Gap for future storage variables
-    uint256[48] private __gap;
+    uint256[43] private __gap;
 
     /// @notice Emitted when PSR transfers tokens and calls updateAssetsState
     event AssetsReceived(address indexed comptroller, address indexed asset, uint256 amount);
@@ -67,6 +106,22 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     /// @notice Emitted when tokens are swept from the contract
     event SweepToken(address indexed token, address indexed to, uint256 amount);
 
+    /// @notice Emitted when an executeBuyback swap returns less USD value than the input,
+    ///         beyond the configured slippage threshold. Event-only; the swap still settles.
+    event AbnormalSlippage(
+        address indexed tokenIn,
+        uint256 actualAmountIn,
+        uint256 amountOut,
+        uint256 usdIn,
+        uint256 usdOut
+    );
+
+    /// @notice Emitted when the daily USD cap is updated
+    event DailyCapUpdated(uint256 oldCap, uint256 newCap);
+
+    /// @notice Emitted when the slippage event threshold is updated
+    event SlippageEventUsdUpdated(uint256 oldThreshold, uint256 newThreshold);
+
     /// @notice Thrown when the router is not on the allowlist
     error RouterNotAllowed(address router);
 
@@ -85,29 +140,49 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     /// @notice Thrown when updateAssetsState is called by any address other than PROTOCOL_SHARE_RESERVE
     error UnauthorizedCaller(address caller);
 
+    /// @notice Thrown when executeBuyback would push cumulative USD consumption past the daily cap
+    error DailyCapExceeded(uint256 attempted, uint256 cap);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     /// @param destination_ Address where buyback proceeds land
     /// @param baseAsset_ Token being bought (output of every swap)
     /// @param protocolShareReserve_ Only address permitted to call updateAssetsState
+    /// @param resilientOracle_ ResilientOracle used to USD-price tokenIn and BASE_ASSET
     constructor(
         address destination_,
         address baseAsset_,
-        address protocolShareReserve_
+        address protocolShareReserve_,
+        address resilientOracle_
     ) {
         ensureNonzeroAddress(destination_);
         ensureNonzeroAddress(baseAsset_);
         ensureNonzeroAddress(protocolShareReserve_);
+        ensureNonzeroAddress(resilientOracle_);
         DESTINATION = destination_;
         BASE_ASSET = baseAsset_;
         PROTOCOL_SHARE_RESERVE = protocolShareReserve_;
+        RESILIENT_ORACLE = resilientOracle_;
 
         _disableInitializers();
     }
 
     /// @param accessControlManager_ Access control manager contract address
-    function initialize(address accessControlManager_) public initializer {
+    /// @param dailyCapUsd_ Initial daily USD cap on tokenIn consumption (1e18-scaled)
+    /// @param slippageEventUsd_ Initial absolute USD slippage threshold for AbnormalSlippage (1e18-scaled)
+    function initialize(
+        address accessControlManager_,
+        uint256 dailyCapUsd_,
+        uint256 slippageEventUsd_
+    ) public initializer {
+        ensureNonzeroValue(dailyCapUsd_);
+        ensureNonzeroValue(slippageEventUsd_);
+
         __AccessControlled_init(accessControlManager_);
         __ReentrancyGuard_init();
+
+        dailyCapUsd = dailyCapUsd_;
+        slippageEventUsd = slippageEventUsd_;
+        lastUpdate = block.timestamp;
     }
 
     /// @notice Called by PSR after transferring tokens to this contract
@@ -115,24 +190,33 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     ///      via safeTransfer before calling this function. The contract passively holds
     ///      tokens until the cron calls executeBuyback. The emitted event is monitored
     ///      by the cron to track which tokens arrived from which pool.
+    ///      The reported `balanceDifference` is computed as `balanceOf(this) -
+    ///      assetsReserves[asset]` and therefore reflects the observed balance delta
+    ///      since the last accounting update, not an authenticated record of PSR
+    ///      transfer amounts. Tokens transferred directly to the contract outside the
+    ///      PSR flow will be merged into a subsequent AssetsReceived event under
+    ///      whichever comptroller PSR happens to be processing at the time. The bias
+    ///      is one-shot (the watermark resyncs to `balanceOf(this)` on the same call)
+    ///      and the donated tokens remain recoverable via `sweepToken`.
     /// @param comptroller Address of the pool's comptroller
     /// @param asset Address of the token transferred
     /// @custom:event AssetsReceived emits the received amount
     /// @custom:error UnauthorizedCaller when msg.sender is not PROTOCOL_SHARE_RESERVE
+    /// @custom:access Only callable by PROTOCOL_SHARE_RESERVE
     function updateAssetsState(address comptroller, address asset) external override nonReentrant {
         if (msg.sender != PROTOCOL_SHARE_RESERVE) {
             revert UnauthorizedCaller(msg.sender);
         }
         uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
         uint256 previousBalance = assetsReserves[asset];
-        uint256 balanceDifference;
         if (currentBalance > previousBalance) {
+            uint256 balanceDifference;
             unchecked {
                 balanceDifference = currentBalance - previousBalance;
             }
             assetsReserves[asset] = currentBalance;
+            emit AssetsReceived(comptroller, asset, balanceDifference);
         }
-        emit AssetsReceived(comptroller, asset, balanceDifference);
     }
 
     /// @notice Executes a buyback by swapping accumulated tokens via a DEX router
@@ -162,15 +246,20 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         _checkAccessAllowed("executeBuyback(address,uint256,uint256,uint256,address,bytes,address)");
         _validateBuyback(tokenIn, amountIn, deadline, router);
 
-        // Measure BASE_ASSET balance on this contract (not DESTINATION) to prevent
-        // donation-based amountOut inflation. Router calldata MUST send swap output here.
-        uint256 balanceBefore = IERC20Upgradeable(BASE_ASSET).balanceOf(address(this));
+        // Measure BASE_ASSET and tokenIn balances directly on this contract so the
+        // delta reflects actual swap consumption regardless of any donation surplus
+        // sitting outside the assetsReserves watermark. Router calldata MUST send
+        // BASE_ASSET output here.
+        uint256 baseAssetBalanceBefore = IERC20Upgradeable(BASE_ASSET).balanceOf(address(this));
+        uint256 tokenInBalanceBefore = IERC20Upgradeable(tokenIn).balanceOf(address(this));
 
         IERC20Upgradeable(tokenIn).forceApprove(router, amountIn);
         router.functionCall(routerCalldata);
         IERC20Upgradeable(tokenIn).forceApprove(router, 0);
 
-        uint256 amountOut = IERC20Upgradeable(BASE_ASSET).balanceOf(address(this)) - balanceBefore;
+        uint256 tokenInBalanceAfter = IERC20Upgradeable(tokenIn).balanceOf(address(this));
+        uint256 amountOut = IERC20Upgradeable(BASE_ASSET).balanceOf(address(this)) - baseAssetBalanceBefore;
+        uint256 actualAmountIn = tokenInBalanceBefore - tokenInBalanceAfter;
 
         if (amountOut < minAmountOut) {
             revert SlippageExceeded(minAmountOut, amountOut);
@@ -180,10 +269,12 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
             IERC20Upgradeable(BASE_ASSET).safeTransfer(DESTINATION, amountOut);
         }
 
-        assetsReserves[tokenIn] = IERC20Upgradeable(tokenIn).balanceOf(address(this));
+        assetsReserves[tokenIn] = tokenInBalanceAfter;
         assetsReserves[BASE_ASSET] = IERC20Upgradeable(BASE_ASSET).balanceOf(address(this));
 
-        emit BuybackExecuted(tokenIn, amountIn, amountOut, router, comptroller);
+        _enforceCapAndDetectSlippage(tokenIn, actualAmountIn, amountOut);
+
+        emit BuybackExecuted(tokenIn, actualAmountIn, amountOut, router, comptroller);
     }
 
     /// @notice Forwards a caller-specified portion of accumulated BASE_ASSET to DESTINATION without swap
@@ -226,6 +317,11 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     }
 
     /// @notice Transfers tokens out of the contract (emergency recovery)
+    /// @dev Resyncs `assetsReserves[token]` to the post-transfer balance after the
+    ///      sweep. This is also the canonical recovery path for tokens transferred
+    ///      directly to the contract outside the PSR flow: such tokens are not
+    ///      distinguished from PSR-delivered balances on-chain, so governance can
+    ///      use this function to drain unsolicited inflows when needed.
     /// @param token Address of the token to sweep
     /// @param to Recipient address
     /// @param amount Amount to transfer
@@ -246,6 +342,67 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         assetsReserves[token] = IERC20Upgradeable(token).balanceOf(address(this));
 
         emit SweepToken(token, to, amount);
+    }
+
+    /// @notice Updates the daily USD cap on tokenIn consumption
+    /// @param newCap New cap value (1e18-scaled)
+    /// @custom:event DailyCapUpdated emits on success
+    /// @custom:access Restricted by ACM
+    function setDailyCapUsd(uint256 newCap) external override {
+        _checkAccessAllowed("setDailyCapUsd(uint256)");
+        ensureNonzeroValue(newCap);
+        emit DailyCapUpdated(dailyCapUsd, newCap);
+        dailyCapUsd = newCap;
+    }
+
+    /// @notice Updates the absolute USD slippage threshold above which AbnormalSlippage is emitted
+    /// @param newThreshold New threshold value (1e18-scaled)
+    /// @custom:event SlippageEventUsdUpdated emits on success
+    /// @custom:access Restricted by ACM
+    function setSlippageEventUsd(uint256 newThreshold) external override {
+        _checkAccessAllowed("setSlippageEventUsd(uint256)");
+        ensureNonzeroValue(newThreshold);
+        emit SlippageEventUsdUpdated(slippageEventUsd, newThreshold);
+        slippageEventUsd = newThreshold;
+    }
+
+    /// @dev Enforces the daily USD cap on tokenIn consumption via a leaky-bucket
+    ///      accumulator with linear decay (rate `dailyCapUsd / WINDOW`), and emits
+    ///      AbnormalSlippage when the swap returns less USD value than the input by
+    ///      more than `slippageEventUsd`. The cap reverts; slippage detection is
+    ///      event-only. Continuous decay (vs a tumbling window) ensures any rolling
+    ///      24h interval's total consumption is bounded by `dailyCapUsd`.
+    function _enforceCapAndDetectSlippage(
+        address tokenIn,
+        uint256 actualAmountIn,
+        uint256 amountOut
+    ) internal {
+        ResilientOracleInterface oracle = ResilientOracleInterface(RESILIENT_ORACLE);
+        oracle.updateAssetPrice(tokenIn);
+        oracle.updateAssetPrice(BASE_ASSET);
+        uint256 priceIn = oracle.getPrice(tokenIn);
+        uint256 priceBase = oracle.getPrice(BASE_ASSET);
+
+        uint256 usdIn = (actualAmountIn * priceIn) / 1e18;
+        uint256 usdOut = (amountOut * priceBase) / 1e18;
+
+        uint256 elapsed = block.timestamp - lastUpdate;
+        uint256 decayed = elapsed >= WINDOW ? 0 : (usdConsumedInWindow * (WINDOW - elapsed)) / WINDOW;
+        lastUpdate = block.timestamp;
+
+        uint256 newConsumed = decayed + usdIn;
+        if (newConsumed > dailyCapUsd) {
+            revert DailyCapExceeded(newConsumed, dailyCapUsd);
+        }
+
+        usdConsumedInWindow = newConsumed;
+
+        if (usdIn > usdOut) {
+            uint256 usdSlippage = usdIn - usdOut;
+            if (usdSlippage > slippageEventUsd) {
+                emit AbnormalSlippage(tokenIn, actualAmountIn, amountOut, usdIn, usdOut);
+            }
+        }
     }
 
     /// @dev Validates executeBuyback inputs before router interaction
