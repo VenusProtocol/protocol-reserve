@@ -9,8 +9,20 @@ import { ensureNonzeroAddress, ensureNonzeroValue } from "@venusprotocol/solidit
 import { AbstractTokenConverter } from "./AbstractTokenConverter.sol";
 import { IPoolRegistry } from "../Interfaces/IPoolRegistry.sol";
 import { IComptroller } from "../Interfaces/IComptroller.sol";
-import { IRiskFund, IRiskFundGetters } from "../Interfaces/IRiskFund.sol";
+import { IRiskFundGetters } from "../Interfaces/IRiskFund.sol";
 import { IVToken } from "../Interfaces/IVToken.sol";
+
+/// @dev Local interface retained so the deprecated RiskFundConverter still compiles
+///      after `updatePoolState` was removed from IRiskFund. New deployments do not
+///      call into this path; it only exists for historical contracts that remain in
+///      the repo for reference.
+interface ILegacyRiskFundPoolState {
+    function updatePoolState(
+        address comptroller,
+        address asset,
+        uint256 amount
+    ) external;
+}
 
 /// @title RiskFundConverter
 /// @author Venus
@@ -237,7 +249,11 @@ contract RiskFundConverter is AbstractTokenConverter {
                     poolAmountInShare = amountIn - distributedInShare;
                 }
                 emit AssetTransferredToDestination(destinationAddress, pools[i], tokenInAddress, poolAmountInShare);
-                IRiskFund(destinationAddress).updatePoolState(pools[i], tokenInAddress, poolAmountInShare);
+                ILegacyRiskFundPoolState(destinationAddress).updatePoolState(
+                    pools[i],
+                    tokenInAddress,
+                    poolAmountInShare
+                );
             }
             unchecked {
                 ++i;
@@ -368,7 +384,7 @@ contract RiskFundConverter is AbstractTokenConverter {
                 uint256 newDestinationBalance = token.balanceOf(destinationAddress);
 
                 emit AssetTransferredToDestination(destinationAddress, comptroller, asset, balanceDifference);
-                IRiskFund(destinationAddress).updatePoolState(
+                ILegacyRiskFundPoolState(destinationAddress).updatePoolState(
                     comptroller,
                     asset,
                     newDestinationBalance - previousDestinationBalance
@@ -398,7 +414,11 @@ contract RiskFundConverter is AbstractTokenConverter {
                 tokenAddressIn,
                 convertedTokenInBalance
             );
-            IRiskFund(destinationAddress).updatePoolState(comptroller, tokenAddressIn, convertedTokenInBalance);
+            ILegacyRiskFundPoolState(destinationAddress).updatePoolState(
+                comptroller,
+                tokenAddressIn,
+                convertedTokenInBalance
+            );
         }
         if (convertedTokenOutBalance > 0) {
             assetsReserves[tokenAddressOut] += convertedTokenOutBalance;
