@@ -83,7 +83,7 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
     uint256 internal constant WINDOW = 24 hours;
 
     /// @dev Gap for future storage variables
-    uint256[43] private __gap;
+    uint256[44] private __gap;
 
     /// @notice Emitted when PSR transfers tokens and calls updateAssetsState
     event AssetsReceived(address indexed comptroller, address indexed asset, uint256 amount);
@@ -353,6 +353,9 @@ contract TokenBuyback is AccessControlledV8, ReentrancyGuardUpgradeable, ITokenB
         ensureNonzeroValue(newCap);
         emit DailyCapUpdated(dailyCapUsd, newCap);
         dailyCapUsd = newCap;
+        if (usdConsumedInWindow > newCap) {
+            usdConsumedInWindow = newCap;
+        }
     }
 
     /// @notice Updates the absolute USD slippage threshold above which AbnormalSlippage is emitted
