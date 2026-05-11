@@ -2,11 +2,14 @@ import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-const func: DeployFunction = async ({
-  network: { live },
-  getNamedAccounts,
-  deployments,
-}: HardhatRuntimeEnvironment) => {
+import { verifyDeployment } from "../helpers/verify";
+
+const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+  const {
+    network: { live },
+    getNamedAccounts,
+    deployments,
+  } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
@@ -40,6 +43,8 @@ const func: DeployFunction = async ({
       await tx.wait();
     }
   }
+
+  await verifyDeployment(hre, "RiskFundV2");
 };
 
 func.tags = ["RiskFundV2"];

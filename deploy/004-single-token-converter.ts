@@ -5,6 +5,7 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { ADDRESS_ONE } from "../helpers/utils";
+import { verifyDeployment } from "../helpers/verify";
 
 type NETWORK = "hardhat" | "bsctestnet" | "bscmainnet" | "sepolia" | "ethereum";
 interface BaseAssets {
@@ -96,6 +97,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
     skipIfAlreadyDeployed: true,
   });
+  await verifyDeployment(hre, "SingleTokenConverterImp");
 
   const SingleTokenConverterBeacon: DeployResult = await deploy("SingleTokenConverterBeacon", {
     contract: "UpgradeableBeacon",
@@ -105,6 +107,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
     skipIfAlreadyDeployed: true,
   });
+  await verifyDeployment(hre, "SingleTokenConverterBeacon");
 
   const SingleTokenConverter = await ethers.getContractFactory("SingleTokenConverter");
 
@@ -139,6 +142,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       await tx.wait();
       console.log(`Transferred ownership of ${singleTokenConverterName} to Timelock: ` + proxyOwnerAddress);
     }
+
+    await verifyDeployment(hre, singleTokenConverterName);
   }
 };
 

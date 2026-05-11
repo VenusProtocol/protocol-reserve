@@ -3,6 +3,7 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { ADDRESS_ONE } from "../helpers/utils";
+import { verifyDeployment } from "../helpers/verify";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const {
@@ -67,6 +68,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     await tx.wait();
     console.log("Transferred ownership of PSR to Timelock");
   }
+
+  await verifyDeployment(hre, "ProtocolShareReserve");
 };
 
 func.tags = ["ProtocolShareReserve"];
