@@ -1,7 +1,14 @@
 import { ethers } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-const func = async ({ network: { live }, getNamedAccounts, deployments }: HardhatRuntimeEnvironment) => {
+import { verifyDeployment } from "../helpers/verify";
+
+const func = async (hre: HardhatRuntimeEnvironment) => {
+  const {
+    network: { live },
+    getNamedAccounts,
+    deployments,
+  } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
@@ -34,6 +41,8 @@ const func = async ({ network: { live }, getNamedAccounts, deployments }: Hardha
     await tx.wait();
     console.log("Transferred ownership of XVSVaultTreasury to Timelock");
   }
+
+  await verifyDeployment(hre, "XVSVaultTreasury");
 };
 
 func.tags = ["XVSVaultTreasury"];

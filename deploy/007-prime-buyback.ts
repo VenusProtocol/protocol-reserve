@@ -3,6 +3,7 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { TOKEN_BUYBACK_DEFAULTS } from "../helpers/deploymentConfig";
+import { verifyDeployment } from "../helpers/verify";
 
 // U token is not registered in `@venusprotocol/venus-protocol` external deployments.
 // Hard-coded per-network so TokenBuyback's immutable BASE_ASSET can be set at deploy.
@@ -68,6 +69,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         console.log(`Ownership transfer of ${instanceName} already pending to ${pendingOwner}`);
       }
     }
+
+    await verifyDeployment(hre, instanceName);
   }
 };
 
