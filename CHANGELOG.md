@@ -1,3 +1,13 @@
+## 3.5.0-dev.7 (2026-05-12)
+
+* Merge pull request #163 from VenusProtocol/feat/VPD-1185 ([7e2e9b2](https://github.com/VenusProtocol/protocol-reserve/commit/7e2e9b2)), closes [#163](https://github.com/VenusProtocol/protocol-reserve/issues/163)
+* feat: add deployment verification for new contracts ([98abeaa](https://github.com/VenusProtocol/protocol-reserve/commit/98abeaa))
+* feat: add tokenBuyBack deployment on bsctestnet ([a3bdc73](https://github.com/VenusProtocol/protocol-reserve/commit/a3bdc73))
+* feat: deployed RiskFundV2 on bsctestnet ([3120eab](https://github.com/VenusProtocol/protocol-reserve/commit/3120eab))
+* feat: update hardhat configuration for bsctestnet ([104cf94](https://github.com/VenusProtocol/protocol-reserve/commit/104cf94))
+* feat: updating deployment files ([b9ca3de](https://github.com/VenusProtocol/protocol-reserve/commit/b9ca3de))
+* feat: updating deployment files ([d45616b](https://github.com/VenusProtocol/protocol-reserve/commit/d45616b))
+
 ## 3.5.0-dev.6 (2026-05-09)
 
 * Merge pull request #158 from VenusProtocol/feat/VPD-1087 ([c56a6f5](https://github.com/VenusProtocol/protocol-reserve/commit/c56a6f5)), closes [#158](https://github.com/VenusProtocol/protocol-reserve/issues/158)
