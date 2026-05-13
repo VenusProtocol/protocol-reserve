@@ -39,9 +39,12 @@ import { ethers } from "hardhat";
 
 import { forking, initMainnetUser } from "../utils";
 
-// Block at or after VPD-1087's TokenBuyback proxies + the migration helper are
-// deployed on BSC mainnet. Helper deployment block: 97105830.
-const FORK_BLOCK = 97105830;
+// Block at or after VPD-1087's TokenBuyback proxies + the V2 migration helper
+// are deployed on BSC mainnet. Matches the VIP-800 simulation fork block so
+// the Prime allocation block inside execute1 (vU addMarket, PLP init, PCS V3
+// USDC -> {USDT, U} swap) runs against the same chain state used to size
+// the swap legs and Prime distribution speeds.
+const FORK_BLOCK = 97988051;
 
 // ------------- Production constants (BSC mainnet) -------------
 const NORMAL_TIMELOCK = "0x939bD8d64c0A9583A7Dcea9933f7b21697ab6396";
@@ -222,32 +225,38 @@ forking(FORK_BLOCK, () => {
       const acm = new ethers.Contract(ACM, ACM_ABI, timelock);
       await acm.grantRole(DEFAULT_ADMIN_ROLE, helper.address);
 
-      // Step 2: timelock acceptOwnership on each buyback (deploy script set
-      // pendingOwner = NormalTimelock).
+      // Step 2: re-point pendingOwner of each buyback to the freshly-deployed
+      // test helper, regardless of who currently owns it. Mirrors the VIP-800
+      // sim's `before` hook: at later fork blocks the buybacks may already be
+      // pointed at a previously-deployed migration helper (V1), so we
+      // impersonate the live owner instead of assuming NormalTimelock.
       for (const b of BUYBACKS) {
-        await ownable(b).connect(timelock).acceptOwnership();
+        const ownerAddr = await ownable(b).owner();
+        const pending = await ownable(b).pendingOwner();
+        if (pending.toLowerCase() === helper.address.toLowerCase()) continue;
+        const ownerSigner = await initMainnetUser(ownerAddr);
+        await ethers.provider.send("hardhat_setBalance", [ownerAddr, "0xde0b6b3a7640000"]);
+        await new ethers.Contract(b, ["function transferOwnership(address)"], ownerSigner).transferOwnership(
+          helper.address,
+        );
       }
 
-      // Step 3: timelock transferOwnership of buybacks + converters to helper.
-      for (const b of BUYBACKS) {
-        await ownable(b).connect(timelock).transferOwnership(helper.address);
-      }
+      // Step 3: timelock transferOwnership of the 6 timelock-owned converters
+      // to helper. These are owned by NormalTimelock at every relevant block.
       for (const c of TIMELOCK_OWNED_CONVERTERS) {
         await ownable(c).connect(timelock).transferOwnership(helper.address);
       }
 
-      // Step 4: helper.execute1() — configures buybacks, pauses converters,
-      // rewires PSR, hands back the 10 buybacks, renounces DEFAULT_ADMIN_ROLE.
+      // Step 4: helper.execute1() — pauses converters, rewires PSR, runs the
+      // May Prime allocation (gas-capped, soft-failing on swap reverts), grants
+      // operator perms, renounces DEFAULT_ADMIN_ROLE. Helper retains ownership
+      // of all 16 contracts until execute2.
       const tx1 = await helper.connect(timelock).execute1();
       const r1 = await tx1.wait();
 
-      // Step 5: timelock acceptOwnership of the 10 buybacks (helper handed back).
-      for (const b of BUYBACKS) {
-        await ownable(b).connect(timelock).acceptOwnership();
-      }
-
-      // Step 6: helper.execute2() — drains the 6 converters into their
-      // replacement buybacks and hands the 6 converters back.
+      // Step 5: helper.execute2() — allowlists routers on every buyback,
+      // drains the 6 converters into their replacement buybacks, and hands
+      // ownership of all 16 contracts back to NormalTimelock.
       const tx2 = await helper.connect(timelock).execute2();
       const r2 = await tx2.wait();
 
@@ -260,9 +269,28 @@ forking(FORK_BLOCK, () => {
         `[gas] combined  =${r1.gasUsed.add(r2.gasUsed).toString()} (${pct(r1.gasUsed.add(r2.gasUsed))}% of Osaka cap)`,
       );
 
-      // Step 7: timelock acceptOwnership of the 6 converters.
-      for (const c of TIMELOCK_OWNED_CONVERTERS) {
-        await ownable(c).connect(timelock).acceptOwnership();
+      // Log every StepFailed event so it's obvious whether the Prime
+      // allocation succeeded or soft-failed inside the helper's outer
+      // try/catch.
+      const stepFailedTopic = ethers.utils.id("StepFailed(string,bytes)");
+      const stepFailedIface = new ethers.utils.Interface(["event StepFailed(string step, bytes reason)"]);
+      for (const log of r1.logs) {
+        if (log.topics[0] === stepFailedTopic) {
+          const parsed = stepFailedIface.parseLog(log);
+          console.log(`[StepFailed/execute1] step="${parsed.args.step}" reason=${parsed.args.reason}`);
+        }
+      }
+      for (const log of r2.logs) {
+        if (log.topics[0] === stepFailedTopic) {
+          const parsed = stepFailedIface.parseLog(log);
+          console.log(`[StepFailed/execute2] step="${parsed.args.step}" reason=${parsed.args.reason}`);
+        }
+      }
+
+      // Step 6: timelock acceptOwnership of all 16 contracts (helper handed
+      // back in execute2).
+      for (const a of [...BUYBACKS, ...TIMELOCK_OWNED_CONVERTERS]) {
+        await ownable(a).connect(timelock).acceptOwnership();
       }
     });
 

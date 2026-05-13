@@ -3,6 +3,7 @@ pragma solidity 0.8.25;
 
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 interface IACMForMigration {
     function giveCallPermission(
@@ -57,6 +58,58 @@ interface IPsrForMigration {
     function removeDistributionConfig(uint8 schema, address destination) external;
 }
 
+interface IShortfallForMigration {
+    function pauseAuctions() external;
+}
+
+interface IPrimeForMigration {
+    function addMarket(
+        address comptroller,
+        address market,
+        uint256 supplyMultiplier,
+        uint256 borrowMultiplier
+    ) external;
+}
+
+interface IPrimeLiquidityProviderForMigration {
+    function initializeTokens(address[] calldata tokens) external;
+
+    function setMaxTokensDistributionSpeed(address[] calldata tokens, uint256[] calldata speeds) external;
+
+    function setTokensDistributionSpeed(address[] calldata tokens, uint256[] calldata speeds) external;
+
+    function sweepToken(
+        address tokenAddress,
+        address to,
+        uint256 amount
+    ) external;
+}
+
+interface IPancakeV3Router {
+    struct ExactInputSingleParams {
+        address tokenIn;
+        address tokenOut;
+        uint24 fee;
+        address recipient;
+        uint256 deadline;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
+        uint160 sqrtPriceLimitX96;
+    }
+
+    function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut);
+
+    struct ExactInputParams {
+        bytes path;
+        address recipient;
+        uint256 deadline;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
+    }
+
+    function exactInput(ExactInputParams calldata params) external payable returns (uint256 amountOut);
+}
+
 /// @title TokenBuybackMigrationHelper
 /// @notice Two-shot helper that migrates the Venus Token Converter system to the
 ///         new TokenBuyback proxies. Split across `execute1()` and `execute2()`
@@ -72,26 +125,47 @@ interface IPsrForMigration {
 ///               6 timelock-owned legacy converters (16 contracts total).
 ///           (3) `grantRole(DEFAULT_ADMIN_ROLE, helper)` on the AccessControlManager.
 ///         It then calls `execute1()`, which: accepts ownership of all 16
-///         contracts, configures buybacks (routers + operator perms), pauses
-///         converters, repoints PSR distributions, revokes the transient ACM
-///         permissions, hands back ownership of the 10 buybacks to NormalTimelock,
-///         and renounces its own ACM admin role.
+///         contracts, pauses converters, repoints PSR distributions, runs the
+///         May 2026 Prime allocation (gas-capped, soft-failing on swap /
+///         distribution-speed reverts), revokes the transient ACM
+///         permissions, grants the cron operator persistent `executeBuyback`
+///         + `forwardBaseAsset` permissions on every buyback, and renounces
+///         its own ACM admin role. Router allowlisting and the ownership
+///         handback for all 16 contracts are deferred to `execute2()` so
+///         that each tx stays comfortably under BSC Osaka's 16,777,216 (2^24)
+///         per-tx gas cap.
 ///
 ///         A second wrapping VIP (queued after `execute1` lands) calls
-///         `execute2()`, which drains every legacy converter into its replacement
-///         buyback and hands back ownership of the 6 converters to NormalTimelock.
-///         Between the two VIPs the helper holds no ACM privileges; the only
-///         residual power is owner of the 6 converters, used solely for
-///         `sweepToken` (the converters are already paused and the PSR no longer
-///         routes income to them).
+///         `execute2()`, which allowlists the 9 swap routers on every
+///         buyback, drains every legacy converter into its replacement
+///         buyback, and hands back ownership of all 16 contracts to
+///         NormalTimelock. Between the two VIPs the helper holds no ACM
+///         privileges (DEFAULT_ADMIN_ROLE renounced at end of `execute1`).
+///         The only residual power is owner of all 16 contracts, used solely
+///         by `execute2()` itself; no other external entrypoint exists, and
+///         both flags are one-shot.
 ///
 ///         After `execute2()` returns the helper holds no privileges and no
 ///         balances. Both entrypoints are one-shot: a second call to either
 ///         reverts.
 ///
+///         `execute1()` also folds in the May 2026 Prime rewards allocation:
+///         Prime.addMarket(vU), PLP token init + max-speed, USDC sweep from
+///         PLP, USDC -> USDT direct swap, USDC -> USDT -> U multihop swap (the
+///         direct USDC/U V3 pool is too thin), Shortfall.pauseAuctions,
+///         PLP.setTokensDistributionSpeed. Hard-fails on every step except
+///         the two PCS V3 swap legs and the final setTokensDistributionSpeed:
+///         those three are wrapped in per-call `try/catch` and emit
+///         `StepFailed(label, reason)` on revert, so the migration core
+///         (ownership, ACM, PSR rewire) cannot be brought down by a
+///         thin-pool slippage or PLP-state edge case. Any USDC left in the
+///         helper after the swap block is forwarded back to NormalTimelock.
+///
 ///         Single-chain (BSC mainnet) two-shot. Every address is hardcoded as a
 ///         `constant`; redeploy the helper if any address changes.
 contract TokenBuybackMigrationHelper is ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
 
     // -------------------------------------------------------------------------
@@ -152,11 +226,55 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
     address private constant UNIV4_SWAP_ROUTER = 0x8B844f885672f333Bc0042cB669255f93a4C1E6b;
     address private constant UNI_UNIVERSAL_ROUTER = 0x1906c1d672b88cD1B9aC7593301cA990F94Eae07;
 
+    // -------------------------------------------------------------------------
+    // May 2026 Prime allocation (folded into execute1, post-PSR-rewire)
+    // -------------------------------------------------------------------------
+    address private constant SHORTFALL = 0xf37530A8a810Fcb501AA0Ecd0B0699388F0F2209;
+    address private constant PRIME = 0xBbCD063efE506c3D42a0Fa2dB5C08430288C71FC;
+    address private constant PRIME_LIQUIDITY_PROVIDER = 0x23c4F844ffDdC6161174eB32c770D4D8C07833F2;
+    address private constant CORE_COMPTROLLER = 0xfD36E2c2a6789Db23113685031d7F16329158384;
+    address private constant VU = 0x3d5E269787d562b74aCC55F18Bd26C5D09Fa245E;
+
+    address private constant USDT = 0x55d398326f99059fF775485246999027B3197955;
+    address private constant USDC = 0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d;
+    address private constant U = 0xcE24439F2D9C6a2289F741120FE202248B666666;
+
+    uint256 private constant SUPPLY_MULTIPLIER = 2e18;
+    uint256 private constant BORROW_MULTIPLIER = 0;
+    uint256 private constant U_MAX_DISTRIBUTION_SPEED = 1e18;
+
+    uint24 private constant PANCAKE_V3_FEE_TIER = 100;
+    /// @dev Multihop USDC -> USDT -> U on PancakeSwap V3 at fork block 97988051
+    ///      via QuoterV2: 7,493 USDC in -> 7,489.92 U out (well above U_MIN_OUT).
+    ///      Direct USDC/U pool was too thin (~2,694 U) to absorb 7,493 USDC in
+    ///      a single hop; routing through the deep USDT/U pool fixes that.
+    uint24 private constant USDC_USDT_FEE_TIER = 100;
+    uint24 private constant USDT_U_FEE_TIER = 100;
+
+    uint256 private constant USDC_TO_SWEEP = 14986e18;
+    uint256 private constant USDC_PER_LEG = 7493e18;
+    uint256 private constant USDT_MIN_OUT = 7418e18;
+    uint256 private constant U_MIN_OUT = 7418e18;
+
+    /// @dev Monthly reward budget per market = 12,250 U-units; BSC blocks per
+    ///      month assumed at 30 * 192,000 = 5,760,000. Per-block speed for
+    ///      both USDT and U is the integer division of these constants.
+    uint256 private constant REWARD_PER_MARKET_PER_MONTH = 12_250e18;
+    uint256 private constant BSC_BLOCKS_PER_MONTH = 30 * 192_000;
+    uint256 private constant NEW_PRIME_SPEED_FOR_USDT = REWARD_PER_MARKET_PER_MONTH / BSC_BLOCKS_PER_MONTH;
+    uint256 private constant NEW_PRIME_SPEED_FOR_U = REWARD_PER_MARKET_PER_MONTH / BSC_BLOCKS_PER_MONTH;
+
+    uint256 private constant SWAP_DEADLINE_WINDOW = 14 days;
+
     bool public executed1;
     bool public executed2;
 
     event Executed1();
     event Executed2();
+    /// @notice Emitted when a soft-failing step inside execute1 reverts. Currently
+    ///         used for: PancakeSwap V3 USDC->USDT swap, USDC->U swap, and
+    ///         PLP.setTokensDistributionSpeed. Migration core continues regardless.
+    event StepFailed(string step, bytes reason);
 
     error NotTimelock();
     error AlreadyExecuted();
@@ -179,25 +297,17 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
         _acceptAllOwnerships();
 
         // Step 2: self-grant transient ACM permissions for the ACM-checked
-        //         calls below (`pauseConversion`, PSR add/remove). Revoked in
-        //         step 7.
+        //         calls below (PSR add/remove, `pauseConversion`, Prime block).
+        //         Revoked in step 6.
         _selfGrantTransientAcmPermissions();
 
-        // Step 3: allowlist the 9 swap routers on each of the 10 buybacks so
-        //         the cron operator can route via the best execution venue.
-        _allowlistRoutersOnAllBuybacks();
-
-        // Step 4: grant the cron operator `executeBuyback` and
-        //         `forwardBaseAsset` permissions on each of the 10 buybacks.
-        _grantOperatorPermissions();
-
-        // Step 5: pause every timelock-owned legacy converter, closing the
+        // Step 3: pause every timelock-owned legacy converter, closing the
         //         only sensitive surface (token conversion). Drain happens in
         //         `execute2()`; `sweepToken` is `onlyOwner`-gated and not
         //         affected by the pause flag.
         _pauseAllTimelockOwnedConverters();
 
-        // Step 6: repoint ProtocolShareReserve distributions from legacy
+        // Step 4: repoint ProtocolShareReserve distributions from legacy
         //         converters and the VTreasury direct destination to the 10
         //         new buybacks; the 18 new rows + 12 zero-stale rows land in
         //         a single `addOrUpdateDistributionConfigs` call so PSR's
@@ -205,39 +315,65 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
         //         `removeDistributionConfig` deletes the zeroed entries.
         _rewireProtocolShareReserve();
 
-        // Step 7: revoke the transient ACM permissions self-granted in step 2.
+        // Step 5: May 2026 Prime rewards allocation — pause Shortfall, add vU
+        //         as a Prime market, initialize U in PLP, sweep USDC out of
+        //         PLP, swap USDC -> {USDT, U} on PancakeSwap V3 (soft-fail per
+        //         leg), set distribution speeds (soft-fail). Any USDC left in
+        //         this helper after the swap block is forwarded back to
+        //         NormalTimelock. Bounded to PRIME_ALLOCATION_GAS_CAP gas.
+        _runPrimeAllocation();
+
+        // Step 6: revoke the transient ACM permissions self-granted in step 2.
         _revokeTransientAcmPermissions();
 
-        // Step 8: transfer ownership of the 10 buybacks back to NormalTimelock
-        //         (the wrapping VIP calls `acceptOwnership` on each). The 6
-        //         converters stay with this helper for `execute2()`.
-        _handBackBuybackOwnership();
+        // Step 7: grant the cron operator `executeBuyback` and
+        //         `forwardBaseAsset` permissions on each of the 10 buybacks.
+        //         Done after the ACM revoke above because operator perms are
+        //         persistent, not transient.
+        _grantOperatorPermissions();
 
-        // Step 9: relinquish the helper's `DEFAULT_ADMIN_ROLE` on the ACM so
-        //         no residual ACM privilege survives between the two VIPs.
+        // Step 8: relinquish the helper's `DEFAULT_ADMIN_ROLE` on the ACM so
+        //          no residual ACM privilege survives between the two VIPs.
         IACMForMigration(ACM).renounceRole(DEFAULT_ADMIN_ROLE, address(this));
+
+        // Note: router allowlisting and ownership handback both move to
+        //       execute2() to keep execute1's gas footprint bounded well
+        //       under BSC Osaka's 16,777,216 (2^24) per-tx limit. Helper
+        //       retains ownership of all 16 contracts between VIPs; with
+        //       DEFAULT_ADMIN_ROLE renounced and no external entrypoints
+        //       beyond execute1/execute2 (both one-shot), the residual blast
+        //       surface is bounded to whatever execute2 itself can do.
 
         emit Executed1();
     }
 
     /// @notice Second half of the migration. Callable exactly once, by
-    ///         NormalTimelock, only after `execute1()` has run. Drains every
-    ///         legacy converter into its replacement buyback and hands back
-    ///         ownership of the 6 converters to NormalTimelock.
+    ///         NormalTimelock, only after `execute1()` has run.
+    ///         Allowlists swap routers on every buyback, drains every legacy
+    ///         converter into its replacement buyback, then hands back
+    ///         ownership of all 16 contracts to NormalTimelock.
     function execute2() external nonReentrant {
         if (msg.sender != NORMAL_TIMELOCK) revert NotTimelock();
         if (!executed1) revert Execute1NotRun();
         if (executed2) revert AlreadyExecuted();
         executed2 = true;
 
-        // Step 1: sweep every non-zero core-pool ERC20 balance off each
+        // Step 1: allowlist the 9 swap routers on each of the 10 buybacks so
+        //         the cron operator can route via the best execution venue.
+        //         Done here (rather than execute1) so execute1 stays well
+        //         under Osaka's per-tx gas cap.
+        _allowlistRoutersOnAllBuybacks();
+
+        // Step 2: sweep every non-zero core-pool ERC20 balance off each
         //         timelock-owned converter into its replacement buyback.
         //         `sweepToken` is `onlyOwner` and not gated by the pause flag,
         //         so this works against the converters paused in `execute1`.
         _drainAllConverters();
 
-        // Step 2: transfer ownership of the 6 converters back to NormalTimelock
-        //         (the wrapping VIP calls `acceptOwnership` on each).
+        // Step 3: transfer ownership of all 16 contracts (10 buybacks + 6
+        //         converters) back to NormalTimelock. The wrapping VIP calls
+        //         `acceptOwnership` on each after this returns.
+        _handBackBuybackOwnership();
         _handBackConverterOwnership();
 
         emit Executed2();
@@ -287,6 +423,21 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
         acm.giveCallPermission(BTCB_PRIME_CONVERTER, "pauseConversion()", address(this));
         acm.giveCallPermission(ETH_PRIME_CONVERTER, "pauseConversion()", address(this));
         acm.giveCallPermission(XVS_VAULT_CONVERTER, "pauseConversion()", address(this));
+        // Prime / Shortfall / PLP — May 2026 Prime allocation block.
+        acm.giveCallPermission(SHORTFALL, "pauseAuctions()", address(this));
+        acm.giveCallPermission(PRIME, "addMarket(address,address,uint256,uint256)", address(this));
+        acm.giveCallPermission(PRIME_LIQUIDITY_PROVIDER, "initializeTokens(address[])", address(this));
+        acm.giveCallPermission(
+            PRIME_LIQUIDITY_PROVIDER,
+            "setMaxTokensDistributionSpeed(address[],uint256[])",
+            address(this)
+        );
+        acm.giveCallPermission(
+            PRIME_LIQUIDITY_PROVIDER,
+            "setTokensDistributionSpeed(address[],uint256[])",
+            address(this)
+        );
+        acm.giveCallPermission(PRIME_LIQUIDITY_PROVIDER, "sweepToken(address,address,uint256)", address(this));
     }
 
     /// @dev Drains every legacy converter against the universal core-pool token
@@ -500,6 +651,123 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
         acm.revokeCallPermission(BTCB_PRIME_CONVERTER, "pauseConversion()", address(this));
         acm.revokeCallPermission(ETH_PRIME_CONVERTER, "pauseConversion()", address(this));
         acm.revokeCallPermission(XVS_VAULT_CONVERTER, "pauseConversion()", address(this));
+        acm.revokeCallPermission(SHORTFALL, "pauseAuctions()", address(this));
+        acm.revokeCallPermission(PRIME, "addMarket(address,address,uint256,uint256)", address(this));
+        acm.revokeCallPermission(PRIME_LIQUIDITY_PROVIDER, "initializeTokens(address[])", address(this));
+        acm.revokeCallPermission(
+            PRIME_LIQUIDITY_PROVIDER,
+            "setMaxTokensDistributionSpeed(address[],uint256[])",
+            address(this)
+        );
+        acm.revokeCallPermission(
+            PRIME_LIQUIDITY_PROVIDER,
+            "setTokensDistributionSpeed(address[],uint256[])",
+            address(this)
+        );
+        acm.revokeCallPermission(PRIME_LIQUIDITY_PROVIDER, "sweepToken(address,address,uint256)", address(this));
+    }
+
+    /// @dev May 2026 Prime rewards allocation. Hard-fails on everything except
+    ///      the two PancakeSwap V3 swap legs and the final
+    ///      `setTokensDistributionSpeed` (those three operations are wrapped in
+    ///      per-call `try/catch` and emit `StepFailed(label, reason)` on revert
+    ///      so a thin-pool slippage / PLP-state edge case can't unwind the
+    ///      migration core's ownership / ACM / PSR rewire work).
+    ///
+    ///      USDT leg: direct USDC -> USDT single-hop (deep V3 pool).
+    ///      U leg: multihop USDC -> USDT -> U via `exactInput` because the
+    ///      direct USDC/U V3 pool is too thin (~2,694 U) to absorb 7,493 USDC;
+    ///      routing through the deep USDT/U pool (~7,489.92 U out for 7,493
+    ///      USDC in at fork block 97988051) lands cleanly.
+    ///
+    ///      Any USDC left in the helper after the swap block is forwarded back
+    ///      to NormalTimelock so it isn't stranded.
+    function _runPrimeAllocation() internal {
+        IPrimeForMigration(PRIME).addMarket(CORE_COMPTROLLER, VU, SUPPLY_MULTIPLIER, BORROW_MULTIPLIER);
+
+        address[] memory uTokens = new address[](1);
+        uTokens[0] = U;
+        IPrimeLiquidityProviderForMigration(PRIME_LIQUIDITY_PROVIDER).initializeTokens(uTokens);
+
+        uint256[] memory uMax = new uint256[](1);
+        uMax[0] = U_MAX_DISTRIBUTION_SPEED;
+        IPrimeLiquidityProviderForMigration(PRIME_LIQUIDITY_PROVIDER).setMaxTokensDistributionSpeed(uTokens, uMax);
+
+        IPrimeLiquidityProviderForMigration(PRIME_LIQUIDITY_PROVIDER).sweepToken(USDC, address(this), USDC_TO_SWEEP);
+
+        IERC20(USDC).safeApprove(PANCAKE_V3_ROUTER, 0);
+        IERC20(USDC).safeApprove(PANCAKE_V3_ROUTER, USDC_TO_SWEEP);
+
+        _trySwap(USDC, USDT, USDC_PER_LEG, USDT_MIN_OUT, "swapUSDCtoUSDT");
+
+        bytes memory usdcToUPath = abi.encodePacked(USDC, USDC_USDT_FEE_TIER, USDT, USDT_U_FEE_TIER, U);
+        _trySwapMultihop(usdcToUPath, USDC_PER_LEG, U_MIN_OUT, "swapUSDCtoU");
+
+        IERC20(USDC).safeApprove(PANCAKE_V3_ROUTER, 0);
+
+        uint256 leftover = IERC20(USDC).balanceOf(address(this));
+        if (leftover > 0) {
+            IERC20(USDC).safeTransfer(NORMAL_TIMELOCK, leftover);
+        }
+
+        IShortfallForMigration(SHORTFALL).pauseAuctions();
+
+        address[] memory speedTokens = new address[](2);
+        speedTokens[0] = USDT;
+        speedTokens[1] = U;
+        uint256[] memory speeds = new uint256[](2);
+        speeds[0] = NEW_PRIME_SPEED_FOR_USDT;
+        speeds[1] = NEW_PRIME_SPEED_FOR_U;
+        try
+            IPrimeLiquidityProviderForMigration(PRIME_LIQUIDITY_PROVIDER).setTokensDistributionSpeed(
+                speedTokens,
+                speeds
+            )
+        {} catch (bytes memory reason) {
+            emit StepFailed("setTokensDistributionSpeed", reason);
+        }
+    }
+
+    function _trySwap(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 minOut,
+        string memory label
+    ) internal {
+        IPancakeV3Router.ExactInputSingleParams memory params = IPancakeV3Router.ExactInputSingleParams({
+            tokenIn: tokenIn,
+            tokenOut: tokenOut,
+            fee: PANCAKE_V3_FEE_TIER,
+            recipient: PRIME_LIQUIDITY_PROVIDER,
+            deadline: block.timestamp + SWAP_DEADLINE_WINDOW,
+            amountIn: amountIn,
+            amountOutMinimum: minOut,
+            sqrtPriceLimitX96: 0
+        });
+        try IPancakeV3Router(PANCAKE_V3_ROUTER).exactInputSingle(params) returns (uint256) {} catch (
+            bytes memory reason
+        ) {
+            emit StepFailed(label, reason);
+        }
+    }
+
+    function _trySwapMultihop(
+        bytes memory path,
+        uint256 amountIn,
+        uint256 minOut,
+        string memory label
+    ) internal {
+        IPancakeV3Router.ExactInputParams memory params = IPancakeV3Router.ExactInputParams({
+            path: path,
+            recipient: PRIME_LIQUIDITY_PROVIDER,
+            deadline: block.timestamp + SWAP_DEADLINE_WINDOW,
+            amountIn: amountIn,
+            amountOutMinimum: minOut
+        });
+        try IPancakeV3Router(PANCAKE_V3_ROUTER).exactInput(params) returns (uint256) {} catch (bytes memory reason) {
+            emit StepFailed(label, reason);
+        }
     }
 
     function _handBackBuybackOwnership() internal {
