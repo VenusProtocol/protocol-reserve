@@ -63,17 +63,6 @@ interface IShortfallForMigration {
 }
 
 interface IPancakeV3Router {
-    struct ExactInputSingleParams {
-        address tokenIn;
-        address tokenOut;
-        uint24 fee;
-        address recipient;
-        uint256 deadline;
-        uint256 amountIn;
-        uint256 amountOutMinimum;
-        uint160 sqrtPriceLimitX96;
-    }
-
     struct ExactInputParams {
         bytes path;
         address recipient;
@@ -81,8 +70,6 @@ interface IPancakeV3Router {
         uint256 amountIn;
         uint256 amountOutMinimum;
     }
-
-    function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut);
 
     function exactInput(ExactInputParams calldata params) external payable returns (uint256 amountOut);
 }
@@ -134,10 +121,11 @@ interface IPancakeV3Router {
 ///             `PLP.setMaxTokensDistributionSpeed`, `PLP.setTokensDistributionSpeed`.
 ///             These are either `onlyOwner`-gated on PLP or simple ACM-gated
 ///             setters that don't justify wrapping in helper logic.
-///           - Helper (`executeSwap`): the USDC -> {USDT, U} V3 swap legs,
-///             with per-call try/catch + `StepFailed` events so a thin-pool
-///             slippage can't take down the broader VIP, and leftover USDC
-///             forwarded back to NormalTimelock.
+///           - Helper (`executeSwap`): single multihop USDC -> USDT -> U V3
+///             swap (the USDT leg is omitted — PLP already holds enough USDT
+///             for the May 2026 distribution), with try/catch + `StepFailed`
+///             so a thin-pool slippage can't take down the broader VIP, and
+///             leftover USDC forwarded back to NormalTimelock.
 ///
 ///         Single-chain (BSC mainnet) two-shot. Every address is hardcoded as a
 ///         `constant`; redeploy the helper if any address changes.
@@ -224,12 +212,17 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
     /// @dev 0.01% fee tier on every leg — deepest pools for stable/U pairs.
     uint24 private constant V3_FEE_TIER = 100;
 
-    /// @dev USDC consumed per swap leg + min-out tolerances. Multihop
-    ///      USDC -> USDT -> U on PancakeSwap V3 (USDC/U direct pool ~2,694 U
-    ///      depth is too thin for 7,493 USDC; USDT/U pool is deep enough).
-    uint256 private constant USDC_PER_LEG = 7493e18;
-    uint256 private constant USDT_MIN_OUT = 7418e18;
-    uint256 private constant U_MIN_OUT = 7418e18;
+    /// @dev Single multihop USDC -> USDT -> U swap. The direct USDC/U V3 pool
+    ///      is too thin (~2,694 U) for this size; routing through the deep
+    ///      USDT/U pool is required. The USDT leg is intentionally omitted —
+    ///      PLP already holds ~25k USDT, more than enough for the May 2026
+    ///      distribution. Of PLP's ~14.9k USDC, ~4k is reserved for
+    ///      unclaimed user rewards, so the wrapping VIP sweeps 10k into this
+    ///      helper. Quote at 2026-05-13 (BSC mainnet latest):
+    ///      10,000 USDC -> 9,996.60 U via QuoterV2 (~0.034% slippage);
+    ///      `U_MIN_OUT` set at 9,900e18 (~1% buffer for execution-time drift).
+    uint256 private constant USDC_TO_SWAP = 10_000e18;
+    uint256 private constant U_MIN_OUT = 9_900e18;
 
     /// @dev Generous deadline window; tx executes atomically within the VIP so
     ///      `block.timestamp` at submit is effectively `now`.
@@ -348,33 +341,30 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
     ///         once, by NormalTimelock. The wrapping VIP is responsible for
     ///         the rest of the Prime block (`Prime.addMarket(vU)`,
     ///         `PLP.initializeTokens([U])`, `PLP.setMaxTokensDistributionSpeed`,
-    ///         `PLP.setTokensDistributionSpeed`) and for delivering the USDC
-    ///         to this helper via `PLP.sweepToken(USDC, helper, amount)` from
-    ///         NormalTimelock (the PLP owner) before calling this function.
+    ///         `PLP.setTokensDistributionSpeed`) and for delivering
+    ///         `USDC_TO_SWAP` USDC to this helper via
+    ///         `PLP.sweepToken(USDC, helper, USDC_TO_SWAP)` from NormalTimelock
+    ///         (the PLP owner) before calling this function. Only U is bought
+    ///         here — PLP already holds enough USDT to cover the May 2026
+    ///         distribution.
     ///
     ///         This function:
-    ///           1. Approves USDC to the PancakeSwap V3 router for the full
-    ///              local balance.
-    ///           2. Swaps `USDC_PER_LEG` USDC -> USDT (single-hop, soft-fail).
-    ///           3. Swaps `USDC_PER_LEG` USDC -> USDT -> U (multihop,
-    ///              soft-fail). The direct USDC/U V3 pool is too thin (~2,694
-    ///              U depth) to absorb 7,493 USDC, so routing through the
-    ///              deep USDT/U pool is required.
-    ///           4. Resets USDC approval and forwards any leftover USDC back
+    ///           1. Approves `USDC_TO_SWAP` USDC to the PancakeSwap V3 router.
+    ///           2. Swaps USDC -> USDT -> U (multihop, soft-fail). The direct
+    ///              USDC/U V3 pool is too thin to absorb 10k USDC, so routing
+    ///              through the deep USDT/U pool is required. Output is
+    ///              delivered directly to PRIME_LIQUIDITY_PROVIDER.
+    ///           3. Resets USDC approval and forwards any leftover USDC back
     ///              to NormalTimelock so it isn't stranded in this helper.
-    ///         Output of both swaps is delivered directly to PRIME_LIQUIDITY_PROVIDER.
     function executeSwap() external nonReentrant {
         if (msg.sender != NORMAL_TIMELOCK) revert NotTimelock();
         if (executedSwap) revert AlreadyExecuted();
         executedSwap = true;
 
-        uint256 balance = IERC20(USDC).balanceOf(address(this));
-        IERC20(USDC).forceApprove(PANCAKE_V3_ROUTER, balance);
-
-        _trySwap(USDC, USDT, USDC_PER_LEG, USDT_MIN_OUT, "swapUSDCtoUSDT");
+        IERC20(USDC).forceApprove(PANCAKE_V3_ROUTER, USDC_TO_SWAP);
 
         bytes memory usdcToUPath = abi.encodePacked(USDC, V3_FEE_TIER, USDT, V3_FEE_TIER, U);
-        _trySwapMultihop(usdcToUPath, USDC_PER_LEG, U_MIN_OUT, "swapUSDCtoU");
+        _trySwapMultihop(usdcToUPath, USDC_TO_SWAP, U_MIN_OUT, "swapUSDCtoU");
 
         IERC20(USDC).forceApprove(PANCAKE_V3_ROUTER, 0);
 
@@ -384,31 +374,6 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
         }
 
         emit ExecutedSwap();
-    }
-
-    /// @dev Soft-failing single-hop V3 swap; output goes directly to PLP.
-    function _trySwap(
-        address tokenIn,
-        address tokenOut,
-        uint256 amountIn,
-        uint256 minOut,
-        string memory label
-    ) internal {
-        IPancakeV3Router.ExactInputSingleParams memory params = IPancakeV3Router.ExactInputSingleParams({
-            tokenIn: tokenIn,
-            tokenOut: tokenOut,
-            fee: V3_FEE_TIER,
-            recipient: PRIME_LIQUIDITY_PROVIDER,
-            deadline: block.timestamp + SWAP_DEADLINE_WINDOW,
-            amountIn: amountIn,
-            amountOutMinimum: minOut,
-            sqrtPriceLimitX96: 0
-        });
-        try IPancakeV3Router(PANCAKE_V3_ROUTER).exactInputSingle(params) returns (uint256) {} catch (
-            bytes memory reason
-        ) {
-            emit StepFailed(label, reason);
-        }
     }
 
     /// @dev Soft-failing multihop V3 swap; output goes directly to PLP.

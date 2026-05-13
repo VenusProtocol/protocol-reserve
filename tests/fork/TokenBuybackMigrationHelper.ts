@@ -66,8 +66,11 @@ const U = "0xcE24439F2D9C6a2289F741120FE202248B666666";
 
 // PLP — source of the USDC the VIP sweeps into the helper before executeSwap.
 const PRIME_LIQUIDITY_PROVIDER = "0x23c4F844ffDdC6161174eB32c770D4D8C07833F2";
-// Matches the helper's `USDC_PER_LEG * 2` budget.
-const USDC_TO_SWEEP = ethers.utils.parseUnits("14986", 18);
+// Matches the helper's `USDC_TO_SWAP`. 10k USDC leaves ~4k on PLP for
+// unclaimed user rewards out of PLP's ~14.9k USDC balance.
+const USDC_TO_SWEEP = ethers.utils.parseUnits("10000", 18);
+// Matches the helper's `U_MIN_OUT` — ~1% under the 9,996.60 U quote.
+const U_MIN_OUT = ethers.utils.parseUnits("9900", 18);
 
 // Routers (allowlisted on every buyback)
 const ROUTERS = [
@@ -269,9 +272,10 @@ forking(FORK_BLOCK, () => {
       const usdc = new ethers.Contract(USDC, ["function transfer(address,uint256) returns (bool)"], plpSigner);
       await usdc.transfer(helper.address, USDC_TO_SWEEP);
 
-      // Step 6: helper.executeSwap() — approves USDC, swaps USDC -> {USDT, U}
-      // on PCS V3 (soft-fail per leg), forwards leftover USDC back to
-      // NormalTimelock.
+      // Step 6: helper.executeSwap() — approves USDC, swaps USDC -> USDT -> U
+      // on PCS V3 (multihop, soft-fail), forwards leftover USDC back to
+      // NormalTimelock. USDT leg is omitted — PLP already holds enough USDT
+      // for the May 2026 distribution.
       const txSwap = await helper.connect(timelock).executeSwap();
       const rSwap = await txSwap.wait();
 
@@ -332,23 +336,21 @@ forking(FORK_BLOCK, () => {
         expect(await erc20(USDC).balanceOf(helper.address)).to.equal(0);
       });
 
-      it("PLP received the USDT swap output (>= USDT_MIN_OUT)", async () => {
+      it("PLP USDT balance is unchanged (no USDT swap leg)", async () => {
         const after = await erc20(USDT).balanceOf(PRIME_LIQUIDITY_PROVIDER);
-        const delta = after.sub(usdtPlpBefore);
-        // helper's USDT_MIN_OUT = 7418e18; assert at least that much landed in PLP
-        expect(delta).to.be.gte(ethers.utils.parseUnits("7418", 18));
+        expect(after).to.equal(usdtPlpBefore);
       });
 
       it("PLP received the U swap output (>= U_MIN_OUT)", async () => {
         const after = await erc20(U).balanceOf(PRIME_LIQUIDITY_PROVIDER);
         const delta = after.sub(uPlpBefore);
-        expect(delta).to.be.gte(ethers.utils.parseUnits("7418", 18));
+        expect(delta).to.be.gte(U_MIN_OUT);
       });
 
-      it("any USDC leftover after swaps was forwarded to NormalTimelock", async () => {
-        // Either both legs consumed USDC_PER_LEG (no leftover) or one leg
-        // soft-failed and leftover landed back at NormalTimelock. In both
-        // cases the timelock balance must not have decreased.
+      it("any USDC leftover after the swap was forwarded to NormalTimelock", async () => {
+        // Either the swap consumed USDC_TO_SWAP (no leftover) or it
+        // soft-failed and the full amount landed back at NormalTimelock.
+        // In both cases the timelock balance must not have decreased.
         const after = await erc20(USDC).balanceOf(NORMAL_TIMELOCK);
         expect(after).to.be.gte(usdcTimelockBefore);
       });
