@@ -15384,7 +15384,7 @@
       ]
     },
     "TokenBuybackMigrationHelper": {
-      "address": "0xa30fcE7A72aD101f6afd4D8b89D1AD8687f51cb0",
+      "address": "0x003811Cab5d85fa8F33113f3160C8B3CE69D93d4",
       "abi": [
         {
           "inputs": [],
@@ -15435,6 +15435,31 @@
           "type": "event"
         },
         {
+          "anonymous": false,
+          "inputs": [],
+          "name": "ExecutedSwap",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "string",
+              "name": "step",
+              "type": "string"
+            },
+            {
+              "indexed": false,
+              "internalType": "bytes",
+              "name": "reason",
+              "type": "bytes"
+            }
+          ],
+          "name": "StepFailed",
+          "type": "event"
+        },
+        {
           "inputs": [],
           "name": "DEFAULT_ADMIN_ROLE",
           "outputs": [
@@ -15463,6 +15488,13 @@
         },
         {
           "inputs": [],
+          "name": "executeSwap",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
           "name": "executed1",
           "outputs": [
             {
@@ -15477,6 +15509,19 @@
         {
           "inputs": [],
           "name": "executed2",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "executedSwap",
           "outputs": [
             {
               "internalType": "bool",
