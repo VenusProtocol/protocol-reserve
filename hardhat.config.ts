@@ -112,7 +112,6 @@ function isFork() {
     ? {
         allowUnlimitedContractSize: false,
         loggingEnabled: false,
-        hardfork: "cancun",
         forking: {
           url:
             process.env[`ARCHIVE_NODE_${process.env.FORKED_NETWORK}`] ||
@@ -127,7 +126,6 @@ function isFork() {
     : {
         allowUnlimitedContractSize: true,
         loggingEnabled: false,
-        hardfork: "cancun",
         live: false,
       };
 }
@@ -143,7 +141,7 @@ const config: HardhatUserConfig = {
             enabled: true,
             runs: 10000,
           },
-          evmVersion: "cancun",
+          evmVersion: "paris",
           outputSelection: {
             "*": {
               "*": ["storageLayout"],
