@@ -3,6 +3,7 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { TOKEN_BUYBACK_DEFAULTS } from "../helpers/deploymentConfig";
+import { verifyDeployment } from "../helpers/verify";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -54,6 +55,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       console.log(`Ownership transfer already pending to ${pendingOwner}`);
     }
   }
+
+  await verifyDeployment(hre, "RiskFundBuyback");
 };
 
 func.tags = ["RiskFundBuyback"];

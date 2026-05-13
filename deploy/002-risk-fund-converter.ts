@@ -4,6 +4,7 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { ADDRESS_ONE } from "../helpers/utils";
+import { verifyDeployment } from "../helpers/verify";
 
 const MIN_AMOUNT_TO_CONVERT = parseUnits("10", 18);
 
@@ -11,11 +12,12 @@ const getTokenOrMockName = (name: string, live: boolean) => {
   return `${live ? "" : "Mock"}${name}`;
 };
 
-const func: DeployFunction = async ({
-  network: { live },
-  getNamedAccounts,
-  deployments,
-}: HardhatRuntimeEnvironment) => {
+const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+  const {
+    network: { live },
+    getNamedAccounts,
+    deployments,
+  } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
@@ -82,6 +84,8 @@ const func: DeployFunction = async ({
     await tx.wait();
     console.log(`Transferred ownership of RiskFundConverter to Timelock`);
   }
+
+  await verifyDeployment(hre, "RiskFundConverter");
 };
 
 func.tags = ["RiskFundConverter"];
