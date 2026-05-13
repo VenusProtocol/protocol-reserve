@@ -1,24 +1,20 @@
-// Fork test scaffold for TokenBuybackMigrationHelper.sol
+// Fork test for TokenBuybackMigrationHelper.sol on BSC mainnet.
 //
-// This file is a DRAFT — it lives next to the helper source under `draft/` and
-// is meant to be moved into venus-periphery's `tests/hardhat/Fork/` directory
-// alongside the helper before it is run. It is not picked up by the vips repo's
-// hardhat test runner.
-//
-// Once moved, run with:
-//   FORKED_NETWORK=bscmainnet npx hardhat test tests/hardhat/Fork/TokenBuybackMigrationHelper.ts
+// Run with:
+//   FORK=true FORKED_NETWORK=bscmainnet npx hardhat test tests/fork/TokenBuybackMigrationHelper.ts
 //
 // The suite drives the helper end-to-end on a BSC mainnet fork:
 //   1. Impersonate NormalTimelock.
-//   2. Deploy the helper with the production constructor args (constants below).
-//   3. Have NormalTimelock grant DEFAULT_ADMIN_ROLE to the helper, accept and
-//      transfer ownership of the 10 buybacks, transfer ownership of the 6
-//      timelock-owned converters.
-//   4. Call helper.execute1(), then NormalTimelock acceptOwnership on the 10
-//      buybacks, then helper.execute2(), then NormalTimelock acceptOwnership
-//      on the 6 converters. Assert the post-conditions:
+//   2. Deploy the helper.
+//   3. NormalTimelock grants DEFAULT_ADMIN_ROLE to the helper, points the
+//      10 buybacks' pendingOwner at it (impersonating the live owner —
+//      deploy scripts now set helper directly), and transfers ownership of
+//      the 6 timelock-owned converters.
+//   4. Call helper.execute1(), then helper.execute2(), then NormalTimelock
+//      acceptOwnership on all 16. Assert:
 //        - Each buyback is now owned by NormalTimelock
 //        - Each timelock-owned converter is paused (conversionPaused == true)
+//        - Shortfall.auctionsPaused == true
 //        - All drained tokens have zero residual on each converter
 //        - Each replacement buyback received the drained balances
 //        - PSR distributionTargets contain every new row at the expected
@@ -29,22 +25,16 @@
 //        - A second execute1() / execute2() reverts with AlreadyExecuted
 //        - execute2() called before execute1() reverts with Execute1NotRun
 //
-// All addresses below mirror the snapshot read on 2026-05-07 from the BSC
-// mainnet archive node and the deploy-time values planned for the new
-// TokenBuyback proxies and helper. Buyback / OPERATOR / NEW_RISK_FUND_V2_IMPL
-// are TODO until feat/VPD-1087 is deployed.
+// Buyback addresses mirror the redeployed proxies from PR #162.
 import { expect } from "chai";
 import { BigNumber, Contract, Signer } from "ethers";
 import { ethers } from "hardhat";
 
 import { forking, initMainnetUser } from "../utils";
 
-// Block at or after VPD-1087's TokenBuyback proxies + the V2 migration helper
-// are deployed on BSC mainnet. Matches the VIP-800 simulation fork block so
-// the Prime allocation block inside execute1 (vU addMarket, PLP init, PCS V3
-// USDC -> {USDT, U} swap) runs against the same chain state used to size
-// the swap legs and Prime distribution speeds.
-const FORK_BLOCK = 97988051;
+// Block after the PR #162 redeploy of the 10 TokenBuyback proxies on BSC
+// mainnet. Deploy landed at block 98010461; pinning just past that.
+const FORK_BLOCK = 98010500;
 
 // ------------- Production constants (BSC mainnet) -------------
 const NORMAL_TIMELOCK = "0x939bD8d64c0A9583A7Dcea9933f7b21697ab6396";
@@ -72,6 +62,12 @@ const WBNB = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
 const BUSD = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56";
 const DAI = "0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3";
 const CAKE = "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82";
+const U = "0xcE24439F2D9C6a2289F741120FE202248B666666";
+
+// PLP — source of the USDC the VIP sweeps into the helper before executeSwap.
+const PRIME_LIQUIDITY_PROVIDER = "0x23c4F844ffDdC6161174eB32c770D4D8C07833F2";
+// Matches the helper's `USDC_PER_LEG * 2` budget.
+const USDC_TO_SWEEP = ethers.utils.parseUnits("14986", 18);
 
 // Routers (allowlisted on every buyback)
 const ROUTERS = [
@@ -88,16 +84,18 @@ const ROUTERS = [
 
 // Mirror the helper's hardcoded production constants (BSC mainnet).
 const OPERATOR = "0x88ac9ca69A371f47798Df18e5C36449af44526a4";
-const RISK_FUND_BUYBACK = "0xfffB20c23650B27126815994f3F07eF6B46aea60";
-const USDT_PRIME_BUYBACK = "0x0191Bb3CD28A96691F5EC5066ad42A0373ae11C6";
-const U_PRIME_BUYBACK = "0xFd50bd4107705929df73Ac683BD505232BA9E9dB";
-const XVS_BUYBACK = "0xBaAc819aE93b29fA6512a095CA00255a4F05b027";
-const U_TREASURY_BUYBACK = "0xef7cb42a7EBD4b011905D20Fc8038a603c3f22E4";
-const BTCB_TREASURY_BUYBACK = "0x69739FF52e90BC93dCaEd5a2431072b5082d326D";
-const ETH_TREASURY_BUYBACK = "0x9e0543F9E09fb5b8a58F73d11967DC894dbD40a7";
-const USDT_TREASURY_BUYBACK = "0xBF858c95D778022b48E6Ad343D3d644017fb0ca7";
-const USDC_TREASURY_BUYBACK = "0xFB5FA544dBf39983198BDD01e2c26E3AB597e22A";
-const XVS_TREASURY_BUYBACK = "0x01D0f07D389692D386EB8D09Da3bbCa5C83be551";
+const SHORTFALL = "0xf37530A8a810Fcb501AA0Ecd0B0699388F0F2209";
+// Redeployed buyback proxies from PR #162.
+const RISK_FUND_BUYBACK = "0x0c71EFabD00329E839745ef23aB946d3ed24A805";
+const USDT_PRIME_BUYBACK = "0xD721932C7CA41Eb5305867287010587a266346a8";
+const U_PRIME_BUYBACK = "0xBC9fFBfb799B2d189669D3816E2B7273c69041bd";
+const XVS_BUYBACK = "0x637E6246BBb0F9aBae9d764F5e1bB6347f028C12";
+const U_TREASURY_BUYBACK = "0xec63411423D03327De19135446dDdA3055D2feA8";
+const BTCB_TREASURY_BUYBACK = "0x1F306a0d929a7098a0A0b12248Ba97600AB79026";
+const ETH_TREASURY_BUYBACK = "0x41954F0bf26959dF2e1B8302DEBf736B5b154B64";
+const USDT_TREASURY_BUYBACK = "0xB3dDf13E8B6b8dE10F5826087C202b80F1D1b490";
+const USDC_TREASURY_BUYBACK = "0xd7aC40f9bd9A1beb8E2d121b4446CF90417cf169";
+const XVS_TREASURY_BUYBACK = "0x6D2d239c16453062cF145A7a5128A6a60710d236";
 
 const BUYBACKS = [
   RISK_FUND_BUYBACK,
@@ -188,6 +186,11 @@ forking(FORK_BLOCK, () => {
     let helper: Contract;
     let timelock: Signer;
     const balanceBefore = new Map<string, BigNumber>(); // key: token:recipient
+    // Pre-swap balances captured in `before` so post-state asserts can verify
+    // PLP received the swap outputs and the timelock got the USDC leftover.
+    let usdtPlpBefore: BigNumber;
+    let uPlpBefore: BigNumber;
+    let usdcTimelockBefore: BigNumber;
 
     before(async () => {
       timelock = await initMainnetUser(NORMAL_TIMELOCK);
@@ -247,14 +250,32 @@ forking(FORK_BLOCK, () => {
         await ownable(c).connect(timelock).transferOwnership(helper.address);
       }
 
-      // Step 4: helper.execute1() — pauses converters, rewires PSR, runs the
-      // May Prime allocation (gas-capped, soft-failing on swap reverts), grants
-      // operator perms, renounces DEFAULT_ADMIN_ROLE. Helper retains ownership
-      // of all 16 contracts until execute2.
+      // Step 4: helper.execute1() — pauses converters + Shortfall, rewires
+      // PSR, grants operator perms, renounces DEFAULT_ADMIN_ROLE. Helper
+      // retains ownership of all 16 contracts until execute2.
       const tx1 = await helper.connect(timelock).execute1();
       const r1 = await tx1.wait();
 
-      // Step 5: helper.execute2() — allowlists routers on every buyback,
+      // Step 5: simulate the Prime-block VIP step that feeds USDC to the
+      // helper. Real VIP path: NormalTimelock (PLP owner) calls
+      // `PLP.sweepToken(USDC, helper, USDC_TO_SWEEP)`. Mirror that by
+      // impersonating PLP itself and `transfer`-ing the same amount —
+      // equivalent end state for executeSwap's perspective.
+      usdtPlpBefore = await erc20(USDT).balanceOf(PRIME_LIQUIDITY_PROVIDER);
+      uPlpBefore = await erc20(U).balanceOf(PRIME_LIQUIDITY_PROVIDER);
+      usdcTimelockBefore = await erc20(USDC).balanceOf(NORMAL_TIMELOCK);
+      const plpSigner = await initMainnetUser(PRIME_LIQUIDITY_PROVIDER);
+      await ethers.provider.send("hardhat_setBalance", [PRIME_LIQUIDITY_PROVIDER, "0xde0b6b3a7640000"]);
+      const usdc = new ethers.Contract(USDC, ["function transfer(address,uint256) returns (bool)"], plpSigner);
+      await usdc.transfer(helper.address, USDC_TO_SWEEP);
+
+      // Step 6: helper.executeSwap() — approves USDC, swaps USDC -> {USDT, U}
+      // on PCS V3 (soft-fail per leg), forwards leftover USDC back to
+      // NormalTimelock.
+      const txSwap = await helper.connect(timelock).executeSwap();
+      const rSwap = await txSwap.wait();
+
+      // Step 7: helper.execute2() — allowlists routers on every buyback,
       // drains the 6 converters into their replacement buybacks, and hands
       // ownership of all 16 contracts back to NormalTimelock.
       const tx2 = await helper.connect(timelock).execute2();
@@ -263,31 +284,25 @@ forking(FORK_BLOCK, () => {
       // BSC Osaka hardfork per-tx gas cap = 16,777,216 (2^24).
       const OSAKA_CAP = BigNumber.from(16_777_216);
       const pct = (g: BigNumber) => g.mul(10000).div(OSAKA_CAP).toNumber() / 100;
-      console.log(`[gas] execute1 gasUsed=${r1.gasUsed.toString()} (${pct(r1.gasUsed)}% of Osaka cap)`);
-      console.log(`[gas] execute2 gasUsed=${r2.gasUsed.toString()} (${pct(r2.gasUsed)}% of Osaka cap)`);
-      console.log(
-        `[gas] combined  =${r1.gasUsed.add(r2.gasUsed).toString()} (${pct(r1.gasUsed.add(r2.gasUsed))}% of Osaka cap)`,
-      );
+      console.log(`[gas] execute1    gasUsed=${r1.gasUsed.toString()} (${pct(r1.gasUsed)}% of Osaka cap)`);
+      console.log(`[gas] executeSwap gasUsed=${rSwap.gasUsed.toString()} (${pct(rSwap.gasUsed)}% of Osaka cap)`);
+      console.log(`[gas] execute2    gasUsed=${r2.gasUsed.toString()} (${pct(r2.gasUsed)}% of Osaka cap)`);
+      const total = r1.gasUsed.add(rSwap.gasUsed).add(r2.gasUsed);
+      console.log(`[gas] combined    =${total.toString()} (${pct(total)}% of Osaka cap)`);
 
-      // Log every StepFailed event so it's obvious whether the Prime
-      // allocation succeeded or soft-failed inside the helper's outer
-      // try/catch.
+      // Log every StepFailed event so soft-failing swap legs are visible.
       const stepFailedTopic = ethers.utils.id("StepFailed(string,bytes)");
       const stepFailedIface = new ethers.utils.Interface(["event StepFailed(string step, bytes reason)"]);
-      for (const log of r1.logs) {
-        if (log.topics[0] === stepFailedTopic) {
-          const parsed = stepFailedIface.parseLog(log);
-          console.log(`[StepFailed/execute1] step="${parsed.args.step}" reason=${parsed.args.reason}`);
-        }
-      }
-      for (const log of r2.logs) {
-        if (log.topics[0] === stepFailedTopic) {
-          const parsed = stepFailedIface.parseLog(log);
-          console.log(`[StepFailed/execute2] step="${parsed.args.step}" reason=${parsed.args.reason}`);
+      for (const r of [r1, rSwap, r2]) {
+        for (const log of r.logs) {
+          if (log.topics[0] === stepFailedTopic) {
+            const parsed = stepFailedIface.parseLog(log);
+            console.log(`[StepFailed] step="${parsed.args.step}" reason=${parsed.args.reason}`);
+          }
         }
       }
 
-      // Step 6: timelock acceptOwnership of all 16 contracts (helper handed
+      // Step 8: timelock acceptOwnership of all 16 contracts (helper handed
       // back in execute2).
       for (const a of [...BUYBACKS, ...TIMELOCK_OWNED_CONVERTERS]) {
         await ownable(a).connect(timelock).acceptOwnership();
@@ -295,8 +310,9 @@ forking(FORK_BLOCK, () => {
     });
 
     describe("post-execute state", () => {
-      it("helper.executed1 and helper.executed2 are true", async () => {
+      it("helper.executed1, executedSwap and executed2 are true", async () => {
         expect(await helper.executed1()).to.be.true;
+        expect(await helper.executedSwap()).to.be.true;
         expect(await helper.executed2()).to.be.true;
       });
 
@@ -304,8 +320,37 @@ forking(FORK_BLOCK, () => {
         await expect(helper.connect(timelock).execute1()).to.be.revertedWithCustomError(helper, "AlreadyExecuted");
       });
 
+      it("a second executeSwap() reverts with AlreadyExecuted", async () => {
+        await expect(helper.connect(timelock).executeSwap()).to.be.revertedWithCustomError(helper, "AlreadyExecuted");
+      });
+
       it("a second execute2() reverts with AlreadyExecuted", async () => {
         await expect(helper.connect(timelock).execute2()).to.be.revertedWithCustomError(helper, "AlreadyExecuted");
+      });
+
+      it("executeSwap leaves no USDC in the helper", async () => {
+        expect(await erc20(USDC).balanceOf(helper.address)).to.equal(0);
+      });
+
+      it("PLP received the USDT swap output (>= USDT_MIN_OUT)", async () => {
+        const after = await erc20(USDT).balanceOf(PRIME_LIQUIDITY_PROVIDER);
+        const delta = after.sub(usdtPlpBefore);
+        // helper's USDT_MIN_OUT = 7418e18; assert at least that much landed in PLP
+        expect(delta).to.be.gte(ethers.utils.parseUnits("7418", 18));
+      });
+
+      it("PLP received the U swap output (>= U_MIN_OUT)", async () => {
+        const after = await erc20(U).balanceOf(PRIME_LIQUIDITY_PROVIDER);
+        const delta = after.sub(uPlpBefore);
+        expect(delta).to.be.gte(ethers.utils.parseUnits("7418", 18));
+      });
+
+      it("any USDC leftover after swaps was forwarded to NormalTimelock", async () => {
+        // Either both legs consumed USDC_PER_LEG (no leftover) or one leg
+        // soft-failed and leftover landed back at NormalTimelock. In both
+        // cases the timelock balance must not have decreased.
+        const after = await erc20(USDC).balanceOf(NORMAL_TIMELOCK);
+        expect(after).to.be.gte(usdcTimelockBefore);
       });
 
       it("helper no longer holds DEFAULT_ADMIN_ROLE on ACM", async () => {
@@ -323,6 +368,15 @@ forking(FORK_BLOCK, () => {
         for (const c of TIMELOCK_OWNED_CONVERTERS) {
           expect(await converter(c).conversionPaused(), c).to.be.true;
         }
+      });
+
+      it("Shortfall auctions are paused", async () => {
+        const shortfall = new ethers.Contract(
+          SHORTFALL,
+          ["function auctionsPaused() view returns (bool)"],
+          ethers.provider,
+        );
+        expect(await shortfall.auctionsPaused()).to.be.true;
       });
 
       it("each timelock-owned converter has zero residual for every drained token", async () => {
