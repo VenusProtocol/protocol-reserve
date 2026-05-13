@@ -118,12 +118,15 @@ interface IPancakeV3Router {
 ///
 /// @dev    Trust model
 ///         -----------
-///         A first wrapping VIP performs three preparatory actions:
-///           (1) `acceptOwnership()` on each of the 10 buyback proxies (timelock
-///               claims them from the deploy script's `pendingOwner = NormalTimelock`).
-///           (2) `transferOwnership(helper)` on each of the 10 buybacks plus the
-///               6 timelock-owned legacy converters (16 contracts total).
-///           (3) `grantRole(DEFAULT_ADMIN_ROLE, helper)` on the AccessControlManager.
+///         Pre-state assumptions:
+///           - 10 buyback proxies deployed with `pendingOwner = address(this)`
+///             (deploy scripts set the helper directly as pending owner; no
+///             timelock hop).
+///           - 6 legacy converters currently owned by NormalTimelock.
+///         A first wrapping VIP performs two preparatory actions:
+///           (1) `transferOwnership(helper)` on each of the 6 timelock-owned
+///               legacy converters (sets `pendingOwner = helper`).
+///           (2) `grantRole(DEFAULT_ADMIN_ROLE, helper)` on the AccessControlManager.
 ///         It then calls `execute1()`, which: accepts ownership of all 16
 ///         contracts, pauses converters, repoints PSR distributions, runs the
 ///         May 2026 Prime allocation (gas-capped, soft-failing on swap /
@@ -152,7 +155,7 @@ interface IPancakeV3Router {
 ///         `execute1()` also folds in the May 2026 Prime rewards allocation:
 ///         Prime.addMarket(vU), PLP token init + max-speed, USDC sweep from
 ///         PLP, USDC -> USDT direct swap, USDC -> USDT -> U multihop swap (the
-///         direct USDC/U V3 pool is too thin), Shortfall.pauseAuctions,
+///         direct USDC/U V3 pool is too thin),
 ///         PLP.setTokensDistributionSpeed. Hard-fails on every step except
 ///         the two PCS V3 swap legs and the final setTokensDistributionSpeed:
 ///         those three are wrapped in per-call `try/catch` and emit
@@ -193,17 +196,17 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
     ///         and `forwardBaseAsset` ACM permissions on every buyback.
     address private constant OPERATOR = 0x88ac9ca69A371f47798Df18e5C36449af44526a4;
 
-    // ----- New TokenBuyback proxies -----
-    address private constant RISK_FUND_BUYBACK = 0xfffB20c23650B27126815994f3F07eF6B46aea60;
-    address private constant USDT_PRIME_BUYBACK = 0x0191Bb3CD28A96691F5EC5066ad42A0373ae11C6;
-    address private constant U_PRIME_BUYBACK = 0xFd50bd4107705929df73Ac683BD505232BA9E9dB;
-    address private constant XVS_BUYBACK = 0xBaAc819aE93b29fA6512a095CA00255a4F05b027;
-    address private constant U_TREASURY_BUYBACK = 0xef7cb42a7EBD4b011905D20Fc8038a603c3f22E4;
-    address private constant BTCB_TREASURY_BUYBACK = 0x69739FF52e90BC93dCaEd5a2431072b5082d326D;
-    address private constant ETH_TREASURY_BUYBACK = 0x9e0543F9E09fb5b8a58F73d11967DC894dbD40a7;
-    address private constant USDT_TREASURY_BUYBACK = 0xBF858c95D778022b48E6Ad343D3d644017fb0ca7;
-    address private constant USDC_TREASURY_BUYBACK = 0xFB5FA544dBf39983198BDD01e2c26E3AB597e22A;
-    address private constant XVS_TREASURY_BUYBACK = 0x01D0f07D389692D386EB8D09Da3bbCa5C83be551;
+    // ----- New TokenBuyback proxies (redeployed in PR #162) -----
+    address private constant RISK_FUND_BUYBACK = 0x0c71EFabD00329E839745ef23aB946d3ed24A805;
+    address private constant USDT_PRIME_BUYBACK = 0xD721932C7CA41Eb5305867287010587a266346a8;
+    address private constant U_PRIME_BUYBACK = 0xBC9fFBfb799B2d189669D3816E2B7273c69041bd;
+    address private constant XVS_BUYBACK = 0x637E6246BBb0F9aBae9d764F5e1bB6347f028C12;
+    address private constant U_TREASURY_BUYBACK = 0xec63411423D03327De19135446dDdA3055D2feA8;
+    address private constant BTCB_TREASURY_BUYBACK = 0x1F306a0d929a7098a0A0b12248Ba97600AB79026;
+    address private constant ETH_TREASURY_BUYBACK = 0x41954F0bf26959dF2e1B8302DEBf736B5b154B64;
+    address private constant USDT_TREASURY_BUYBACK = 0xB3dDf13E8B6b8dE10F5826087C202b80F1D1b490;
+    address private constant USDC_TREASURY_BUYBACK = 0xd7aC40f9bd9A1beb8E2d121b4446CF90417cf169;
+    address private constant XVS_TREASURY_BUYBACK = 0x6D2d239c16453062cF145A7a5128A6a60710d236;
 
     // -------------------------------------------------------------------------
     // BSC core pool ERC20 universe (47 tokens) — every underlying of every
@@ -301,11 +304,13 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
         //         Revoked in step 6.
         _selfGrantTransientAcmPermissions();
 
-        // Step 3: pause every timelock-owned legacy converter, closing the
-        //         only sensitive surface (token conversion). Drain happens in
-        //         `execute2()`; `sweepToken` is `onlyOwner`-gated and not
-        //         affected by the pause flag.
-        _pauseAllTimelockOwnedConverters();
+        // Step 3: pause revenue flows — the 6 legacy converters (token
+        //         conversion) and Shortfall (RiskFund auctions). Shortfall is
+        //         paused here because it pulls from RiskFundV2, whose income
+        //         path is being rewired by this migration. Drain of converter
+        //         balances happens in `execute2()`; `sweepToken` is
+        //         `onlyOwner`-gated and not affected by the pause flag.
+        _pauseRevenueFlows();
 
         // Step 4: repoint ProtocolShareReserve distributions from legacy
         //         converters and the VTreasury direct destination to the 10
@@ -315,12 +320,11 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
         //         `removeDistributionConfig` deletes the zeroed entries.
         _rewireProtocolShareReserve();
 
-        // Step 5: May 2026 Prime rewards allocation — pause Shortfall, add vU
-        //         as a Prime market, initialize U in PLP, sweep USDC out of
-        //         PLP, swap USDC -> {USDT, U} on PancakeSwap V3 (soft-fail per
-        //         leg), set distribution speeds (soft-fail). Any USDC left in
-        //         this helper after the swap block is forwarded back to
-        //         NormalTimelock. Bounded to PRIME_ALLOCATION_GAS_CAP gas.
+        // Step 5: May 2026 Prime rewards allocation — add vU as a Prime market,
+        //         initialize U in PLP, sweep USDC out of PLP, swap USDC ->
+        //         {USDT, U} on PancakeSwap V3 (soft-fail per leg), set
+        //         distribution speeds (soft-fail). Any USDC left in this helper
+        //         after the swap block is forwarded back to NormalTimelock.
         _runPrimeAllocation();
 
         // Step 6: revoke the transient ACM permissions self-granted in step 2.
@@ -423,8 +427,10 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
         acm.giveCallPermission(BTCB_PRIME_CONVERTER, "pauseConversion()", address(this));
         acm.giveCallPermission(ETH_PRIME_CONVERTER, "pauseConversion()", address(this));
         acm.giveCallPermission(XVS_VAULT_CONVERTER, "pauseConversion()", address(this));
-        // Prime / Shortfall / PLP — May 2026 Prime allocation block.
+        // Shortfall.pauseAuctions — paused alongside converters in step 3 because
+        // it pulls from RiskFundV2, whose income path is being rewired.
         acm.giveCallPermission(SHORTFALL, "pauseAuctions()", address(this));
+        // Prime / PLP — May 2026 Prime allocation block.
         acm.giveCallPermission(PRIME, "addMarket(address,address,uint256,uint256)", address(this));
         acm.giveCallPermission(PRIME_LIQUIDITY_PROVIDER, "initializeTokens(address[])", address(this));
         acm.giveCallPermission(
@@ -546,13 +552,19 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
         }
     }
 
-    function _pauseAllTimelockOwnedConverters() internal {
+    /// @dev Pauses the legacy converters (token conversion) and Shortfall (RiskFund
+    ///      auctions). Shortfall is included here because it pulls from RiskFundV2,
+    ///      whose income path is being rewired by this migration: pausing auctions
+    ///      until the new buyback flow lands the first USDT into RiskFundV2 prevents
+    ///      Shortfall settlement from running short.
+    function _pauseRevenueFlows() internal {
         ITokenConverterForMigration(RISK_FUND_CONVERTER).pauseConversion();
         ITokenConverterForMigration(USDT_PRIME_CONVERTER).pauseConversion();
         ITokenConverterForMigration(USDC_PRIME_CONVERTER).pauseConversion();
         ITokenConverterForMigration(BTCB_PRIME_CONVERTER).pauseConversion();
         ITokenConverterForMigration(ETH_PRIME_CONVERTER).pauseConversion();
         ITokenConverterForMigration(XVS_VAULT_CONVERTER).pauseConversion();
+        IShortfallForMigration(SHORTFALL).pauseAuctions();
     }
 
     /// @dev PSR enforces `distributionTargets.length <= maxLoopsLimit` (mainnet:
@@ -709,8 +721,6 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
         if (leftover > 0) {
             IERC20(USDC).safeTransfer(NORMAL_TIMELOCK, leftover);
         }
-
-        IShortfallForMigration(SHORTFALL).pauseAuctions();
 
         address[] memory speedTokens = new address[](2);
         speedTokens[0] = USDT;
