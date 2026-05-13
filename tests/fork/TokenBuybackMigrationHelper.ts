@@ -14,7 +14,9 @@
 //   3. Have NormalTimelock grant DEFAULT_ADMIN_ROLE to the helper, accept and
 //      transfer ownership of the 10 buybacks, transfer ownership of the 6
 //      timelock-owned converters.
-//   4. Call helper.execute() and assert the post-conditions:
+//   4. Call helper.execute1(), then NormalTimelock acceptOwnership on the 10
+//      buybacks, then helper.execute2(), then NormalTimelock acceptOwnership
+//      on the 6 converters. Assert the post-conditions:
 //        - Each buyback is now owned by NormalTimelock
 //        - Each timelock-owned converter is paused (conversionPaused == true)
 //        - All drained tokens have zero residual on each converter
@@ -23,8 +25,9 @@
 //          (schema, percentage); no stale row remains; per-schema sum == 1e4
 //        - Operator has executeBuyback + forwardBaseAsset perms on every buyback
 //        - Helper no longer holds DEFAULT_ADMIN_ROLE
-//        - Helper.executed == true
-//        - A second execute() reverts with AlreadyExecuted
+//        - Helper.executed1 == true and Helper.executed2 == true
+//        - A second execute1() / execute2() reverts with AlreadyExecuted
+//        - execute2() called before execute1() reverts with Execute1NotRun
 //
 // All addresses below mirror the snapshot read on 2026-05-07 from the BSC
 // mainnet archive node and the deploy-time values planned for the new
@@ -233,23 +236,48 @@ forking(FORK_BLOCK, () => {
         await ownable(c).connect(timelock).transferOwnership(helper.address);
       }
 
-      // Step 4: helper.execute() — atomic migration. No parameters; every drain
-      // tuple and router address is hardcoded inside the helper source.
-      await helper.connect(timelock).execute();
+      // Step 4: helper.execute1() — configures buybacks, pauses converters,
+      // rewires PSR, hands back the 10 buybacks, renounces DEFAULT_ADMIN_ROLE.
+      const tx1 = await helper.connect(timelock).execute1();
+      const r1 = await tx1.wait();
 
-      // Step 5: timelock acceptOwnership of all 16 contracts (helper handed back).
-      for (const a of [...BUYBACKS, ...TIMELOCK_OWNED_CONVERTERS]) {
-        await ownable(a).connect(timelock).acceptOwnership();
+      // Step 5: timelock acceptOwnership of the 10 buybacks (helper handed back).
+      for (const b of BUYBACKS) {
+        await ownable(b).connect(timelock).acceptOwnership();
+      }
+
+      // Step 6: helper.execute2() — drains the 6 converters into their
+      // replacement buybacks and hands the 6 converters back.
+      const tx2 = await helper.connect(timelock).execute2();
+      const r2 = await tx2.wait();
+
+      // BSC Osaka hardfork per-tx gas cap = 16,777,216 (2^24).
+      const OSAKA_CAP = BigNumber.from(16_777_216);
+      const pct = (g: BigNumber) => g.mul(10000).div(OSAKA_CAP).toNumber() / 100;
+      console.log(`[gas] execute1 gasUsed=${r1.gasUsed.toString()} (${pct(r1.gasUsed)}% of Osaka cap)`);
+      console.log(`[gas] execute2 gasUsed=${r2.gasUsed.toString()} (${pct(r2.gasUsed)}% of Osaka cap)`);
+      console.log(
+        `[gas] combined  =${r1.gasUsed.add(r2.gasUsed).toString()} (${pct(r1.gasUsed.add(r2.gasUsed))}% of Osaka cap)`,
+      );
+
+      // Step 7: timelock acceptOwnership of the 6 converters.
+      for (const c of TIMELOCK_OWNED_CONVERTERS) {
+        await ownable(c).connect(timelock).acceptOwnership();
       }
     });
 
     describe("post-execute state", () => {
-      it("helper.executed is true", async () => {
-        expect(await helper.executed()).to.be.true;
+      it("helper.executed1 and helper.executed2 are true", async () => {
+        expect(await helper.executed1()).to.be.true;
+        expect(await helper.executed2()).to.be.true;
       });
 
-      it("a second execute() reverts with AlreadyExecuted", async () => {
-        await expect(helper.connect(timelock).execute()).to.be.revertedWithCustomError(helper, "AlreadyExecuted");
+      it("a second execute1() reverts with AlreadyExecuted", async () => {
+        await expect(helper.connect(timelock).execute1()).to.be.revertedWithCustomError(helper, "AlreadyExecuted");
+      });
+
+      it("a second execute2() reverts with AlreadyExecuted", async () => {
+        await expect(helper.connect(timelock).execute2()).to.be.revertedWithCustomError(helper, "AlreadyExecuted");
       });
 
       it("helper no longer holds DEFAULT_ADMIN_ROLE on ACM", async () => {
@@ -358,13 +386,27 @@ forking(FORK_BLOCK, () => {
     });
 
     describe("guards", () => {
-      it("execute() reverts when called by anyone other than NormalTimelock", async () => {
-        // Fresh deployment to test the guard cleanly.
+      it("execute1() reverts when called by anyone other than NormalTimelock", async () => {
         const Factory = await ethers.getContractFactory("TokenBuybackMigrationHelper", timelock);
         const fresh = await Factory.deploy();
         await fresh.deployed();
         const [other] = await ethers.getSigners();
-        await expect(fresh.connect(other).execute()).to.be.revertedWithCustomError(fresh, "NotTimelock");
+        await expect(fresh.connect(other).execute1()).to.be.revertedWithCustomError(fresh, "NotTimelock");
+      });
+
+      it("execute2() reverts when called by anyone other than NormalTimelock", async () => {
+        const Factory = await ethers.getContractFactory("TokenBuybackMigrationHelper", timelock);
+        const fresh = await Factory.deploy();
+        await fresh.deployed();
+        const [other] = await ethers.getSigners();
+        await expect(fresh.connect(other).execute2()).to.be.revertedWithCustomError(fresh, "NotTimelock");
+      });
+
+      it("execute2() reverts with Execute1NotRun when called before execute1()", async () => {
+        const Factory = await ethers.getContractFactory("TokenBuybackMigrationHelper", timelock);
+        const fresh = await Factory.deploy();
+        await fresh.deployed();
+        await expect(fresh.connect(timelock).execute2()).to.be.revertedWithCustomError(fresh, "Execute1NotRun");
       });
     });
   });

@@ -58,25 +58,38 @@ interface IPsrForMigration {
 }
 
 /// @title TokenBuybackMigrationHelper
-/// @notice One-shot helper that migrates the Venus Token Converter system to the new
-///         TokenBuyback proxies in a single atomic transaction. Replaces ~170 raw VIP
-///         commands with one `execute()` call gated by NormalTimelock.
+/// @notice Two-shot helper that migrates the Venus Token Converter system to the
+///         new TokenBuyback proxies. Split across `execute1()` and `execute2()`
+///         so that the per-tx gas budget fits under BSC's Osaka hardfork cap of
+///         16,777,216 (2^24) gas — the original single-tx flow needed ~17.5 M.
 ///
 /// @dev    Trust model
 ///         -----------
-///         The wrapping VIP performs three preparatory actions:
-///           (1) `acceptOwnership()` on each of the 10 buyback proxies (timelock claims
-///               them from the deploy script's `pendingOwner = NormalTimelock`).
-///           (2) `transferOwnership(helper)` on each of the 10 buybacks plus the 6
-///               timelock-owned legacy converters (16 contracts total).
+///         A first wrapping VIP performs three preparatory actions:
+///           (1) `acceptOwnership()` on each of the 10 buyback proxies (timelock
+///               claims them from the deploy script's `pendingOwner = NormalTimelock`).
+///           (2) `transferOwnership(helper)` on each of the 10 buybacks plus the
+///               6 timelock-owned legacy converters (16 contracts total).
 ///           (3) `grantRole(DEFAULT_ADMIN_ROLE, helper)` on the AccessControlManager.
-///         `execute()` then runs end-to-end: accepts ownership of all 16 contracts,
-///         drains converters, configures buybacks, fans out ACM grants, pauses
-///         converters, repoints PSR distributions, transfers all ownership back to
-///         NormalTimelock, and finally renounces its own ACM admin role. After return
-///         the helper holds no privileges and no balances, and a second call reverts.
+///         It then calls `execute1()`, which: accepts ownership of all 16
+///         contracts, configures buybacks (routers + operator perms), pauses
+///         converters, repoints PSR distributions, revokes the transient ACM
+///         permissions, hands back ownership of the 10 buybacks to NormalTimelock,
+///         and renounces its own ACM admin role.
 ///
-///         Single-chain (BSC mainnet) one-shot. Every address is hardcoded as a
+///         A second wrapping VIP (queued after `execute1` lands) calls
+///         `execute2()`, which drains every legacy converter into its replacement
+///         buyback and hands back ownership of the 6 converters to NormalTimelock.
+///         Between the two VIPs the helper holds no ACM privileges; the only
+///         residual power is owner of the 6 converters, used solely for
+///         `sweepToken` (the converters are already paused and the PSR no longer
+///         routes income to them).
+///
+///         After `execute2()` returns the helper holds no privileges and no
+///         balances. Both entrypoints are one-shot: a second call to either
+///         reverts.
+///
+///         Single-chain (BSC mainnet) two-shot. Every address is hardcoded as a
 ///         `constant`; redeploy the helper if any address changes.
 contract TokenBuybackMigrationHelper is ReentrancyGuard {
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
@@ -139,19 +152,27 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
     address private constant UNIV4_SWAP_ROUTER = 0x8B844f885672f333Bc0042cB669255f93a4C1E6b;
     address private constant UNI_UNIVERSAL_ROUTER = 0x1906c1d672b88cD1B9aC7593301cA990F94Eae07;
 
-    bool public executed;
+    bool public executed1;
+    bool public executed2;
 
-    event Executed();
+    event Executed1();
+    event Executed2();
 
     error NotTimelock();
     error AlreadyExecuted();
+    error Execute1NotRun();
     error PendingOwnerMismatch(address contractAddress, address expected, address actual);
 
-    /// @notice Executes the full migration. Callable exactly once, by NormalTimelock.
-    function execute() external nonReentrant {
+    /// @notice First half of the migration. Callable exactly once, by NormalTimelock.
+    ///         Configures the 10 buybacks, pauses the 6 timelock-owned converters,
+    ///         repoints PSR distributions, hands back ownership of the buybacks
+    ///         to NormalTimelock and renounces the helper's `DEFAULT_ADMIN_ROLE`
+    ///         on the ACM. Leaves ownership of the 6 converters with this helper
+    ///         so that `execute2()` can call `sweepToken` on them.
+    function execute1() external nonReentrant {
         if (msg.sender != NORMAL_TIMELOCK) revert NotTimelock();
-        if (executed) revert AlreadyExecuted();
-        executed = true;
+        if (executed1) revert AlreadyExecuted();
+        executed1 = true;
 
         // Step 1: claim ownership of every contract whose `pendingOwner` is set
         //         to this helper (10 buybacks + 6 timelock-owned converters).
@@ -159,26 +180,24 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
 
         // Step 2: self-grant transient ACM permissions for the ACM-checked
         //         calls below (`pauseConversion`, PSR add/remove). Revoked in
-        //         step 8.
+        //         step 7.
         _selfGrantTransientAcmPermissions();
 
-        // Step 3: sweep every non-zero core-pool ERC20 balance off each
-        //         timelock-owned converter into its replacement buyback.
-        _drainAllConverters();
-
-        // Step 4: allowlist the 9 swap routers on each of the 10 buybacks so
+        // Step 3: allowlist the 9 swap routers on each of the 10 buybacks so
         //         the cron operator can route via the best execution venue.
         _allowlistRoutersOnAllBuybacks();
 
-        // Step 5: grant the cron operator `executeBuyback` and
+        // Step 4: grant the cron operator `executeBuyback` and
         //         `forwardBaseAsset` permissions on each of the 10 buybacks.
         _grantOperatorPermissions();
 
-        // Step 6: pause every timelock-owned legacy converter, closing the
-        //         only sensitive surface (token conversion).
+        // Step 5: pause every timelock-owned legacy converter, closing the
+        //         only sensitive surface (token conversion). Drain happens in
+        //         `execute2()`; `sweepToken` is `onlyOwner`-gated and not
+        //         affected by the pause flag.
         _pauseAllTimelockOwnedConverters();
 
-        // Step 7: repoint ProtocolShareReserve distributions from legacy
+        // Step 6: repoint ProtocolShareReserve distributions from legacy
         //         converters and the VTreasury direct destination to the 10
         //         new buybacks; the 18 new rows + 12 zero-stale rows land in
         //         a single `addOrUpdateDistributionConfigs` call so PSR's
@@ -186,18 +205,42 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
         //         `removeDistributionConfig` deletes the zeroed entries.
         _rewireProtocolShareReserve();
 
-        // Step 8: revoke the transient ACM permissions self-granted in step 2.
+        // Step 7: revoke the transient ACM permissions self-granted in step 2.
         _revokeTransientAcmPermissions();
 
-        // Step 9: transfer ownership of all 16 contracts back to NormalTimelock
-        //         (the wrapping VIP calls `acceptOwnership` on each).
-        _handBackOwnership();
+        // Step 8: transfer ownership of the 10 buybacks back to NormalTimelock
+        //         (the wrapping VIP calls `acceptOwnership` on each). The 6
+        //         converters stay with this helper for `execute2()`.
+        _handBackBuybackOwnership();
 
-        // Step 10: relinquish the helper's `DEFAULT_ADMIN_ROLE` on the ACM so
-        //          no residual privilege survives this transaction.
+        // Step 9: relinquish the helper's `DEFAULT_ADMIN_ROLE` on the ACM so
+        //         no residual ACM privilege survives between the two VIPs.
         IACMForMigration(ACM).renounceRole(DEFAULT_ADMIN_ROLE, address(this));
 
-        emit Executed();
+        emit Executed1();
+    }
+
+    /// @notice Second half of the migration. Callable exactly once, by
+    ///         NormalTimelock, only after `execute1()` has run. Drains every
+    ///         legacy converter into its replacement buyback and hands back
+    ///         ownership of the 6 converters to NormalTimelock.
+    function execute2() external nonReentrant {
+        if (msg.sender != NORMAL_TIMELOCK) revert NotTimelock();
+        if (!executed1) revert Execute1NotRun();
+        if (executed2) revert AlreadyExecuted();
+        executed2 = true;
+
+        // Step 1: sweep every non-zero core-pool ERC20 balance off each
+        //         timelock-owned converter into its replacement buyback.
+        //         `sweepToken` is `onlyOwner` and not gated by the pause flag,
+        //         so this works against the converters paused in `execute1`.
+        _drainAllConverters();
+
+        // Step 2: transfer ownership of the 6 converters back to NormalTimelock
+        //         (the wrapping VIP calls `acceptOwnership` on each).
+        _handBackConverterOwnership();
+
+        emit Executed2();
     }
 
     // -------------------------------------------------------------------------
@@ -459,7 +502,7 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
         acm.revokeCallPermission(XVS_VAULT_CONVERTER, "pauseConversion()", address(this));
     }
 
-    function _handBackOwnership() internal {
+    function _handBackBuybackOwnership() internal {
         IOwnable2Step(RISK_FUND_BUYBACK).transferOwnership(NORMAL_TIMELOCK);
         IOwnable2Step(USDT_PRIME_BUYBACK).transferOwnership(NORMAL_TIMELOCK);
         IOwnable2Step(U_PRIME_BUYBACK).transferOwnership(NORMAL_TIMELOCK);
@@ -470,7 +513,9 @@ contract TokenBuybackMigrationHelper is ReentrancyGuard {
         IOwnable2Step(USDT_TREASURY_BUYBACK).transferOwnership(NORMAL_TIMELOCK);
         IOwnable2Step(USDC_TREASURY_BUYBACK).transferOwnership(NORMAL_TIMELOCK);
         IOwnable2Step(XVS_TREASURY_BUYBACK).transferOwnership(NORMAL_TIMELOCK);
+    }
 
+    function _handBackConverterOwnership() internal {
         IOwnable2Step(RISK_FUND_CONVERTER).transferOwnership(NORMAL_TIMELOCK);
         IOwnable2Step(USDT_PRIME_CONVERTER).transferOwnership(NORMAL_TIMELOCK);
         IOwnable2Step(USDC_PRIME_CONVERTER).transferOwnership(NORMAL_TIMELOCK);
