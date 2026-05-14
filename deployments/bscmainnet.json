@@ -77,7 +77,7 @@
       ]
     },
     "BTCBTreasuryBuyback": {
-      "address": "0x69739FF52e90BC93dCaEd5a2431072b5082d326D",
+      "address": "0x1F306a0d929a7098a0A0b12248Ba97600AB79026",
       "abi": [
         {
           "anonymous": false,
@@ -1006,7 +1006,7 @@
       ]
     },
     "BTCBTreasuryBuyback_Implementation": {
-      "address": "0xa9a0B9d2509EfcB06b8EE3812c8442A32C843e0b",
+      "address": "0x058a9f1D43580E6d0ABB9103aE2F908327dB723d",
       "abi": [
         {
           "inputs": [
@@ -1830,7 +1830,7 @@
       ]
     },
     "BTCBTreasuryBuyback_Proxy": {
-      "address": "0x69739FF52e90BC93dCaEd5a2431072b5082d326D",
+      "address": "0x1F306a0d929a7098a0A0b12248Ba97600AB79026",
       "abi": [
         {
           "inputs": [
@@ -3395,7 +3395,7 @@
       ]
     },
     "ETHTreasuryBuyback": {
-      "address": "0x9e0543F9E09fb5b8a58F73d11967DC894dbD40a7",
+      "address": "0x41954F0bf26959dF2e1B8302DEBf736B5b154B64",
       "abi": [
         {
           "anonymous": false,
@@ -4324,7 +4324,7 @@
       ]
     },
     "ETHTreasuryBuyback_Implementation": {
-      "address": "0x908c0aFD4a3e73a69fECbc425729ffB319446Ed9",
+      "address": "0xf125447c4a82421627a5C7Aa03E58029f64585FB",
       "abi": [
         {
           "inputs": [
@@ -5148,7 +5148,7 @@
       ]
     },
     "ETHTreasuryBuyback_Proxy": {
-      "address": "0x9e0543F9E09fb5b8a58F73d11967DC894dbD40a7",
+      "address": "0x41954F0bf26959dF2e1B8302DEBf736B5b154B64",
       "abi": [
         {
           "inputs": [
@@ -7157,7 +7157,7 @@
       ]
     },
     "RiskFundBuyback": {
-      "address": "0xfffB20c23650B27126815994f3F07eF6B46aea60",
+      "address": "0x0c71EFabD00329E839745ef23aB946d3ed24A805",
       "abi": [
         {
           "anonymous": false,
@@ -8086,7 +8086,7 @@
       ]
     },
     "RiskFundBuyback_Implementation": {
-      "address": "0x0175a9888dB6104C9f2c47d87C661e5D6d109FDa",
+      "address": "0xB842fE2eA255B94FCD091EbadFA7283e37dAa823",
       "abi": [
         {
           "inputs": [
@@ -8910,7 +8910,7 @@
       ]
     },
     "RiskFundBuyback_Proxy": {
-      "address": "0xfffB20c23650B27126815994f3F07eF6B46aea60",
+      "address": "0x0c71EFabD00329E839745ef23aB946d3ed24A805",
       "abi": [
         {
           "inputs": [
@@ -15384,7 +15384,7 @@
       ]
     },
     "UPrimeBuyback": {
-      "address": "0xFd50bd4107705929df73Ac683BD505232BA9E9dB",
+      "address": "0xBC9fFBfb799B2d189669D3816E2B7273c69041bd",
       "abi": [
         {
           "anonymous": false,
@@ -16313,7 +16313,7 @@
       ]
     },
     "UPrimeBuyback_Implementation": {
-      "address": "0xbB3304B6a1eB1d48E1d2EE78eadDadD4024DF358",
+      "address": "0xf988F3f434aDF5858AFcFCb9B07A5a914c104a63",
       "abi": [
         {
           "inputs": [
@@ -17137,7 +17137,7 @@
       ]
     },
     "UPrimeBuyback_Proxy": {
-      "address": "0xFd50bd4107705929df73Ac683BD505232BA9E9dB",
+      "address": "0xBC9fFBfb799B2d189669D3816E2B7273c69041bd",
       "abi": [
         {
           "inputs": [
@@ -17347,7 +17347,7 @@
       ]
     },
     "USDCTreasuryBuyback": {
-      "address": "0xFB5FA544dBf39983198BDD01e2c26E3AB597e22A",
+      "address": "0xd7aC40f9bd9A1beb8E2d121b4446CF90417cf169",
       "abi": [
         {
           "anonymous": false,
@@ -18276,7 +18276,7 @@
       ]
     },
     "USDCTreasuryBuyback_Implementation": {
-      "address": "0x3be5EfA5F5974dE4491c73Fe1085445b63D5C879",
+      "address": "0xFd2fe1459088688e271F5867e666a5532115a00D",
       "abi": [
         {
           "inputs": [
@@ -19100,7 +19100,7 @@
       ]
     },
     "USDCTreasuryBuyback_Proxy": {
-      "address": "0xFB5FA544dBf39983198BDD01e2c26E3AB597e22A",
+      "address": "0xd7aC40f9bd9A1beb8E2d121b4446CF90417cf169",
       "abi": [
         {
           "inputs": [
@@ -19236,7 +19236,7 @@
       ]
     },
     "USDTPrimeBuyback": {
-      "address": "0x0191Bb3CD28A96691F5EC5066ad42A0373ae11C6",
+      "address": "0xD721932C7CA41Eb5305867287010587a266346a8",
       "abi": [
         {
           "anonymous": false,
@@ -20165,7 +20165,7 @@
       ]
     },
     "USDTPrimeBuyback_Implementation": {
-      "address": "0x52f4c550a310340284e07B4A8A2722c20C71D39B",
+      "address": "0x6c0b809EA21E4Bb9799E06c3f9C572671C691a31",
       "abi": [
         {
           "inputs": [
@@ -20989,7 +20989,7 @@
       ]
     },
     "USDTPrimeBuyback_Proxy": {
-      "address": "0x0191Bb3CD28A96691F5EC5066ad42A0373ae11C6",
+      "address": "0xD721932C7CA41Eb5305867287010587a266346a8",
       "abi": [
         {
           "inputs": [
@@ -21199,7 +21199,7 @@
       ]
     },
     "USDTTreasuryBuyback": {
-      "address": "0xBF858c95D778022b48E6Ad343D3d644017fb0ca7",
+      "address": "0xB3dDf13E8B6b8dE10F5826087C202b80F1D1b490",
       "abi": [
         {
           "anonymous": false,
@@ -22128,7 +22128,7 @@
       ]
     },
     "USDTTreasuryBuyback_Implementation": {
-      "address": "0x4d2F53c8549CAa7FbaAFba387B60132cEAd1d2ab",
+      "address": "0xA9685aFF08b10e7582a91bce703206C67326b235",
       "abi": [
         {
           "inputs": [
@@ -22952,7 +22952,7 @@
       ]
     },
     "USDTTreasuryBuyback_Proxy": {
-      "address": "0xBF858c95D778022b48E6Ad343D3d644017fb0ca7",
+      "address": "0xB3dDf13E8B6b8dE10F5826087C202b80F1D1b490",
       "abi": [
         {
           "inputs": [
@@ -23088,7 +23088,7 @@
       ]
     },
     "UTreasuryBuyback": {
-      "address": "0xef7cb42a7EBD4b011905D20Fc8038a603c3f22E4",
+      "address": "0xec63411423D03327De19135446dDdA3055D2feA8",
       "abi": [
         {
           "anonymous": false,
@@ -24017,7 +24017,7 @@
       ]
     },
     "UTreasuryBuyback_Implementation": {
-      "address": "0x0D26196F7F2a962a9F84A019Bd0FEcaEbcf66BA6",
+      "address": "0xb46B59D38FC97e05FC25785c1747549199271037",
       "abi": [
         {
           "inputs": [
@@ -24841,7 +24841,7 @@
       ]
     },
     "UTreasuryBuyback_Proxy": {
-      "address": "0xef7cb42a7EBD4b011905D20Fc8038a603c3f22E4",
+      "address": "0xec63411423D03327De19135446dDdA3055D2feA8",
       "abi": [
         {
           "inputs": [
@@ -25051,7 +25051,7 @@
       ]
     },
     "XVSBuyback": {
-      "address": "0xBaAc819aE93b29fA6512a095CA00255a4F05b027",
+      "address": "0x637E6246BBb0F9aBae9d764F5e1bB6347f028C12",
       "abi": [
         {
           "anonymous": false,
@@ -25980,7 +25980,7 @@
       ]
     },
     "XVSBuyback_Implementation": {
-      "address": "0x851581a9616BC85fAC29a7413c229A7b3d3737bE",
+      "address": "0x916aA4a6F6EC78bB3fDBD905a75df2f716C9Db63",
       "abi": [
         {
           "inputs": [
@@ -26804,7 +26804,7 @@
       ]
     },
     "XVSBuyback_Proxy": {
-      "address": "0xBaAc819aE93b29fA6512a095CA00255a4F05b027",
+      "address": "0x637E6246BBb0F9aBae9d764F5e1bB6347f028C12",
       "abi": [
         {
           "inputs": [
@@ -26940,7 +26940,7 @@
       ]
     },
     "XVSTreasuryBuyback": {
-      "address": "0x01D0f07D389692D386EB8D09Da3bbCa5C83be551",
+      "address": "0x6D2d239c16453062cF145A7a5128A6a60710d236",
       "abi": [
         {
           "anonymous": false,
@@ -27869,7 +27869,7 @@
       ]
     },
     "XVSTreasuryBuyback_Implementation": {
-      "address": "0xf4944F1f9AE704942aD5F74bBa9238ba2813CC2f",
+      "address": "0xD2C31b6d51AcFE2F003806EBA3F4518263fbfB8A",
       "abi": [
         {
           "inputs": [
@@ -28693,7 +28693,7 @@
       ]
     },
     "XVSTreasuryBuyback_Proxy": {
-      "address": "0x01D0f07D389692D386EB8D09Da3bbCa5C83be551",
+      "address": "0x6D2d239c16453062cF145A7a5128A6a60710d236",
       "abi": [
         {
           "inputs": [

@@ -849,6 +849,33 @@ describe("TokenBuyback", () => {
       ).to.be.revertedWithCustomError(buyback, "DailyCapExceeded");
     });
 
+    it("setDailyCapUsd clamps usdConsumedInWindow when new cap is below accumulator", async () => {
+      await buyback.setDailyCapUsd(parseUnits("150", 18));
+      await runSwap(parseUnits("100", 18), parseUnits("100", 6));
+
+      // Accumulator sits at ~$100 after the swap.
+      const beforeReduction = await buyback.usdConsumedInWindow();
+      expect(beforeReduction.gt(parseUnits("99", 18))).to.equal(true);
+
+      // Drop the cap below the accumulator. Without clamping the operator
+      // would be locked out for up to WINDOW seconds; clamp must bring the
+      // accumulator down to the new cap so the new policy takes effect now.
+      await buyback.setDailyCapUsd(parseUnits("20", 18));
+      expect(await buyback.usdConsumedInWindow()).to.equal(parseUnits("20", 18));
+    });
+
+    it("setDailyCapUsd does not touch usdConsumedInWindow when new cap is above accumulator", async () => {
+      await buyback.setDailyCapUsd(parseUnits("150", 18));
+      await runSwap(parseUnits("100", 18), parseUnits("100", 6));
+
+      const beforeIncrease = await buyback.usdConsumedInWindow();
+
+      // Raising the cap leaves the accumulator alone — the clamp is a no-op
+      // because the accumulator is already below the new cap.
+      await buyback.setDailyCapUsd(parseUnits("500", 18));
+      expect(await buyback.usdConsumedInWindow()).to.equal(beforeIncrease);
+    });
+
     it("usdConsumedInWindow decays to 0 after WINDOW elapses (leaky bucket)", async () => {
       await buyback.setDailyCapUsd(parseUnits("150", 18));
       await runSwap(parseUnits("100", 18), parseUnits("100", 6));
