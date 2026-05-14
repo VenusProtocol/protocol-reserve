@@ -1,3 +1,14 @@
+## 3.5.0-dev.8 (2026-05-14)
+
+* Merge branch 'develop' into feat/VPD-984 ([eb491f6](https://github.com/VenusProtocol/protocol-reserve/commit/eb491f6))
+* Merge pull request #162 from VenusProtocol/feat/VPD-984 ([68aa023](https://github.com/VenusProtocol/protocol-reserve/commit/68aa023)), closes [#162](https://github.com/VenusProtocol/protocol-reserve/issues/162)
+* chore: rename Certik audit report for token converter Phase 2 ([fe6fb4f](https://github.com/VenusProtocol/protocol-reserve/commit/fe6fb4f))
+* chore(deployments): redeploy bscmainnet buybacks ([849e9ca](https://github.com/VenusProtocol/protocol-reserve/commit/849e9ca))
+* feat: add Certik audit report for token converter Phase 2 ([3e26323](https://github.com/VenusProtocol/protocol-reserve/commit/3e26323))
+* feat: add token converter Phase 2 hashdit audit report ([04064b5](https://github.com/VenusProtocol/protocol-reserve/commit/04064b5))
+* feat: updating deployment files ([ce77641](https://github.com/VenusProtocol/protocol-reserve/commit/ce77641))
+* fix(TokenBuyback): Hashdit findings L02 (gap) and I06 (cap clamp) ([3e9caae](https://github.com/VenusProtocol/protocol-reserve/commit/3e9caae))
+
 ## 3.5.0-dev.7 (2026-05-12)
 
 * Merge pull request #163 from VenusProtocol/feat/VPD-1185 ([7e2e9b2](https://github.com/VenusProtocol/protocol-reserve/commit/7e2e9b2)), closes [#163](https://github.com/VenusProtocol/protocol-reserve/issues/163)
