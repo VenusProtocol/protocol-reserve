@@ -6205,7 +6205,7 @@
       ]
     },
     "ProtocolShareReserve_Implementation": {
-      "address": "0xDF41C4201b06EE344C5A3F6E20E41b4b900C90BD",
+      "address": "0x4eC6D748a2647000895b455c408f85602A144Ed6",
       "abi": [
         {
           "inputs": [
