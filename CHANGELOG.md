@@ -1,3 +1,10 @@
+## 3.5.0-dev.9 (2026-06-01)
+
+* Merge pull request #165 from VenusProtocol/feat/vpd-774 ([fcddd80](https://github.com/VenusProtocol/protocol-reserve/commit/fcddd80)), closes [#165](https://github.com/VenusProtocol/protocol-reserve/issues/165)
+* feat: deploy psr on bsctestnet and bscmainnet ([3722017](https://github.com/VenusProtocol/protocol-reserve/commit/3722017))
+* feat: extend PSR income types for FRV ([ac18ef7](https://github.com/VenusProtocol/protocol-reserve/commit/ac18ef7))
+* feat: updating deployment files ([6a9b6a6](https://github.com/VenusProtocol/protocol-reserve/commit/6a9b6a6))
+
 ## 3.5.0-dev.8 (2026-05-14)
 
 * Merge branch 'develop' into feat/VPD-984 ([eb491f6](https://github.com/VenusProtocol/protocol-reserve/commit/eb491f6))
