@@ -1,3 +1,116 @@
+## 3.5.0-dev.9 (2026-06-01)
+
+* Merge pull request #165 from VenusProtocol/feat/vpd-774 ([fcddd80](https://github.com/VenusProtocol/protocol-reserve/commit/fcddd80)), closes [#165](https://github.com/VenusProtocol/protocol-reserve/issues/165)
+* feat: deploy psr on bsctestnet and bscmainnet ([3722017](https://github.com/VenusProtocol/protocol-reserve/commit/3722017))
+* feat: extend PSR income types for FRV ([ac18ef7](https://github.com/VenusProtocol/protocol-reserve/commit/ac18ef7))
+* feat: updating deployment files ([6a9b6a6](https://github.com/VenusProtocol/protocol-reserve/commit/6a9b6a6))
+
+## 3.5.0-dev.8 (2026-05-14)
+
+* Merge branch 'develop' into feat/VPD-984 ([eb491f6](https://github.com/VenusProtocol/protocol-reserve/commit/eb491f6))
+* Merge pull request #162 from VenusProtocol/feat/VPD-984 ([68aa023](https://github.com/VenusProtocol/protocol-reserve/commit/68aa023)), closes [#162](https://github.com/VenusProtocol/protocol-reserve/issues/162)
+* chore: rename Certik audit report for token converter Phase 2 ([fe6fb4f](https://github.com/VenusProtocol/protocol-reserve/commit/fe6fb4f))
+* chore(deployments): redeploy bscmainnet buybacks ([849e9ca](https://github.com/VenusProtocol/protocol-reserve/commit/849e9ca))
+* feat: add Certik audit report for token converter Phase 2 ([3e26323](https://github.com/VenusProtocol/protocol-reserve/commit/3e26323))
+* feat: add token converter Phase 2 hashdit audit report ([04064b5](https://github.com/VenusProtocol/protocol-reserve/commit/04064b5))
+* feat: updating deployment files ([ce77641](https://github.com/VenusProtocol/protocol-reserve/commit/ce77641))
+* fix(TokenBuyback): Hashdit findings L02 (gap) and I06 (cap clamp) ([3e9caae](https://github.com/VenusProtocol/protocol-reserve/commit/3e9caae))
+
+## 3.5.0-dev.7 (2026-05-12)
+
+* Merge pull request #163 from VenusProtocol/feat/VPD-1185 ([7e2e9b2](https://github.com/VenusProtocol/protocol-reserve/commit/7e2e9b2)), closes [#163](https://github.com/VenusProtocol/protocol-reserve/issues/163)
+* feat: add deployment verification for new contracts ([98abeaa](https://github.com/VenusProtocol/protocol-reserve/commit/98abeaa))
+* feat: add tokenBuyBack deployment on bsctestnet ([a3bdc73](https://github.com/VenusProtocol/protocol-reserve/commit/a3bdc73))
+* feat: deployed RiskFundV2 on bsctestnet ([3120eab](https://github.com/VenusProtocol/protocol-reserve/commit/3120eab))
+* feat: update hardhat configuration for bsctestnet ([104cf94](https://github.com/VenusProtocol/protocol-reserve/commit/104cf94))
+* feat: updating deployment files ([b9ca3de](https://github.com/VenusProtocol/protocol-reserve/commit/b9ca3de))
+* feat: updating deployment files ([d45616b](https://github.com/VenusProtocol/protocol-reserve/commit/d45616b))
+
+## 3.5.0-dev.6 (2026-05-09)
+
+* Merge pull request #158 from VenusProtocol/feat/VPD-1087 ([c56a6f5](https://github.com/VenusProtocol/protocol-reserve/commit/c56a6f5)), closes [#158](https://github.com/VenusProtocol/protocol-reserve/issues/158)
+* Merge pull request #159 from VenusProtocol/feat/VPD-1149 ([59b77bc](https://github.com/VenusProtocol/protocol-reserve/commit/59b77bc)), closes [#159](https://github.com/VenusProtocol/protocol-reserve/issues/159)
+* Merge pull request #160 from VenusProtocol/feat/VPD-1163 ([10a7a63](https://github.com/VenusProtocol/protocol-reserve/commit/10a7a63)), closes [#160](https://github.com/VenusProtocol/protocol-reserve/issues/160)
+* feat: add TokenBuyback contract and interface ([efd8a2c](https://github.com/VenusProtocol/protocol-reserve/commit/efd8a2c))
+* feat: add TokenBuyback deploy scripts for BSC ([f583d35](https://github.com/VenusProtocol/protocol-reserve/commit/f583d35))
+* feat: deploy RiskFundV2 new implementation ([ebe3e56](https://github.com/VenusProtocol/protocol-reserve/commit/ebe3e56))
+* feat: I06 add USD caps and slippage detection ([ac85093](https://github.com/VenusProtocol/protocol-reserve/commit/ac85093))
+* feat: updating deployment files ([1a6bea0](https://github.com/VenusProtocol/protocol-reserve/commit/1a6bea0))
+* chore: drop isRiskFund arg from TokenBuyback deploy scripts ([1eca94c](https://github.com/VenusProtocol/protocol-reserve/commit/1eca94c))
+* chore: fix lint ([a3f62bf](https://github.com/VenusProtocol/protocol-reserve/commit/a3f62bf))
+* chore: update buyback deploy scripts ([ed06fc6](https://github.com/VenusProtocol/protocol-reserve/commit/ed06fc6))
+* chore(deployments): add bscmainnet TokenBuyback artifacts ([da07157](https://github.com/VenusProtocol/protocol-reserve/commit/da07157))
+* fix: I02 ([1fd1673](https://github.com/VenusProtocol/protocol-reserve/commit/1fd1673))
+* fix: I03 ([ab99c34](https://github.com/VenusProtocol/protocol-reserve/commit/ab99c34))
+* fix: I04 ([cdccdd8](https://github.com/VenusProtocol/protocol-reserve/commit/cdccdd8))
+* fix: I07 ([feea4a5](https://github.com/VenusProtocol/protocol-reserve/commit/feea4a5))
+* fix: lint ([a33f2f4](https://github.com/VenusProtocol/protocol-reserve/commit/a33f2f4))
+* fix: partition per-pool attribution in forwardBaseAsset ([3662e52](https://github.com/VenusProtocol/protocol-reserve/commit/3662e52))
+* fix: pin PROTOCOL_SHARE_RESERVE as only caller of updateAssetsState ([6b58adb](https://github.com/VenusProtocol/protocol-reserve/commit/6b58adb))
+* fix: report delta in TokenBuyback.updateAssetsState ([a65224e](https://github.com/VenusProtocol/protocol-reserve/commit/a65224e))
+* fix: VLT-03 ([187c1d9](https://github.com/VenusProtocol/protocol-reserve/commit/187c1d9))
+* fix: VLT-05 ([871b322](https://github.com/VenusProtocol/protocol-reserve/commit/871b322))
+* fix: VLT-09 ([0cfc8e3](https://github.com/VenusProtocol/protocol-reserve/commit/0cfc8e3))
+* fix: VLT-12 ([27e27d0](https://github.com/VenusProtocol/protocol-reserve/commit/27e27d0))
+* fix(I01): Missing bound validaion in setters ([efcd0b7](https://github.com/VenusProtocol/protocol-reserve/commit/efcd0b7))
+* refactor: drop per-block cap from TokenBuyback ([0c90ac7](https://github.com/VenusProtocol/protocol-reserve/commit/0c90ac7))
+* refactor: minor fixes ([38ba843](https://github.com/VenusProtocol/protocol-reserve/commit/38ba843))
+* refactor: replace tumbling window with leaky-bucket cap ([ad790bd](https://github.com/VenusProtocol/protocol-reserve/commit/ad790bd))
+* refactor: strip poolAssetsFunds and IS_RISK_FUND branch ([7e195fa](https://github.com/VenusProtocol/protocol-reserve/commit/7e195fa))
+* refactor: switch RiskFundV2.updatePoolState to ACM-gated access ([3151a48](https://github.com/VenusProtocol/protocol-reserve/commit/3151a48))
+* refactor: update futureDeadline to use block timestamp and remove unused riskFundConverter ([6bcd467](https://github.com/VenusProtocol/protocol-reserve/commit/6bcd467))
+* test: add TokenBuyback fork tests against BSC mainnet ([83349f7](https://github.com/VenusProtocol/protocol-reserve/commit/83349f7))
+* test: add TokenBuyback unit tests and MockRouter ([6d6d884](https://github.com/VenusProtocol/protocol-reserve/commit/6d6d884))
+* test: align suites with the simplified TokenBuyback and RiskFundV2 ([54e2908](https://github.com/VenusProtocol/protocol-reserve/commit/54e2908))
+* test: expand TokenBuyback fork coverage ([dce9087](https://github.com/VenusProtocol/protocol-reserve/commit/dce9087))
+
+## 3.5.0-dev.5 (2026-02-25)
+
+* Merge branch 'develop' into fix/add-repo ([c511115](https://github.com/VenusProtocol/protocol-reserve/commit/c511115))
+* Merge pull request #156 from VenusProtocol/fix/add-repo ([915d607](https://github.com/VenusProtocol/protocol-reserve/commit/915d607)), closes [#156](https://github.com/VenusProtocol/protocol-reserve/issues/156)
+* fix: add repo URL ([3afad48](https://github.com/VenusProtocol/protocol-reserve/commit/3afad48))
+
+## 3.5.0-dev.4 (2026-01-15)
+
+* fix: add packageMgr back ([4812016](https://github.com/VenusProtocol/protocol-reserve/commit/4812016))
+
+## 3.5.0-dev.3 (2026-01-15)
+
+* build: fix ci ([bd88d75](https://github.com/VenusProtocol/protocol-reserve/commit/bd88d75))
+* style: prettier ([a8e22eb](https://github.com/VenusProtocol/protocol-reserve/commit/a8e22eb))
+* ci: update to use the Trusted Publisher for npm release ([d13f028](https://github.com/VenusProtocol/protocol-reserve/commit/d13f028))
+* Merge branch 'fix/vpd-392' of github.com:VenusProtocol/protocol-reserve into fix/vpd-392 ([767f038](https://github.com/VenusProtocol/protocol-reserve/commit/767f038))
+* Merge pull request #157 from VenusProtocol/fix/vpd-392 ([23a1719](https://github.com/VenusProtocol/protocol-reserve/commit/23a1719)), closes [#157](https://github.com/VenusProtocol/protocol-reserve/issues/157)
+* fix: deployed riskfund v2 ([0d03e22](https://github.com/VenusProtocol/protocol-reserve/commit/0d03e22))
+* fix: etherscan verify ([4d9b589](https://github.com/VenusProtocol/protocol-reserve/commit/4d9b589))
+* fix: fixed calc and added tests ([c37594b](https://github.com/VenusProtocol/protocol-reserve/commit/c37594b))
+* fix: fixed hardhat config ([7c733ae](https://github.com/VenusProtocol/protocol-reserve/commit/7c733ae))
+* fix: fixed lint ([76a0540](https://github.com/VenusProtocol/protocol-reserve/commit/76a0540))
+* feat: updating deployment files ([db9cd8f](https://github.com/VenusProtocol/protocol-reserve/commit/db9cd8f))
+
+## [3.5.0-dev.2](https://github.com/VenusProtocol/protocol-reserve/compare/v3.5.0-dev.1...v3.5.0-dev.2) (2025-11-03)
+
+
+### Bug Fixes
+
+* add id-token permission ([f5c3c5a](https://github.com/VenusProtocol/protocol-reserve/commit/f5c3c5a44d7bfe894537b19f68fcd8008afc142a))
+* auth NPM before publish ([710d289](https://github.com/VenusProtocol/protocol-reserve/commit/710d289f065305069050bdd9f31a137b76a0c741))
+* slim package publish scripts ([64d8f92](https://github.com/VenusProtocol/protocol-reserve/commit/64d8f92cdfb4b5222f4d795383ff762c9cdf57ae))
+
+## [3.5.0-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v3.4.1-dev.1...v3.5.0-dev.1) (2025-10-23)
+
+
+### Features
+
+* add slim package scripts ([c8a4cdc](https://github.com/VenusProtocol/protocol-reserve/commit/c8a4cdc8e8c7493783214b3f4b59b575b8ba2404))
+
+## [3.4.1-dev.1](https://github.com/VenusProtocol/protocol-reserve/compare/v3.4.0...v3.4.1-dev.1) (2025-09-29)
+
+
+### Bug Fixes
+
+* release ([4dd0cbc](https://github.com/VenusProtocol/protocol-reserve/commit/4dd0cbc9c3eb13d8954b5f9ece094569ff5a046a))
+
 ## [3.4.0](https://github.com/VenusProtocol/protocol-reserve/compare/v3.3.0...v3.4.0) (2025-09-29)
 
 

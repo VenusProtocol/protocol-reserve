@@ -7,7 +7,9 @@ interface IProtocolShareReserve {
         SPREAD,
         LIQUIDATION,
         ERC4626_WRAPPER_REWARDS,
-        FLASHLOAN
+        FLASHLOAN,
+        INSTITUTIONAL_VAULT_PROTOCOL_FEE,
+        INSTITUTIONAL_VAULT_LIQUIDATION
     }
 
     function updateAssetsState(

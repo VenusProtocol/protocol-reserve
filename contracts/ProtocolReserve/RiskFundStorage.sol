@@ -12,9 +12,11 @@ contract ReserveHelpersStorage is Ownable2StepUpgradeable {
     /// @notice Deprecated slot for assetReserves mapping
     bytes32 private __deprecatedSlot1;
 
-    /// @notice Available asset's fund per pool in RiskFund
-    /// Comptroller(pool) -> Asset -> amount
-    mapping(address => mapping(address => uint256)) public poolAssetsFunds;
+    /// @notice Deprecated slot for the former poolAssetsFunds mapping. The per-pool
+    ///         accounting ledger was removed: isolated pools are wound down on BSC
+    ///         and core pool does not auction via Shortfall, so funds now live as a
+    ///         single balance on this contract and are governed via sweepToken.
+    bytes32 private __deprecatedSlotPoolAssetsFunds;
 
     /// @notice Deprecated slot for poolRegistry address
     bytes32 private __deprecatedSlot2;
@@ -62,6 +64,10 @@ contract RiskFundV1Storage is ReserveHelpersStorage, MaxLoopsLimitHelpersStorage
 /// @dev Risk fund V2 storage
 /// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 contract RiskFundV2Storage is RiskFundV1Storage, ReentrancyGuardUpgradeable {
-    /// @notice Risk fund converter address
-    address public riskFundConverter;
+    /// @notice Deprecated slot for the former riskFundConverter address used for
+    ///         per-pool accounting callbacks; the converter callback path was removed
+    ///         and this slot is retained only to preserve the upgradeable storage
+    ///         layout. The setter was dropped and the slot is not read by any contract
+    ///         code.
+    bytes32 private __deprecatedSlotRiskFundConverter;
 }

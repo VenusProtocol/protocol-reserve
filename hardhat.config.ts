@@ -1,9 +1,8 @@
 import "module-alias/register";
 
 import "@nomicfoundation/hardhat-chai-matchers";
-import "@nomicfoundation/hardhat-toolbox";
+import "@nomicfoundation/hardhat-verify";
 import "@nomiclabs/hardhat-ethers";
-import "@nomiclabs/hardhat-etherscan";
 import "@openzeppelin/hardhat-upgrades";
 import "@typechain/hardhat";
 import dotenv from "dotenv";
@@ -25,6 +24,7 @@ const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
 // when the export deployment command executes independently for each network.
 const externalDeployments = {
   bsctestnet: [
+    "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
     "node_modules/@venusprotocol/governance-contracts/deployments/bsctestnet",
     "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
   ],
@@ -157,9 +157,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_bsctestnet || "https://data-seed-prebsc-1-s1.binance.org:8545",
       chainId: 97,
       live: true,
-      accounts: {
-        mnemonic: process.env.MNEMONIC || "",
-      },
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
       gasPrice: 10000000000, // 10 gwei
       gasMultiplier: 10,
       timeout: 12000000,
@@ -244,56 +242,12 @@ const config: HardhatUserConfig = {
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
   },
+  sourcify: {
+    enabled: true,
+  },
   etherscan: {
-    apiKey: {
-      bscmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      bsctestnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      sepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      ethereum: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      opbnbtestnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      opbnbmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      arbitrumsepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      arbitrumone: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      opsepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      opmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      basesepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      basemainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      unichainsepolia: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      unichainmainnet: ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-    },
+    apiKey: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     customChains: [
-      {
-        network: "bscmainnet",
-        chainId: 56,
-        urls: {
-          apiURL: "https://api.bscscan.com/api",
-          browserURL: "https://bscscan.com",
-        },
-      },
-      {
-        network: "bsctestnet",
-        chainId: 97,
-        urls: {
-          apiURL: "https://api-testnet.bscscan.com/api",
-          browserURL: "https://testnet.bscscan.com",
-        },
-      },
-      {
-        network: "sepolia",
-        chainId: 11155111,
-        urls: {
-          apiURL: "https://api-sepolia.etherscan.io/api",
-          browserURL: "https://sepolia.etherscan.io",
-        },
-      },
-      {
-        network: "ethereum",
-        chainId: 1,
-        urls: {
-          apiURL: "https://api.etherscan.io/api",
-          browserURL: "https://etherscan.io",
-        },
-      },
       {
         network: "opbnbtestnet",
         chainId: 5611,
@@ -311,51 +265,11 @@ const config: HardhatUserConfig = {
         },
       },
       {
-        network: "arbitrumsepolia",
-        chainId: 421614,
-        urls: {
-          apiURL: `https://api-sepolia.arbiscan.io/api`,
-          browserURL: "https://sepolia.arbiscan.io/",
-        },
-      },
-      {
-        network: "arbitrumone",
-        chainId: 42161,
-        urls: {
-          apiURL: `https://api.arbiscan.io/api/`,
-          browserURL: "https://arbiscan.io/",
-        },
-      },
-      {
         network: "opsepolia",
         chainId: 11155420,
         urls: {
           apiURL: "https://api-sepolia-optimistic.etherscan.io/api/",
           browserURL: "https://sepolia-optimistic.etherscan.io/",
-        },
-      },
-      {
-        network: "opmainnet",
-        chainId: 10,
-        urls: {
-          apiURL: "https://api-optimistic.etherscan.io/api",
-          browserURL: "https://optimistic.etherscan.io/",
-        },
-      },
-      {
-        network: "basesepolia",
-        chainId: 84532,
-        urls: {
-          apiURL: "https://api-sepolia.basescan.org/api",
-          browserURL: "https://sepolia.basescan.org/",
-        },
-      },
-      {
-        network: "basemainnet",
-        chainId: 8453,
-        urls: {
-          apiURL: "https://api.basescan.org/api",
-          browserURL: "https://basescan.org/",
         },
       },
       {

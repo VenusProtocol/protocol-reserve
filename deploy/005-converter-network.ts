@@ -1,9 +1,16 @@
 import { ethers } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
+import { verifyDeployment } from "../helpers/verify";
+
 const MAX_LOOPS_LIMIT = 20;
 
-const func = async ({ network: { live }, getNamedAccounts, deployments }: HardhatRuntimeEnvironment) => {
+const func = async (hre: HardhatRuntimeEnvironment) => {
+  const {
+    network: { live },
+    getNamedAccounts,
+    deployments,
+  } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
@@ -33,6 +40,8 @@ const func = async ({ network: { live }, getNamedAccounts, deployments }: Hardha
     await tx.wait();
     console.log("Transferred ownership of ConverterNetwork to Timelock");
   }
+
+  await verifyDeployment(hre, "ConverterNetwork");
 };
 
 func.tags = ["ConverterNetwork", "Converters"];
