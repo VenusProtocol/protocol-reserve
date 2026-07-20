@@ -3,6 +3,22 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { verifyDeployment } from "../helpers/verify";
 
+// VAI, its Peg Stability Module (PegStability_USDT) and the PSM stable token (USDT), per network.
+// VAI is redeemed for USDT at the PSM by `convertVaiViaPsm` before distribution; these are verified
+// against the live PSM getters (`VAI()`, `STABLE_TOKEN_ADDRESS()`) on each network.
+const VAI_PSM_CONFIG: { [network: string]: { vai: string; psm: string; stable: string } } = {
+  bscmainnet: {
+    vai: "0x4BD17003473389A42DAF6a0a729f6Fdb328BbBd7",
+    psm: "0xC138aa4E424D1A8539e8F38Af5a754a2B7c3Cc36",
+    stable: "0x55d398326f99059fF775485246999027B3197955",
+  },
+  bsctestnet: {
+    vai: "0x5fFbE5302BadED40941A403228E6AD03f93752d9",
+    psm: "0xB21E69eef4Bc1D64903fa28D9b32491B1c0786F1",
+    stable: "0xA11c8D9DC9b66E209Ef60F0C8D969D3CD988782c",
+  },
+};
+
 // The distributor's six destinations are the Treasury TokenBuyback proxies deployed by
 // `009-treasury-buyback.ts`. They are read from the already-committed deployment artifacts so the
 // immutable wiring always matches the live buyback addresses on each network. We deliberately do
@@ -22,10 +38,25 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const usdcBuyback = (await deployments.get("USDCTreasuryBuyback")).address;
   const uBuyback = (await deployments.get("UTreasuryBuyback")).address;
 
+  const psmConfig = VAI_PSM_CONFIG[hre.network.name];
+  if (!psmConfig) {
+    throw new Error(`No VAI/PSM config for network ${hre.network.name}`);
+  }
+
   await deploy("TreasuryTokenBuybackDistributor", {
     from: deployer,
     contract: "TreasuryTokenBuybackDistributor",
-    args: [btcbBuyback, ethBuyback, xvsBuyback, usdtBuyback, usdcBuyback, uBuyback],
+    args: [
+      btcbBuyback,
+      ethBuyback,
+      xvsBuyback,
+      usdtBuyback,
+      usdcBuyback,
+      uBuyback,
+      psmConfig.vai,
+      psmConfig.psm,
+      psmConfig.stable,
+    ],
     log: true,
     autoMine: true,
     deterministicDeployment: false,
