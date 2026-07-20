@@ -4,8 +4,12 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { verifyDeployment } from "../helpers/verify";
 
 // The distributor's six destinations are the Treasury TokenBuyback proxies deployed by
-// `009-treasury-buyback.ts`. They are read from the deployment artifacts so the immutable
-// wiring always matches the current buyback addresses on each network.
+// `009-treasury-buyback.ts`. They are read from the already-committed deployment artifacts so the
+// immutable wiring always matches the live buyback addresses on each network. We deliberately do
+// NOT declare a `func.dependencies = ["TreasuryBuyback"]`: the buybacks are already deployed on
+// both bsctestnet and bscmainnet (their artifacts are committed), so declaring the dependency only
+// forces a redundant re-run of the buyback deploy — which can spuriously redeploy a buyback
+// implementation and shadow this script during a single-tag deploy of the distributor.
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
@@ -31,7 +35,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 func.tags = ["TreasuryTokenBuybackDistributor"];
-func.dependencies = ["TreasuryBuyback"];
 
 func.skip = async (hre: HardhatRuntimeEnvironment) => {
   return hre.network.name !== "bscmainnet" && hre.network.name !== "bsctestnet";
