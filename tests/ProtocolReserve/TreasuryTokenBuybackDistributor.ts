@@ -36,11 +36,12 @@ let xvsBuyback: string;
 let usdtBuyback: string;
 let usdcBuyback: string;
 let uBuyback: string;
-// Placeholder VAI / PSM / stable-token wiring for the tests that don't exercise the PSM path
-// (the constructor only nonzero-checks them, so plain EOAs suffice here).
+// Placeholder VAI / PSM / stable-token / treasury wiring for the tests that don't exercise the PSM
+// path (the constructor only nonzero-checks them, so plain EOAs suffice here).
 let vai: string;
 let vaiPsm: string;
 let stableToken: string;
+let treasuryAddr: string;
 
 let distributor: TreasuryTokenBuybackDistributor;
 
@@ -58,6 +59,7 @@ async function deployDistributor(): Promise<TreasuryTokenBuybackDistributor> {
     vai,
     vaiPsm,
     stableToken,
+    treasuryAddr,
   );
 }
 
@@ -82,6 +84,7 @@ before(async () => {
   vai = await signers[7].getAddress();
   vaiPsm = await signers[8].getAddress();
   stableToken = await signers[9].getAddress();
+  treasuryAddr = await signers[10].getAddress();
 });
 
 describe("TreasuryTokenBuybackDistributor", () => {
@@ -110,10 +113,11 @@ describe("TreasuryTokenBuybackDistributor", () => {
       expect(sum).to.equal(MAX_BPS);
     });
 
-    it("stores the VAI / PSM / stable-token wiring as immutables", async () => {
+    it("stores the VAI / PSM / stable-token / treasury wiring as immutables", async () => {
       expect(await distributor.VAI()).to.equal(vai);
       expect(await distributor.VAI_PSM()).to.equal(vaiPsm);
       expect(await distributor.STABLE_TOKEN()).to.equal(stableToken);
+      expect(await distributor.TREASURY()).to.equal(treasuryAddr);
     });
 
     it("reverts if any constructor address is zero", async () => {
@@ -122,19 +126,88 @@ describe("TreasuryTokenBuybackDistributor", () => {
       )) as TreasuryTokenBuybackDistributor__factory;
       const z = ethers.constants.AddressZero;
       await expect(
-        factory.deploy(z, ethBuyback, xvsBuyback, usdtBuyback, usdcBuyback, uBuyback, vai, vaiPsm, stableToken),
+        factory.deploy(
+          z,
+          ethBuyback,
+          xvsBuyback,
+          usdtBuyback,
+          usdcBuyback,
+          uBuyback,
+          vai,
+          vaiPsm,
+          stableToken,
+          treasuryAddr,
+        ),
       ).to.be.reverted;
       await expect(
-        factory.deploy(btcbBuyback, ethBuyback, xvsBuyback, usdtBuyback, usdcBuyback, z, vai, vaiPsm, stableToken),
+        factory.deploy(
+          btcbBuyback,
+          ethBuyback,
+          xvsBuyback,
+          usdtBuyback,
+          usdcBuyback,
+          z,
+          vai,
+          vaiPsm,
+          stableToken,
+          treasuryAddr,
+        ),
       ).to.be.reverted;
       await expect(
-        factory.deploy(btcbBuyback, ethBuyback, xvsBuyback, usdtBuyback, usdcBuyback, uBuyback, z, vaiPsm, stableToken),
+        factory.deploy(
+          btcbBuyback,
+          ethBuyback,
+          xvsBuyback,
+          usdtBuyback,
+          usdcBuyback,
+          uBuyback,
+          z,
+          vaiPsm,
+          stableToken,
+          treasuryAddr,
+        ),
       ).to.be.reverted;
       await expect(
-        factory.deploy(btcbBuyback, ethBuyback, xvsBuyback, usdtBuyback, usdcBuyback, uBuyback, vai, z, stableToken),
+        factory.deploy(
+          btcbBuyback,
+          ethBuyback,
+          xvsBuyback,
+          usdtBuyback,
+          usdcBuyback,
+          uBuyback,
+          vai,
+          z,
+          stableToken,
+          treasuryAddr,
+        ),
       ).to.be.reverted;
       await expect(
-        factory.deploy(btcbBuyback, ethBuyback, xvsBuyback, usdtBuyback, usdcBuyback, uBuyback, vai, vaiPsm, z),
+        factory.deploy(
+          btcbBuyback,
+          ethBuyback,
+          xvsBuyback,
+          usdtBuyback,
+          usdcBuyback,
+          uBuyback,
+          vai,
+          vaiPsm,
+          z,
+          treasuryAddr,
+        ),
+      ).to.be.reverted;
+      await expect(
+        factory.deploy(
+          btcbBuyback,
+          ethBuyback,
+          xvsBuyback,
+          usdtBuyback,
+          usdcBuyback,
+          uBuyback,
+          vai,
+          vaiPsm,
+          stableToken,
+          z,
+        ),
       ).to.be.reverted;
     });
   });
@@ -288,10 +361,11 @@ describe("TreasuryTokenBuybackDistributor", () => {
         vaiToken.address,
         psm.address,
         stable.address,
+        treasury,
       );
     }
 
-    it("redeems the held VAI for the stable token at the PSM (peg price)", async () => {
+    it("redeems the held VAI for the stable token at the PSM (peg price) and sends it to the treasury", async () => {
       await setup();
       const vaiBal = parseUnits("526974", 18).add(123); // odd wei to exercise flooring
       await vaiToken.mint(psmDistributor.address, vaiBal);
@@ -303,8 +377,10 @@ describe("TreasuryTokenBuybackDistributor", () => {
         .to.emit(psmDistributor, "VaiConvertedViaPsm")
         .withArgs(total, stableOut);
 
-      // Distributor received exactly stableOut USDT and holds no more than sub-fee VAI dust.
-      expect(await stable.balanceOf(psmDistributor.address)).to.equal(stableOut);
+      // The redeemed USDT went straight to the treasury; the distributor keeps none of it.
+      expect(await stable.balanceOf(treasury)).to.equal(stableOut);
+      expect(await stable.balanceOf(psmDistributor.address)).to.equal(0);
+      // Distributor holds no more than sub-fee VAI dust after the swap.
       expect(await vaiToken.balanceOf(psmDistributor.address)).to.equal(vaiBal.sub(total));
       // Leftover VAI is negligible dust (bounded by the fee granularity of a single swap).
       expect(vaiBal.sub(total)).to.be.lt(parseUnits("1", 18));
@@ -341,26 +417,33 @@ describe("TreasuryTokenBuybackDistributor", () => {
       const stableOut = expectedStableOut(vaiBal, price);
       await expect(psmDistributor.convertVaiViaPsm()).to.emit(psmDistributor, "VaiConvertedViaPsm");
 
-      expect(await stable.balanceOf(psmDistributor.address)).to.equal(stableOut);
+      expect(await stable.balanceOf(treasury)).to.equal(stableOut);
+      expect(await stable.balanceOf(psmDistributor.address)).to.equal(0);
       // Required VAI never exceeded the balance (no revert / fallback), leaving only small dust.
       const { total } = requiredVai(stableOut, price);
       expect(await vaiToken.balanceOf(psmDistributor.address)).to.equal(vaiBal.sub(total));
     });
 
-    it("hands the redeemed stable token off to distribute (split across the six buybacks)", async () => {
+    it("keeps the redeemed USDT in the treasury (not distributed to the buybacks)", async () => {
       await setup();
       const vaiBal = parseUnits("400000", 18);
       await vaiToken.mint(psmDistributor.address, vaiBal);
 
       await psmDistributor.convertVaiViaPsm();
-      const stableOut = await stable.balanceOf(psmDistributor.address);
+      const stableOut = expectedStableOut(vaiBal, ONE);
 
-      // Mirrors the VIP: distribute the VAI (now dust) and the freshly received USDT.
-      await psmDistributor.distribute([vaiToken.address, stable.address]);
-
-      expect(await stable.balanceOf(btcbBuyback)).to.equal(stableOut.mul(WEIGHTS.btcb).div(MAX_BPS));
-      expect(await stable.balanceOf(usdcBuyback)).to.equal(stableOut.mul(WEIGHTS.usdc).div(MAX_BPS));
+      // USDT is already a base asset — it stays in the treasury and never reaches the buybacks.
+      expect(await stable.balanceOf(treasury)).to.equal(stableOut);
       expect(await stable.balanceOf(psmDistributor.address)).to.equal(0);
+
+      // Mirrors the VIP: distribute only the withdrawn tokens (VAI is now dust). USDT is NOT in the
+      // list, so no USDT can leak to the buybacks.
+      await psmDistributor.distribute([vaiToken.address]);
+
+      for (const buyback of [btcbBuyback, ethBuyback, xvsBuyback, usdtBuyback, usdcBuyback, uBuyback]) {
+        expect(await stable.balanceOf(buyback)).to.equal(0);
+      }
+      expect(await stable.balanceOf(treasury)).to.equal(stableOut);
     });
 
     it("rejects a direct call to the internal _convertVaiViaPsm (only self)", async () => {

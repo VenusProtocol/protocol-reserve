@@ -18,16 +18,17 @@ import { IPegStability } from "../Interfaces/IPegStability.sol";
 ///         self-adjust if balances change between authoring and execution.
 ///
 ///         VAI is handled specially: rather than DEX-swapping the treasury's VAI out of the
-///         thin VAI market via the buybacks, `convertVaiViaPsm` first redeems it 1:1 (minus
-///         the PSM fee) for USDT at the VAI Peg Stability Module. The resulting USDT is then
-///         distributed across the same six buybacks by the same weights, so the VAI value keeps
-///         its intended per-buyback allocation but reaches the base assets through USDT's deep
-///         liquidity (and the USDT-buyback leg needs no swap at all).
+///         thin VAI market via the buybacks, `convertVaiViaPsm` redeems it 1:1 (minus the PSM
+///         fee) for USDT at the VAI Peg Stability Module and sends the resulting USDT straight
+///         back to the treasury. USDT is already a clean, deeply-liquid base asset, so it needs
+///         no further buyback conversion — the redemption simply turns the treasury's illiquid
+///         VAI into treasury-held USDT at the peg with no slippage.
 /// @dev The contract holds no privileged role over the treasury and can only move tokens
 ///      that are explicitly transferred to it, to a fixed set of verified, immutable
 ///      destinations. `distribute` and `convertVaiViaPsm` are therefore permissionless
 ///      (griefing-free): the worst a caller can do is forward the contract's own balance to the
-///      pre-aligned buybacks, or redeem its own VAI for USDT at the oracle-pegged PSM rate.
+///      pre-aligned buybacks, or redeem its own VAI for USDT (delivered to the treasury) at the
+///      oracle-pegged PSM rate.
 /// @custom:security-contact https://github.com/VenusProtocol/protocol-reserve#discussion
 contract TreasuryTokenBuybackDistributor {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -92,19 +93,24 @@ contract TreasuryTokenBuybackDistributor {
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable VAI_PSM;
 
-    /// @notice The PSM's stable token (USDT). Output of `convertVaiViaPsm`; then distributed
-    ///         across the six buybacks like any other token.
+    /// @notice The PSM's stable token (USDT). Output of `convertVaiViaPsm`; delivered directly to
+    ///         the treasury (USDT needs no buyback conversion).
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable STABLE_TOKEN;
+
+    /// @notice The Venus treasury (VTreasury). Receives the USDT redeemed from VAI at the PSM,
+    ///         since USDT is already a base asset and needs no buyback conversion.
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address public immutable TREASURY;
 
     /// @notice Emitted once per token after it has been fully distributed
     /// @param token The token distributed
     /// @param totalAmount The balance held for `token` at the start of distribution
     event TokenDistributed(address indexed token, uint256 totalAmount);
 
-    /// @notice Emitted after VAI has been redeemed for the PSM stable token
+    /// @notice Emitted after VAI has been redeemed for the PSM stable token and sent to the treasury
     /// @param vaiIn The VAI balance consumed by the PSM swap (burnt + fee)
-    /// @param stableOut The stable-token amount received from the PSM
+    /// @param stableOut The stable-token amount delivered to the treasury by the PSM
     event VaiConvertedViaPsm(uint256 vaiIn, uint256 stableOut);
 
     /// @notice Thrown when the configured weights do not sum to MAX_BPS
@@ -122,6 +128,7 @@ contract TreasuryTokenBuybackDistributor {
     /// @param vai_ VAI token
     /// @param vaiPsm_ VAI Peg Stability Module (PegStability_USDT)
     /// @param stableToken_ The PSM's stable token (USDT), received from VAI redemptions
+    /// @param treasury_ The Venus treasury (VTreasury), recipient of the redeemed USDT
     constructor(
         address btcbBuyback_,
         address ethBuyback_,
@@ -131,7 +138,8 @@ contract TreasuryTokenBuybackDistributor {
         address uBuyback_,
         address vai_,
         address vaiPsm_,
-        address stableToken_
+        address stableToken_,
+        address treasury_
     ) {
         ensureNonzeroAddress(btcbBuyback_);
         ensureNonzeroAddress(ethBuyback_);
@@ -142,6 +150,7 @@ contract TreasuryTokenBuybackDistributor {
         ensureNonzeroAddress(vai_);
         ensureNonzeroAddress(vaiPsm_);
         ensureNonzeroAddress(stableToken_);
+        ensureNonzeroAddress(treasury_);
 
         uint256 weightSum = BTCB_WEIGHT + ETH_WEIGHT + XVS_WEIGHT + USDT_WEIGHT + USDC_WEIGHT + U_WEIGHT;
         if (weightSum != MAX_BPS) {
@@ -157,6 +166,7 @@ contract TreasuryTokenBuybackDistributor {
         VAI = vai_;
         VAI_PSM = vaiPsm_;
         STABLE_TOKEN = stableToken_;
+        TREASURY = treasury_;
     }
 
     /// @notice Splits the contract's live balance of each supplied token across the six
@@ -180,10 +190,10 @@ contract TreasuryTokenBuybackDistributor {
     }
 
     /// @notice Redeems the contract's entire VAI balance for the PSM stable token (USDT) at the
-    ///         VAI Peg Stability Module, so the treasury's VAI reaches the base assets through
-    ///         USDT's deep liquidity instead of being DEX-swapped out of the thin VAI market.
-    ///         The received USDT is left on the contract and split across the six buybacks by the
-    ///         usual weights when `distribute` is called with the stable token in its list.
+    ///         VAI Peg Stability Module and delivers the USDT straight back to the treasury,
+    ///         instead of DEX-swapping VAI out of the thin VAI market. USDT is already a base
+    ///         asset, so it needs no buyback conversion — the redemption just turns the treasury's
+    ///         illiquid VAI into treasury-held USDT at the peg (minus the small PSM fee).
     /// @dev Best-effort by design: the actual PSM interaction runs in `_convertVaiViaPsm` behind a
     ///      try/catch, so a paused PSM, insufficient PSM liquidity / minted headroom, or a stale
     ///      oracle can never brick the proposal — the VAI simply stays on the contract and is
@@ -238,9 +248,10 @@ contract TreasuryTokenBuybackDistributor {
         }
 
         // The PSM burns `stableUSD` VAI from this contract and pulls `fee` VAI via transferFrom;
-        // VAI decrements the allowance on burn as well, so approve the full held balance.
+        // VAI decrements the allowance on burn as well, so approve the full held balance. The USDT
+        // is sent directly to the treasury (USDT is already a base asset; no buyback needed).
         vai.forceApprove(VAI_PSM, vaiBalance);
-        psm.swapVAIForStable(address(this), stableOut);
+        psm.swapVAIForStable(TREASURY, stableOut);
         vai.forceApprove(VAI_PSM, 0);
 
         uint256 vaiConsumed = vaiBalance - vai.balanceOf(address(this));
