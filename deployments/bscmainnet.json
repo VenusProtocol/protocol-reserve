@@ -15384,7 +15384,7 @@
       ]
     },
     "TreasuryTokenBuybackDistributor": {
-      "address": "0xfE7579C90423eEA3D0D4e29fbED6b8766e225f53",
+      "address": "0xc594053D4b2FaA311b55dDbFAb2338f7c90D6632",
       "abi": [
         {
           "inputs": [
@@ -15417,10 +15417,35 @@
               "internalType": "address",
               "name": "uBuyback_",
               "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "vai_",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "vaiPsm_",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "stableToken_",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "treasury_",
+              "type": "address"
             }
           ],
           "stateMutability": "nonpayable",
           "type": "constructor"
+        },
+        {
+          "inputs": [],
+          "name": "OnlySelf",
+          "type": "error"
         },
         {
           "inputs": [
@@ -15455,6 +15480,25 @@
             }
           ],
           "name": "TokenDistributed",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "vaiIn",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "stableOut",
+              "type": "uint256"
+            }
+          ],
+          "name": "VaiConvertedViaPsm",
           "type": "event"
         },
         {
@@ -15517,6 +15561,32 @@
               "internalType": "uint256",
               "name": "",
               "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "STABLE_TOKEN",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "TREASURY",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
             }
           ],
           "stateMutability": "view",
@@ -15602,6 +15672,32 @@
         },
         {
           "inputs": [],
+          "name": "VAI",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "VAI_PSM",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
           "name": "XVS_BUYBACK",
           "outputs": [
             {
@@ -15624,6 +15720,20 @@
             }
           ],
           "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "_convertVaiViaPsm",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "convertVaiViaPsm",
+          "outputs": [],
+          "stateMutability": "nonpayable",
           "type": "function"
         },
         {

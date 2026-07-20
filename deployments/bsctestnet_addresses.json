@@ -28,7 +28,6 @@
     "RiskFundV2_Proxy": "0x487CeF72dacABD7E12e633bb3B63815a386f7012",
     "SingleTokenConverterBeacon": "0xD2410D8B581D37c5B474CD9Ee0C15F02138AC028",
     "SingleTokenConverterImp": "0x42Ec3Eb6F23460dFDfa3aE5688f3415CDfE0C6AD",
-    "TreasuryTokenBuybackDistributor": "0xfd45810d4c669e59510A096fc4cFA2233e5e20FD",
     "UPrimeBuyback": "0xa9f091C50C2Bd214F757DAF243bCb94A9fE707a4",
     "UPrimeBuyback_Implementation": "0x26C451EB78d517C87A256F8144e061A8a57Fe1d7",
     "UPrimeBuyback_Proxy": "0xa9f091C50C2Bd214F757DAF243bCb94A9fE707a4",
