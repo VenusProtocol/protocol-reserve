@@ -220,6 +220,11 @@ contract TreasuryTokenBuybackDistributor {
         IPegStability psm = IPegStability(VAI_PSM);
         uint256 feeOut = psm.feeOut();
         uint256 oneDollar = psm.ONE_DOLLAR();
+        // Read the stable price from the same oracle the PSM uses, for sizing only. We deliberately
+        // do NOT poke `updateAssetPrice` here: that call is only permitted from the PSM's own context
+        // on mainnet, and the PSM refreshes the price itself inside `swapVAIForStable`. A slightly
+        // stale read can at worst make us under-ask (leaving negligible VAI dust); it never over-asks
+        // because `priceOut` is floored into the denominator below.
         uint256 price = ResilientOracleInterface(psm.oracle()).getPrice(STABLE_TOKEN);
         // PSM prices an outgoing (VAI→stable) swap at MAX(1$, oraclePrice).
         uint256 priceOut = price > oneDollar ? price : oneDollar;
