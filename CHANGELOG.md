@@ -1,3 +1,19 @@
+## 3.5.0-dev.10 (2026-07-21)
+
+* Merge pull request #167 from VenusProtocol/bot/VDB-28-venus-treasury-cleanup-token-transfers-to-buyb ([9f8e0a9](https://github.com/VenusProtocol/protocol-reserve/commit/9f8e0a9)), closes [#167](https://github.com/VenusProtocol/protocol-reserve/issues/167)
+* feat: add TreasuryTokenBuybackDistributor for treasury cleanup (VDB-28) ([f09b5c2](https://github.com/VenusProtocol/protocol-reserve/commit/f09b5c2))
+* feat: deploy TreasuryTokenBuybackDistributor on bscmainnet ([e9ed6cd](https://github.com/VenusProtocol/protocol-reserve/commit/e9ed6cd))
+* feat: updating deployment files ([070f315](https://github.com/VenusProtocol/protocol-reserve/commit/070f315))
+* feat: updating deployment files ([3de6ae2](https://github.com/VenusProtocol/protocol-reserve/commit/3de6ae2))
+* feat: updating deployment files ([78af162](https://github.com/VenusProtocol/protocol-reserve/commit/78af162))
+* feat(distributor): route treasury VAI through the VAI PSM before distribution ([93d5d20](https://github.com/VenusProtocol/protocol-reserve/commit/93d5d20))
+* feat(distributor): send VAI→USDT PSM proceeds back to the treasury ([1d7a44a](https://github.com/VenusProtocol/protocol-reserve/commit/1d7a44a))
+* fix: redeploy TreasuryTokenBuybackDistributor contract on bscmainnet ([7f88d96](https://github.com/VenusProtocol/protocol-reserve/commit/7f88d96))
+* fix(deploy): deploy distributor standalone; drop TreasuryBuyback dep ([b0616ac](https://github.com/VenusProtocol/protocol-reserve/commit/b0616ac))
+* docs(distributor): explain oracle-read sizing in VAI PSM conversion ([f209f1c](https://github.com/VenusProtocol/protocol-reserve/commit/f209f1c))
+* chore: deploy artifacts (bsctestnet) ([9ef495e](https://github.com/VenusProtocol/protocol-reserve/commit/9ef495e))
+* chore: deploy artifacts (bsctestnet) ([6ab7d9e](https://github.com/VenusProtocol/protocol-reserve/commit/6ab7d9e))
+
 ## 3.5.0-dev.9 (2026-06-01)
 
 * Merge pull request #165 from VenusProtocol/feat/vpd-774 ([fcddd80](https://github.com/VenusProtocol/protocol-reserve/commit/fcddd80)), closes [#165](https://github.com/VenusProtocol/protocol-reserve/issues/165)
