@@ -17,6 +17,8 @@ error InvalidAddress();
 error UnsupportedAsset();
 error InvalidTotalPercentage();
 error InvalidMaxLoopsLimit();
+error PoolRegistryAlreadyAdded();
+error PoolRegistryNotFound();
 
 contract ProtocolShareReserve is
     AccessControlledV8,
@@ -67,8 +69,20 @@ contract ProtocolShareReserve is
     /// @notice configuration for different income distribution targets
     DistributionConfig[] public distributionTargets;
 
+    /// @notice Pool registries consulted after `poolRegistry` when resolving a market
+    address[] public additionalPoolRegistries;
+
+    /// @notice Whether an address is present in `additionalPoolRegistries`
+    mapping(address => bool) public isAdditionalPoolRegistry;
+
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
+
+    /// @notice Emitted when a pool registry is added to `additionalPoolRegistries`
+    event PoolRegistryAdded(address indexed poolRegistry);
+
+    /// @notice Emitted when a pool registry is removed from `additionalPoolRegistries`
+    event PoolRegistryRemoved(address indexed poolRegistry);
 
     /// @notice Event emitted after updating of the assets reserves.
     event AssetsReservesUpdated(
@@ -154,8 +168,62 @@ contract ProtocolShareReserve is
      */
     function setPoolRegistry(address _poolRegistry) external onlyOwner {
         ensureNonzeroAddress(_poolRegistry);
+        // A registry must have a single entry; remove it from the additional set before promoting it.
+        if (isAdditionalPoolRegistry[_poolRegistry]) revert PoolRegistryAlreadyAdded();
         emit PoolRegistryUpdated(poolRegistry, _poolRegistry);
         poolRegistry = _poolRegistry;
+    }
+
+    /**
+     * @dev Registers an extra pool registry. Use this rather than `setPoolRegistry` when pools of
+     *      both registries must keep reporting income: repointing `poolRegistry` instead makes every
+     *      pool of the old registry fail `updateAssetsState`, which vTokens call both when reducing
+     *      reserves and when seizing the protocol's share of liquidated collateral.
+     * @param _poolRegistry Address of the pool registry to add
+     * @custom:event PoolRegistryAdded emits on success
+     * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
+     * @custom:error PoolRegistryAlreadyAdded is thrown when the address is the primary registry or already added
+     * @custom:access Only Governance
+     */
+    function addPoolRegistry(address _poolRegistry) external onlyOwner {
+        ensureNonzeroAddress(_poolRegistry);
+        if (_poolRegistry == poolRegistry || isAdditionalPoolRegistry[_poolRegistry]) {
+            revert PoolRegistryAlreadyAdded();
+        }
+
+        isAdditionalPoolRegistry[_poolRegistry] = true;
+        additionalPoolRegistries.push(_poolRegistry);
+        _ensureMaxLoops(additionalPoolRegistries.length);
+
+        emit PoolRegistryAdded(_poolRegistry);
+    }
+
+    /**
+     * @dev Removes a pool registry. Pools known only to it can no longer report income.
+     * @param _poolRegistry Address of the pool registry to remove
+     * @custom:event PoolRegistryRemoved emits on success
+     * @custom:error PoolRegistryNotFound is thrown when the address is not in `additionalPoolRegistries`
+     * @custom:access Only Governance
+     */
+    function removePoolRegistry(address _poolRegistry) external onlyOwner {
+        if (!isAdditionalPoolRegistry[_poolRegistry]) revert PoolRegistryNotFound();
+
+        uint256 length = additionalPoolRegistries.length;
+        for (uint256 i; i < length; ) {
+            if (additionalPoolRegistries[i] == _poolRegistry) {
+                additionalPoolRegistries[i] = additionalPoolRegistries[length - 1];
+                additionalPoolRegistries.pop();
+                break;
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        delete isAdditionalPoolRegistry[_poolRegistry];
+
+        emit PoolRegistryRemoved(_poolRegistry);
     }
 
     /**
@@ -314,6 +382,50 @@ contract ProtocolShareReserve is
     }
 
     /**
+     * @dev Returns every pool registry this contract resolves markets through, primary first.
+     * @return registries Addresses of the pool registries
+     */
+    function getPoolRegistries() external view returns (address[] memory registries) {
+        address primary = poolRegistry;
+        uint256 additionalLength = additionalPoolRegistries.length;
+        bool hasPrimary = primary != address(0);
+
+        registries = new address[](additionalLength + (hasPrimary ? 1 : 0));
+
+        uint256 offset;
+        if (hasPrimary) {
+            registries[0] = primary;
+            offset = 1;
+        }
+
+        for (uint256 i; i < additionalLength; ) {
+            registries[i + offset] = additionalPoolRegistries[i];
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /**
+     * @dev Returns the number of registries in `additionalPoolRegistries`
+     */
+    function totalAdditionalPoolRegistries() external view returns (uint256) {
+        return additionalPoolRegistries.length;
+    }
+
+    /**
+     * @dev Whether any known pool registry lists a market for the asset in the given pool. The core
+     *      pool has no registry entry, so this is false for it.
+     * @param comptroller Comptroller address (pool)
+     * @param asset Asset address
+     * @return True when a registry resolves the pair to a vToken
+     */
+    function isMarketRegistered(address comptroller, address asset) external view returns (bool) {
+        return _isMarketRegistered(comptroller, asset);
+    }
+
+    /**
      * @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
      * @param comptroller Comptroller address (pool)
      * @param asset Asset address.
@@ -327,10 +439,7 @@ contract ProtocolShareReserve is
         if (!IComptroller(comptroller).isComptroller()) revert InvalidAddress();
         ensureNonzeroAddress(asset);
 
-        if (
-            comptroller != CORE_POOL_COMPTROLLER &&
-            IPoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) == address(0)
-        ) revert InvalidAddress();
+        if (comptroller != CORE_POOL_COMPTROLLER && !_isMarketRegistered(comptroller, asset)) revert InvalidAddress();
 
         Schema schema = _getSchema(incomeType);
         uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
@@ -407,6 +516,32 @@ contract ProtocolShareReserve is
                 ++schemaValue;
             }
         }
+    }
+
+    /**
+     * @dev Resolves a pool's market through the known pool registries, `poolRegistry` first.
+     * @param comptroller Comptroller address (pool)
+     * @param asset Asset address
+     * @return True when a registry resolves the pair to a vToken
+     */
+    function _isMarketRegistered(address comptroller, address asset) internal view returns (bool) {
+        address primary = poolRegistry;
+        if (primary != address(0) && IPoolRegistry(primary).getVTokenForAsset(comptroller, asset) != address(0)) {
+            return true;
+        }
+
+        uint256 length = additionalPoolRegistries.length;
+        for (uint256 i; i < length; ) {
+            if (IPoolRegistry(additionalPoolRegistries[i]).getVTokenForAsset(comptroller, asset) != address(0)) {
+                return true;
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        return false;
     }
 
     /**
