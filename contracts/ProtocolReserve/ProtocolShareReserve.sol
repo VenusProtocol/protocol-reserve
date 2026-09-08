@@ -43,6 +43,9 @@ contract ProtocolShareReserve is
         address destination;
     }
 
+    /// @notice Denominator for distribution percentages, 100% expressed in basis points
+    uint16 public constant MAX_PERCENT = 1e4;
+
     /// @notice address of core pool comptroller contract
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable CORE_POOL_COMPTROLLER;
@@ -57,8 +60,6 @@ contract ProtocolShareReserve is
 
     /// @notice address of pool registry contract
     address public poolRegistry;
-
-    uint16 public constant MAX_PERCENT = 1e4;
 
     /// @notice comptroller => asset => schema => balance
     mapping(address => mapping(address => mapping(Schema => uint256))) public assetsReserves;
