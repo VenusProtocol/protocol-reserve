@@ -1,7 +1,7 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { expect } from "chai";
+import chai from "chai";
 import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../helpers/utils";
@@ -13,6 +13,9 @@ import {
   MockToken,
   ProtocolShareReserve,
 } from "../../typechain";
+
+chai.use(smock.matchers);
+const { expect } = chai;
 
 const SCHEMA_PROTOCOL_RESERVE = 0;
 const SCHEMA_ADDITIONAL_REVENUE = 1;
@@ -33,6 +36,8 @@ type SetupProtocolShareReserveFixture = {
   xvsVaultSwapper: FakeContract<IIncomeDestination>;
   corePoolComptroller: FakeContract<IComptroller>;
   isolatedPoolComptroller: FakeContract<IComptroller>;
+  spokePoolRegistry: FakeContract<IPoolRegistry>;
+  spokePoolComptroller: FakeContract<IComptroller>;
 };
 
 const fixture = async (): Promise<SetupProtocolShareReserveFixture> => {
@@ -63,8 +68,13 @@ const fixture = async (): Promise<SetupProtocolShareReserveFixture> => {
   const xvsVaultSwapper = await smock.fake<IIncomeDestination>("IIncomeDestination");
   const poolRegistry = await smock.fake<IPoolRegistry>("IPoolRegistry");
 
+  // A pool that only a second, separately registered pool registry knows about.
+  const spokePoolComptroller = await smock.fake<IComptroller>("IComptroller");
+  const spokePoolRegistry = await smock.fake<IPoolRegistry>("IPoolRegistry");
+
   await corePoolComptroller.isComptroller.returns(true);
   await isolatedPoolComptroller.isComptroller.returns(true);
+  await spokePoolComptroller.isComptroller.returns(true);
 
   const accessControl = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
   accessControl.isAllowedToCall.returns(true);
@@ -88,6 +98,8 @@ const fixture = async (): Promise<SetupProtocolShareReserveFixture> => {
     xvsVaultSwapper,
     corePoolComptroller,
     isolatedPoolComptroller,
+    spokePoolRegistry,
+    spokePoolComptroller,
   };
 };
 
@@ -423,5 +435,371 @@ describe("ProtocolShareReserve: Tests", function () {
         SCHEMA_ADDITIONAL_REVENUE,
       ),
     ).to.equal(0);
+  });
+});
+
+describe("ProtocolShareReserve: multiple pool registries", function () {
+  let setup: SetupProtocolShareReserveFixture;
+  let signers: SignerWithAddress[];
+  let protocolShareReserve: ProtocolShareReserve;
+  let poolRegistry: FakeContract<IPoolRegistry>;
+  let spokePoolRegistry: FakeContract<IPoolRegistry>;
+
+  /// Makes a registry resolve exactly one (comptroller, asset) pair, returning zero for every other
+  /// pair the way `PoolRegistry._vTokens` does.
+  const resolveOnly = (
+    registry: FakeContract<IPoolRegistry>,
+    comptroller: FakeContract<IComptroller>,
+    asset: MockToken,
+  ) => {
+    registry.getVTokenForAsset.reset();
+    registry.getVTokenForAsset.returns(ethers.constants.AddressZero);
+    registry.getVTokenForAsset.whenCalledWith(comptroller.address, asset.address).returns(ONE_ADDRESS);
+  };
+
+  beforeEach(async function () {
+    setup = await loadFixture(fixture);
+    await configureDistribution(setup);
+    signers = await ethers.getSigners();
+    protocolShareReserve = setup.protocolShareReserve;
+    poolRegistry = setup.poolRegistry;
+    spokePoolRegistry = setup.spokePoolRegistry;
+
+    resolveOnly(poolRegistry, setup.isolatedPoolComptroller, setup.mockUSDT);
+    resolveOnly(spokePoolRegistry, setup.spokePoolComptroller, setup.mockUSDC);
+  });
+
+  describe("addPoolRegistry", () => {
+    it("reverts for a non-owner", async () => {
+      await expect(
+        protocolShareReserve.connect(signers[1]).addPoolRegistry(spokePoolRegistry.address),
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it("reverts for the zero address", async () => {
+      await expect(protocolShareReserve.addPoolRegistry(ethers.constants.AddressZero)).to.be.revertedWithCustomError(
+        protocolShareReserve,
+        "ZeroAddressNotAllowed",
+      );
+    });
+
+    it("reverts when the address is already the primary registry", async () => {
+      await expect(protocolShareReserve.addPoolRegistry(poolRegistry.address)).to.be.revertedWithCustomError(
+        protocolShareReserve,
+        "PoolRegistryAlreadyAdded",
+      );
+    });
+
+    it("reverts when the address was already added", async () => {
+      await protocolShareReserve.addPoolRegistry(spokePoolRegistry.address);
+      await expect(protocolShareReserve.addPoolRegistry(spokePoolRegistry.address)).to.be.revertedWithCustomError(
+        protocolShareReserve,
+        "PoolRegistryAlreadyAdded",
+      );
+    });
+
+    it("records the registry and emits", async () => {
+      await expect(protocolShareReserve.addPoolRegistry(spokePoolRegistry.address))
+        .to.emit(protocolShareReserve, "PoolRegistryAdded")
+        .withArgs(spokePoolRegistry.address);
+
+      expect(await protocolShareReserve.isAdditionalPoolRegistry(spokePoolRegistry.address)).to.equal(true);
+      expect(await protocolShareReserve.totalAdditionalPoolRegistries()).to.equal(1);
+      expect(await protocolShareReserve.additionalPoolRegistries(0)).to.equal(spokePoolRegistry.address);
+    });
+
+    it("is bounded by maxLoopsLimit", async () => {
+      // maxLoopsLimit can only be raised, so the bound needs a proxy deployed with a limit of one.
+      const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
+      const accessControl = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
+      accessControl.isAllowedToCall.returns(true);
+      const bounded = await upgrades.deployProxy(ProtocolShareReserve, [accessControl.address, 1], {
+        constructorArgs: [setup.corePoolComptroller.address, ONE_ADDRESS, ONE_ADDRESS],
+      });
+
+      await bounded.addPoolRegistry(spokePoolRegistry.address);
+
+      const another = await smock.fake<IPoolRegistry>("IPoolRegistry");
+      await expect(bounded.addPoolRegistry(another.address))
+        .to.be.revertedWithCustomError(bounded, "MaxLoopsLimitExceeded")
+        .withArgs(1, 2);
+    });
+  });
+
+  describe("removePoolRegistry", () => {
+    beforeEach(async () => {
+      await protocolShareReserve.addPoolRegistry(spokePoolRegistry.address);
+    });
+
+    it("reverts for a non-owner", async () => {
+      await expect(
+        protocolShareReserve.connect(signers[1]).removePoolRegistry(spokePoolRegistry.address),
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it("reverts when the registry was never added", async () => {
+      await expect(protocolShareReserve.removePoolRegistry(poolRegistry.address)).to.be.revertedWithCustomError(
+        protocolShareReserve,
+        "PoolRegistryNotFound",
+      );
+    });
+
+    it("removes the registry and emits", async () => {
+      await expect(protocolShareReserve.removePoolRegistry(spokePoolRegistry.address))
+        .to.emit(protocolShareReserve, "PoolRegistryRemoved")
+        .withArgs(spokePoolRegistry.address);
+
+      expect(await protocolShareReserve.isAdditionalPoolRegistry(spokePoolRegistry.address)).to.equal(false);
+      expect(await protocolShareReserve.totalAdditionalPoolRegistries()).to.equal(0);
+    });
+
+    it("keeps the remaining registries when removing from the middle", async () => {
+      const second = await smock.fake<IPoolRegistry>("IPoolRegistry");
+      const third = await smock.fake<IPoolRegistry>("IPoolRegistry");
+      await protocolShareReserve.addPoolRegistry(second.address);
+      await protocolShareReserve.addPoolRegistry(third.address);
+
+      await protocolShareReserve.removePoolRegistry(second.address);
+
+      expect(await protocolShareReserve.getPoolRegistries()).to.have.members([
+        poolRegistry.address,
+        spokePoolRegistry.address,
+        third.address,
+      ]);
+    });
+
+    it("can re-add a removed registry", async () => {
+      await protocolShareReserve.removePoolRegistry(spokePoolRegistry.address);
+      await protocolShareReserve.addPoolRegistry(spokePoolRegistry.address);
+
+      expect(await protocolShareReserve.totalAdditionalPoolRegistries()).to.equal(1);
+    });
+  });
+
+  describe("setPoolRegistry", () => {
+    it("still repoints the primary registry", async () => {
+      await expect(protocolShareReserve.setPoolRegistry(spokePoolRegistry.address))
+        .to.emit(protocolShareReserve, "PoolRegistryUpdated")
+        .withArgs(poolRegistry.address, spokePoolRegistry.address);
+
+      expect(await protocolShareReserve.poolRegistry()).to.equal(spokePoolRegistry.address);
+    });
+
+    it("refuses to promote a registry that is already in the additional set", async () => {
+      await protocolShareReserve.addPoolRegistry(spokePoolRegistry.address);
+
+      await expect(protocolShareReserve.setPoolRegistry(spokePoolRegistry.address)).to.be.revertedWithCustomError(
+        protocolShareReserve,
+        "PoolRegistryAlreadyAdded",
+      );
+    });
+  });
+
+  describe("getPoolRegistries", () => {
+    it("lists the primary registry first", async () => {
+      await protocolShareReserve.addPoolRegistry(spokePoolRegistry.address);
+
+      expect(await protocolShareReserve.getPoolRegistries()).to.deep.equal([
+        poolRegistry.address,
+        spokePoolRegistry.address,
+      ]);
+    });
+
+    it("omits an unset primary registry", async () => {
+      const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
+      const accessControl = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
+      accessControl.isAllowedToCall.returns(true);
+      const fresh = await upgrades.deployProxy(ProtocolShareReserve, [accessControl.address, 100], {
+        constructorArgs: [setup.corePoolComptroller.address, ONE_ADDRESS, ONE_ADDRESS],
+      });
+
+      expect(await fresh.getPoolRegistries()).to.deep.equal([]);
+
+      await fresh.addPoolRegistry(spokePoolRegistry.address);
+      expect(await fresh.getPoolRegistries()).to.deep.equal([spokePoolRegistry.address]);
+    });
+  });
+
+  describe("isMarketRegistered", () => {
+    beforeEach(async () => {
+      await protocolShareReserve.addPoolRegistry(spokePoolRegistry.address);
+    });
+
+    it("resolves through either registry", async () => {
+      expect(
+        await protocolShareReserve.isMarketRegistered(setup.isolatedPoolComptroller.address, setup.mockUSDT.address),
+      ).to.equal(true);
+      expect(
+        await protocolShareReserve.isMarketRegistered(setup.spokePoolComptroller.address, setup.mockUSDC.address),
+      ).to.equal(true);
+    });
+
+    it("is false for a pair no registry knows", async () => {
+      expect(
+        await protocolShareReserve.isMarketRegistered(setup.spokePoolComptroller.address, setup.mockDAI.address),
+      ).to.equal(false);
+    });
+
+    it("does not cover the core pool", async () => {
+      expect(
+        await protocolShareReserve.isMarketRegistered(setup.corePoolComptroller.address, setup.mockDAI.address),
+      ).to.equal(false);
+    });
+  });
+
+  describe("updateAssetsState", () => {
+    it("rejects a pool no registry knows", async () => {
+      await setup.mockUSDC.transfer(protocolShareReserve.address, 100);
+
+      await expect(
+        protocolShareReserve.updateAssetsState(
+          setup.spokePoolComptroller.address,
+          setup.mockUSDC.address,
+          SPREAD_INCOME,
+        ),
+      ).to.be.revertedWithCustomError(protocolShareReserve, "InvalidAddress");
+    });
+
+    it("keeps accepting a pool of the primary registry after a second one is added", async () => {
+      await protocolShareReserve.addPoolRegistry(spokePoolRegistry.address);
+
+      await setup.mockUSDT.transfer(protocolShareReserve.address, 100);
+      await protocolShareReserve.updateAssetsState(
+        setup.isolatedPoolComptroller.address,
+        setup.mockUSDT.address,
+        SPREAD_INCOME,
+      );
+
+      expect(
+        await protocolShareReserve.assetsReserves(
+          setup.isolatedPoolComptroller.address,
+          setup.mockUSDT.address,
+          SCHEMA_PROTOCOL_RESERVE,
+        ),
+      ).to.equal(100);
+      // The primary registry answers first, so the additional one is never consulted.
+      expect(spokePoolRegistry.getVTokenForAsset).to.have.callCount(0);
+    });
+
+    it("accepts a pool only the additional registry knows", async () => {
+      await protocolShareReserve.addPoolRegistry(spokePoolRegistry.address);
+
+      await setup.mockUSDC.transfer(protocolShareReserve.address, 100);
+      await expect(
+        protocolShareReserve.updateAssetsState(
+          setup.spokePoolComptroller.address,
+          setup.mockUSDC.address,
+          LIQUIDATION_INCOME,
+        ),
+      )
+        .to.emit(protocolShareReserve, "AssetsReservesUpdated")
+        .withArgs(
+          setup.spokePoolComptroller.address,
+          setup.mockUSDC.address,
+          100,
+          LIQUIDATION_INCOME,
+          SCHEMA_ADDITIONAL_REVENUE,
+        );
+
+      expect(
+        await protocolShareReserve.assetsReserves(
+          setup.spokePoolComptroller.address,
+          setup.mockUSDC.address,
+          SCHEMA_ADDITIONAL_REVENUE,
+        ),
+      ).to.equal(100);
+    });
+
+    it("books both product lines at the same time, under their own comptrollers", async () => {
+      await protocolShareReserve.addPoolRegistry(spokePoolRegistry.address);
+
+      await setup.mockUSDT.transfer(protocolShareReserve.address, 100);
+      await protocolShareReserve.updateAssetsState(
+        setup.isolatedPoolComptroller.address,
+        setup.mockUSDT.address,
+        SPREAD_INCOME,
+      );
+      await setup.mockUSDC.transfer(protocolShareReserve.address, 250);
+      await protocolShareReserve.updateAssetsState(
+        setup.spokePoolComptroller.address,
+        setup.mockUSDC.address,
+        SPREAD_INCOME,
+      );
+
+      expect(
+        await protocolShareReserve.assetsReserves(
+          setup.isolatedPoolComptroller.address,
+          setup.mockUSDT.address,
+          SCHEMA_PROTOCOL_RESERVE,
+        ),
+      ).to.equal(100);
+      expect(
+        await protocolShareReserve.assetsReserves(
+          setup.spokePoolComptroller.address,
+          setup.mockUSDC.address,
+          SCHEMA_PROTOCOL_RESERVE,
+        ),
+      ).to.equal(250);
+      expect(await protocolShareReserve.totalAssetReserve(setup.mockUSDT.address)).to.equal(100);
+      expect(await protocolShareReserve.totalAssetReserve(setup.mockUSDC.address)).to.equal(250);
+    });
+
+    it("still bypasses the registries for the core pool", async () => {
+      await setup.mockDAI.transfer(protocolShareReserve.address, 100);
+      await protocolShareReserve.updateAssetsState(
+        setup.corePoolComptroller.address,
+        setup.mockDAI.address,
+        SPREAD_INCOME,
+      );
+
+      expect(
+        await protocolShareReserve.assetsReserves(
+          setup.corePoolComptroller.address,
+          setup.mockDAI.address,
+          SCHEMA_PROTOCOL_RESERVE,
+        ),
+      ).to.equal(100);
+    });
+
+    it("stops accepting the pool once its registry is removed", async () => {
+      await protocolShareReserve.addPoolRegistry(spokePoolRegistry.address);
+      await protocolShareReserve.removePoolRegistry(spokePoolRegistry.address);
+
+      await setup.mockUSDC.transfer(protocolShareReserve.address, 100);
+      await expect(
+        protocolShareReserve.updateAssetsState(
+          setup.spokePoolComptroller.address,
+          setup.mockUSDC.address,
+          SPREAD_INCOME,
+        ),
+      ).to.be.revertedWithCustomError(protocolShareReserve, "InvalidAddress");
+    });
+  });
+
+  describe("releaseFunds", () => {
+    it("distributes income booked against an additional-registry pool", async () => {
+      await protocolShareReserve.addPoolRegistry(spokePoolRegistry.address);
+
+      await setup.mockUSDC.transfer(protocolShareReserve.address, 1000);
+      await protocolShareReserve.updateAssetsState(
+        setup.spokePoolComptroller.address,
+        setup.mockUSDC.address,
+        SPREAD_INCOME,
+      );
+
+      await protocolShareReserve.releaseFunds(setup.spokePoolComptroller.address, [setup.mockUSDC.address]);
+
+      // SCHEMA_PROTOCOL_RESERVE splits 40 / 20 / 40 across the three destinations.
+      expect(await setup.mockUSDC.balanceOf(setup.riskFundSwapper.address)).to.equal(400);
+      expect(await setup.mockUSDC.balanceOf(setup.xvsVaultSwapper.address)).to.equal(200);
+      expect(await setup.mockUSDC.balanceOf(setup.dao.address)).to.equal(400);
+      expect(
+        await protocolShareReserve.assetsReserves(
+          setup.spokePoolComptroller.address,
+          setup.mockUSDC.address,
+          SCHEMA_PROTOCOL_RESERVE,
+        ),
+      ).to.equal(0);
+    });
   });
 });
