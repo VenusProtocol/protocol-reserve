@@ -64,9 +64,14 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const psr = await hre.ethers.getContract("ProtocolShareReserve");
 
   if (live) {
-    const tx = await psr.transferOwnership(timelockAddress);
-    await tx.wait();
-    console.log("Transferred ownership of PSR to Timelock");
+    const currentOwner = await psr.owner();
+    if (currentOwner === deployer) {
+      const tx = await psr.transferOwnership(timelockAddress);
+      await tx.wait();
+      console.log("Transferred ownership of PSR to Timelock");
+    } else {
+      console.log(`PSR owner is ${currentOwner}, skipping transferOwnership`);
+    }
   }
 
   await verifyDeployment(hre, "ProtocolShareReserve");
