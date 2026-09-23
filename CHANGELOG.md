@@ -1,3 +1,10 @@
+## 3.5.0-dev.11 (2026-09-23)
+
+* Merge pull request #169 from VenusProtocol/feat/code-complexity-gates ([778c3b0](https://github.com/VenusProtocol/protocol-reserve/commit/778c3b0)), closes [#169](https://github.com/VenusProtocol/protocol-reserve/issues/169)
+* chore: enforce function complexity limits in eslint and sonarjs ([ff0304f](https://github.com/VenusProtocol/protocol-reserve/commit/ff0304f))
+* chore: remove unused eslint plugins ([6606f5e](https://github.com/VenusProtocol/protocol-reserve/commit/6606f5e))
+* refactor: extract verifyTarget from verifyDeployment ([adfd6c5](https://github.com/VenusProtocol/protocol-reserve/commit/adfd6c5))
+
 ## 3.5.0-dev.10 (2026-07-21)
 
 * Merge pull request #167 from VenusProtocol/bot/VDB-28-venus-treasury-cleanup-token-transfers-to-buyb ([9f8e0a9](https://github.com/VenusProtocol/protocol-reserve/commit/9f8e0a9)), closes [#167](https://github.com/VenusProtocol/protocol-reserve/issues/167)
