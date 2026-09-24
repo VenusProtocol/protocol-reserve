@@ -249,7 +249,10 @@ contract ProtocolShareReserve is
     }
 
     /**
-     * @dev Add or update destination targets based on destination address
+     * @dev Add or update destination targets based on destination address. Income already booked in
+     *      `assetsReserves` but not yet released is split under whatever configuration is in force when
+     *      `releaseFunds` runs, not the one that was in force when it was earned, so call `releaseFunds`
+     *      for the affected pools and assets before changing a percentage.
      * @param configs configurations of the destinations.
      */
     function addOrUpdateDistributionConfigs(DistributionConfig[] calldata configs) external nonReentrant {
