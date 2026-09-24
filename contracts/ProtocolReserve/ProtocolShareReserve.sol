@@ -28,9 +28,11 @@ contract ProtocolShareReserve is
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    /// @notice protocol income is categorized into two schemas.
-    /// The first schema is for spread income
-    /// The second schema is for liquidation income
+    /// @notice protocol income is categorized into two schemas, see `_getSchema`.
+    /// PROTOCOL_RESERVES takes `IncomeType.SPREAD` only.
+    /// ADDITIONAL_REVENUE takes every other income type, not just liquidation: `LIQUIDATION`,
+    /// `ERC4626_WRAPPER_REWARDS`, `FLASHLOAN`, `INSTITUTIONAL_VAULT_PROTOCOL_FEE` and
+    /// `INSTITUTIONAL_VAULT_LIQUIDATION` all distribute under its percentages.
     enum Schema {
         PROTOCOL_RESERVES,
         ADDITIONAL_REVENUE
