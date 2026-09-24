@@ -165,6 +165,21 @@ contract ProtocolShareReserve is
     }
 
     /**
+     * @dev Raises the cap on loop length. Without this the cap can only be written by `initialize`, so a
+     *      chain that runs out of room for distribution targets needs an implementation upgrade to add one.
+     *      `_setMaxLoopsLimit` only accepts a value above the current cap, so the existing targets can never
+     *      be stranded above it.
+     * @param limit New cap on loop length
+     * @custom:event MaxLoopsLimitUpdated emits on success
+     * @custom:error InvalidMaxLoopsLimit is thrown when the cap is large enough to be no cap at all
+     * @custom:access Only Governance
+     */
+    function setMaxLoopsLimit(uint256 limit) external onlyOwner {
+        if (limit >= type(uint128).max) revert InvalidMaxLoopsLimit();
+        _setMaxLoopsLimit(limit);
+    }
+
+    /**
      * @dev Pool registry setter.
      * @param _poolRegistry Address of the pool registry
      * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
