@@ -217,7 +217,11 @@ contract ProtocolShareReserve is
     }
 
     /**
-     * @dev Removes a pool registry. Pools known only to it can no longer report income.
+     * @dev Removes a pool registry. Markets that no other registry lists stop working, they do not merely
+     *      stop reporting income: `updateAssetsState` reverts for them, and vTokens call it both on the
+     *      protocol seize during liquidation and from `accrueInterest` once `reduceReservesBlockDelta`
+     *      passes. Supply, withdraw, borrow, repay and liquidate all revert from that point. Adding the
+     *      registry back restores them.
      * @param _poolRegistry Address of the pool registry to remove
      * @custom:event PoolRegistryRemoved emits on success
      * @custom:error PoolRegistryNotFound is thrown when the address is not in `additionalPoolRegistries`
