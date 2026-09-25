@@ -14,7 +14,7 @@ import {
   MockVaiPsm__factory,
   TreasuryTokenBuybackDistributor,
   TreasuryTokenBuybackDistributor__factory,
-} from "../../../typechain";
+} from "../../typechain";
 
 const { expect } = chai;
 

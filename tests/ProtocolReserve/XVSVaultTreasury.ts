@@ -12,7 +12,7 @@ import {
   MockToken__factory,
   XVSVaultTreasury,
   XVSVaultTreasury__factory,
-} from "../../../typechain";
+} from "../../typechain";
 import { convertToUnit } from "../utils";
 
 const { expect } = chai;
