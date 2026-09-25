@@ -19,7 +19,7 @@ import {
   MockToken__factory,
   ResilientOracle,
   SingleTokenConverter,
-} from "../../typechain";
+} from "../../../typechain";
 import { convertToUnit } from "../utils";
 
 const { expect } = chai;

@@ -4,7 +4,7 @@ import chai from "chai";
 import { ethers } from "hardhat";
 import { Address } from "hardhat-deploy/dist/types";
 
-import { MockArraySorter, MockArraySorter__factory } from "../../typechain";
+import { MockArraySorter, MockArraySorter__factory } from "../../../typechain";
 import { convertToUnit } from "../utils";
 
 const { expect } = chai;

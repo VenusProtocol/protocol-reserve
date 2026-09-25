@@ -4,7 +4,7 @@ import { BigNumber } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import hre from "hardhat";
 
-import { ResilientOracleInterface } from "../../typechain";
+import { ResilientOracleInterface } from "../../../typechain";
 import { forking, initMainnetUser } from "../utils";
 
 const { expect } = chai;

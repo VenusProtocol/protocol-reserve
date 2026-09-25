@@ -14,7 +14,7 @@ import {
   ResilientOracleInterface,
   TokenBuyback,
   TokenBuyback__factory,
-} from "../../typechain";
+} from "../../../typechain";
 
 const { expect } = chai;
 chai.use(smock.matchers);

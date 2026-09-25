@@ -15,7 +15,7 @@ import {
   SingleTokenConverter,
   SingleTokenConverter__factory,
   XVSVaultTreasury,
-} from "../../typechain";
+} from "../../../typechain";
 import { convertToUnit } from "../utils";
 
 const { expect } = chai;

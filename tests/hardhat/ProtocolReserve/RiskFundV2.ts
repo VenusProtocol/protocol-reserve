@@ -6,7 +6,7 @@ import { Signer, constants } from "ethers";
 import { parseUnits } from "ethers/lib/utils.js";
 import { ethers } from "hardhat";
 
-import { convertToUnit } from "../../helpers/utils";
+import { convertToUnit } from "../../../helpers/utils";
 import {
   IAccessControlManagerV8,
   IComptroller,
@@ -15,7 +15,7 @@ import {
   MockToken__factory,
   RiskFundV2,
   RiskFundV2__factory,
-} from "../../typechain";
+} from "../../../typechain";
 
 let shortfall: FakeContract<IShortfall>;
 let riskFund: MockContract<RiskFundV2>;
