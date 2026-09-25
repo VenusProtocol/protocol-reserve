@@ -285,6 +285,23 @@ describe("ProtocolShareReserve: Tests", function () {
     expect(config.percentage).to.equal(0);
   });
 
+  it("remove configuration reverts when no target matches", async () => {
+    const protocolShareReserve = setup.protocolShareReserve;
+    const ONE_ADDRESS = "0x0000000000000000000000000000000000000001";
+
+    await expect(
+      protocolShareReserve.removeDistributionConfig(SCHEMA_PROTOCOL_RESERVE, ONE_ADDRESS),
+    ).to.be.revertedWithCustomError(protocolShareReserve, "DistributionConfigNotFound");
+  });
+
+  it("remove configuration reverts when the target still holds a percentage", async () => {
+    const protocolShareReserve = setup.protocolShareReserve;
+
+    await expect(
+      protocolShareReserve.removeDistributionConfig(SCHEMA_PROTOCOL_RESERVE, setup.riskFundSwapper.address),
+    ).to.be.revertedWithCustomError(protocolShareReserve, "NonZeroPercentage");
+  });
+
   it("collect and distribute of income", async () => {
     const mockDAI = setup.mockDAI;
     const protocolShareReserve = setup.protocolShareReserve;

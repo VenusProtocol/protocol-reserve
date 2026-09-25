@@ -19,6 +19,8 @@ error InvalidTotalPercentage();
 error InvalidMaxLoopsLimit();
 error PoolRegistryAlreadyAdded();
 error PoolRegistryNotFound();
+error DistributionConfigNotFound();
+error NonZeroPercentage();
 
 contract ProtocolShareReserve is
     AccessControlledV8,
@@ -302,17 +304,19 @@ contract ProtocolShareReserve is
      * @dev Remove destionation target if percentage is 0
      * @param schema schema of the configuration
      * @param destination destination address of the configuration
+     * @custom:event DistributionConfigRemoved emits on success
+     * @custom:error DistributionConfigNotFound is thrown when no target matches the schema and destination
+     * @custom:error NonZeroPercentage is thrown when the target still holds a share of the schema. Zero it
+     *      out with `addOrUpdateDistributionConfigs` first, so the remaining targets keep summing to 100%
      */
     function removeDistributionConfig(Schema schema, address destination) external {
         _checkAccessAllowed("removeDistributionConfig(Schema,address)");
 
-        uint256 distributionIndex;
-        bool found = false;
+        uint256 distributionIndex = type(uint256).max;
         for (uint256 i = 0; i < distributionTargets.length; ) {
             DistributionConfig storage config = distributionTargets[i];
 
-            if (schema == config.schema && destination == config.destination && config.percentage == 0) {
-                found = true;
+            if (schema == config.schema && destination == config.destination) {
                 distributionIndex = i;
                 break;
             }
@@ -322,16 +326,15 @@ contract ProtocolShareReserve is
             }
         }
 
-        if (found) {
-            emit DistributionConfigRemoved(
-                distributionTargets[distributionIndex].destination,
-                distributionTargets[distributionIndex].percentage,
-                distributionTargets[distributionIndex].schema
-            );
+        if (distributionIndex == type(uint256).max) revert DistributionConfigNotFound();
 
-            distributionTargets[distributionIndex] = distributionTargets[distributionTargets.length - 1];
-            distributionTargets.pop();
-        }
+        DistributionConfig storage target = distributionTargets[distributionIndex];
+        if (target.percentage != 0) revert NonZeroPercentage();
+
+        emit DistributionConfigRemoved(target.destination, target.percentage, target.schema);
+
+        distributionTargets[distributionIndex] = distributionTargets[distributionTargets.length - 1];
+        distributionTargets.pop();
 
         _ensurePercentages();
     }
