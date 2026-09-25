@@ -6,22 +6,15 @@
 #   FOUNDRY_PROFILE=ci     the thorough budget CI uses
 
 [profile.default]
-src = 'contracts'
 test = 'tests/foundry'
 # Not the default here: with Hardhat's artifacts/ present, Foundry would write into it.
 out = 'out'
 cache_path = 'cache-foundry'
-# node_modules first so @openzeppelin/, @venusprotocol/ and the other Solidity dependencies resolve
-# from the yarn install, at the versions package.json pins, with no remappings.
-libs = ['node_modules', 'lib']
 
 # Matches the compiler settings in hardhat.config.ts.
 evm_version = 'paris'
 optimizer = true
 optimizer_runs = 10000
-
-[profile.default.fuzz]
-runs = 256
 
 [profile.default.invariant]
 runs = 64
