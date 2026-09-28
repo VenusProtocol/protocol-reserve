@@ -44,6 +44,10 @@ contract ProtocolShareReserveHandler is CommonBase, StdCheats, StdUtils {
     address[] public comptrollers;
     address[] public destinations;
 
+    /// @dev Ghost state: the reserves of the pool not being released, either side of the last release.
+    uint256 public otherPoolBeforeRelease;
+    uint256 public otherPoolAfterRelease;
+
     constructor(
         ProtocolShareReserve psr_,
         MockToken token_,
@@ -73,9 +77,15 @@ contract ProtocolShareReserveHandler is CommonBase, StdCheats, StdUtils {
     }
 
     function releaseFunds(uint256 comptrollerSeed) external {
+        uint256 index = comptrollerSeed % comptrollers.length;
+        address pool = comptrollers[index];
+        address other = comptrollers[(index + 1) % comptrollers.length];
         address[] memory assets = new address[](1);
         assets[0] = address(token);
-        psr.releaseFunds(comptrollers[comptrollerSeed % comptrollers.length], assets);
+
+        otherPoolBeforeRelease = _reservesOf(other);
+        psr.releaseFunds(pool, assets);
+        otherPoolAfterRelease = _reservesOf(other);
     }
 
     /// @dev Governance moving the split while income is waiting to be released.
@@ -83,6 +93,12 @@ contract ProtocolShareReserveHandler is CommonBase, StdCheats, StdUtils {
         psr.addOrUpdateDistributionConfigs(
             twoWaySplit(destinations[0], destinations[1], bound(reservesToFirst, 0, 1e4), bound(revenueToFirst, 0, 1e4))
         );
+    }
+
+    function _reservesOf(address pool) internal view returns (uint256) {
+        return
+            psr.assetsReserves(pool, address(token), ProtocolShareReserve.Schema.PROTOCOL_RESERVES) +
+            psr.assetsReserves(pool, address(token), ProtocolShareReserve.Schema.ADDITIONAL_REVENUE);
     }
 }
 
@@ -168,8 +184,7 @@ contract ProtocolShareReserveTest is Test {
         assertEq(psr.totalAssetReserve(address(token)), token.balanceOf(address(psr)));
     }
 
-    /// @notice The asset-wide total is exactly the sum of what each pool and schema is owed. A
-    ///  release for one pool must never draw on another pool's share.
+    /// @notice The asset-wide total is exactly the sum of what each pool and schema is owed.
     function invariant_totalReserveIsTheSumOfEachPoolAndSchema() public view {
         uint256 sum;
         address[2] memory pools = [corePool, isolatedPool];
@@ -178,5 +193,11 @@ contract ProtocolShareReserveTest is Test {
             sum += psr.assetsReserves(pools[i], address(token), ProtocolShareReserve.Schema.ADDITIONAL_REVENUE);
         }
         assertEq(psr.totalAssetReserve(address(token)), sum);
+    }
+
+    /// @notice A release for one pool never draws on another pool's share. The sum above cannot see
+    ///  this: value moved between pools leaves the total unchanged.
+    function invariant_releaseLeavesOtherPoolsUntouched() public view {
+        assertEq(handler.otherPoolAfterRelease(), handler.otherPoolBeforeRelease());
     }
 }
