@@ -1,3 +1,18 @@
+## 3.5.0-dev.12 (2026-09-29)
+
+* Merge pull request #171 from VenusProtocol/feat/foundry-setup ([820c286](https://github.com/VenusProtocol/protocol-reserve/commit/820c286)), closes [#171](https://github.com/VenusProtocol/protocol-reserve/issues/171)
+* test: add a psr pool isolation invariant, document forge test ([8c56646](https://github.com/VenusProtocol/protocol-reserve/commit/8c56646))
+* test: fuzz and invariant-test protocol share reserve accounting ([d2277d8](https://github.com/VenusProtocol/protocol-reserve/commit/d2277d8))
+* test: fuzz single token converter quote rounding in foundry ([628f4a6](https://github.com/VenusProtocol/protocol-reserve/commit/628f4a6))
+* test: keep hardhat tests at the root of tests/ ([80ea473](https://github.com/VenusProtocol/protocol-reserve/commit/80ea473))
+* test: keep one converter suite, fork rpc config, forge out of yarn ([50b7386](https://github.com/VenusProtocol/protocol-reserve/commit/50b7386))
+* test: move hardhat tests into tests/hardhat ([376ec75](https://github.com/VenusProtocol/protocol-reserve/commit/376ec75))
+* docs: add foundry and the forge-std submodule to the setup steps ([7121ebf](https://github.com/VenusProtocol/protocol-reserve/commit/7121ebf))
+* chore: add invariant budgets to the foundry profiles ([81248be](https://github.com/VenusProtocol/protocol-reserve/commit/81248be))
+* chore: drop redundant foundry config and forge build from compile ([52de1f5](https://github.com/VenusProtocol/protocol-reserve/commit/52de1f5))
+* chore: drop the foundry failure dirs and unused invariant config ([4ed55d5](https://github.com/VenusProtocol/protocol-reserve/commit/4ed55d5))
+* feat: add foundry alongside hardhat with forge-std and a ci job ([c66fa0c](https://github.com/VenusProtocol/protocol-reserve/commit/c66fa0c))
+
 ## 3.5.0-dev.11 (2026-09-23)
 
 * Merge pull request #169 from VenusProtocol/feat/code-complexity-gates ([778c3b0](https://github.com/VenusProtocol/protocol-reserve/commit/778c3b0)), closes [#169](https://github.com/VenusProtocol/protocol-reserve/issues/169)
