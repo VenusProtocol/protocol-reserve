@@ -32,6 +32,7 @@
   "scripts": {
     "compile": "hardhat compile && hardhat compile --config hardhat.config.zksync.ts",
     "test": "hardhat test",
+    "test:foundry": "forge test",
     "build": "rm -rf dist && hardhat compile && hardhat compile --config hardhat.config.zksync.ts && tsc --declaration",
     "lint": "yarn lint:ts && yarn lint:sol && yarn prettier:check",
     "lint:ts": "eslint --ignore-path ./.eslintignore --ext .js,.ts .",
@@ -41,7 +42,7 @@
     "prettier:check": "prettier --check \"**/*.{js,json,md,ts,yaml,yml,sol}\"",
     "prettier:cached": "prettier --write --cache \"**/*.{js,json,md,ts,yaml,yml,sol}\"",
     "docgen": "hardhat docgen",
-    "clean": "hardhat clean && hardhat clean --config hardhat.config.zksync.ts"
+    "clean": "hardhat clean && hardhat clean --config hardhat.config.zksync.ts && rm -rf out cache-foundry"
   },
   "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.2.3",
