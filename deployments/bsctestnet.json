@@ -6205,7 +6205,7 @@
       ]
     },
     "ProtocolShareReserve_Implementation": {
-      "address": "0x6eFa596c53E6A753DdA643e3e3FEcA1570879b7C",
+      "address": "0x248Ea902F2f50cb232799196530bCDaDcF2659E9",
       "abi": [
         {
           "inputs": [
@@ -6252,6 +6252,16 @@
             }
           ],
           "name": "MaxLoopsLimitExceeded",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "PoolRegistryAlreadyAdded",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "PoolRegistryNotFound",
           "type": "error"
         },
         {
@@ -6530,6 +6540,32 @@
             {
               "indexed": true,
               "internalType": "address",
+              "name": "poolRegistry",
+              "type": "address"
+            }
+          ],
+          "name": "PoolRegistryAdded",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "poolRegistry",
+              "type": "address"
+            }
+          ],
+          "name": "PoolRegistryRemoved",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
               "name": "oldPoolRegistry",
               "type": "address"
             },
@@ -6673,6 +6709,38 @@
           "inputs": [
             {
               "internalType": "address",
+              "name": "_poolRegistry",
+              "type": "address"
+            }
+          ],
+          "name": "addPoolRegistry",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "name": "additionalPoolRegistries",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
               "name": "",
               "type": "address"
             },
@@ -6752,6 +6820,19 @@
           "type": "function"
         },
         {
+          "inputs": [],
+          "name": "getPoolRegistries",
+          "outputs": [
+            {
+              "internalType": "address[]",
+              "name": "registries",
+              "type": "address[]"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
           "inputs": [
             {
               "internalType": "address",
@@ -6801,6 +6882,49 @@
           "name": "initialize",
           "outputs": [],
           "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "name": "isAdditionalPoolRegistry",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "comptroller",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "asset",
+              "type": "address"
+            }
+          ],
+          "name": "isMarketRegistered",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
           "type": "function"
         },
         {
@@ -6892,6 +7016,19 @@
           "type": "function"
         },
         {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_poolRegistry",
+              "type": "address"
+            }
+          ],
+          "name": "removePoolRegistry",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
           "inputs": [],
           "name": "renounceOwnership",
           "outputs": [],
@@ -6922,6 +7059,19 @@
           "name": "setPoolRegistry",
           "outputs": [],
           "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "totalAdditionalPoolRegistries",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
           "type": "function"
         },
         {
