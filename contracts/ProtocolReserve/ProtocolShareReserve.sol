@@ -10,7 +10,6 @@ import { ensureNonzeroAddress } from "@venusprotocol/solidity-utilities/contract
 import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
 import { IComptroller } from "../Interfaces/IComptroller.sol";
 import { IPoolRegistry } from "../Interfaces/IPoolRegistry.sol";
-import { IVToken } from "../Interfaces/IVToken.sol";
 import { IIncomeDestination } from "../Interfaces/IIncomeDestination.sol";
 
 error InvalidAddress();
@@ -42,7 +41,7 @@ contract ProtocolShareReserve is
 
     struct DistributionConfig {
         Schema schema;
-        /// @dev percenatge is represented without any scale
+        /// @dev share of the schema's income in basis points, where `MAX_PERCENT` (1e4) is 100%
         uint16 percentage;
         address destination;
     }
@@ -55,10 +54,12 @@ contract ProtocolShareReserve is
     address public immutable CORE_POOL_COMPTROLLER;
 
     /// @notice address of WBNB contract
+    /// @dev Not used by this contract. Kept so the constructor and the public getter stay unchanged
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable WBNB;
 
     /// @notice address of vBNB contract
+    /// @dev Not used by this contract. Kept so the constructor and the public getter stay unchanged
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable vBNB;
 
@@ -254,7 +255,9 @@ contract ProtocolShareReserve is
      * @dev Add or update destination targets based on destination address. Income already booked in
      *      `assetsReserves` but not yet released is split under whatever configuration is in force when
      *      `releaseFunds` runs, not the one that was in force when it was earned, so call `releaseFunds`
-     *      for the affected pools and assets before changing a percentage.
+     *      for the affected pools and assets before changing a percentage. Each schema's targets must total
+     *      100% or 0%. A schema at 0% still books income, and `releaseFunds` leaves that income in
+     *      `assetsReserves` until targets totalling 100% are added to the schema again.
      * @param configs configurations of the destinations.
      */
     function addOrUpdateDistributionConfigs(DistributionConfig[] calldata configs) external nonReentrant {
@@ -444,7 +447,8 @@ contract ProtocolShareReserve is
 
     /**
      * @dev Whether any known pool registry lists a market for the asset in the given pool. The core
-     *      pool has no registry entry, so this is false for it.
+     *      pool has no registry entry, so this is false for it. `updateAssetsState` skips this check for
+     *      `CORE_POOL_COMPTROLLER`, so the core pool still reports income.
      * @param comptroller Comptroller address (pool)
      * @param asset Asset address
      * @return True when a registry resolves the pair to a vToken
@@ -586,7 +590,7 @@ contract ProtocolShareReserve is
     }
 
     /**
-     * @dev This ensures that the total percentage of all the distribution targets is 100% or 0%
+     * @dev Ensures that the targets of each schema total either 100% or 0%
      */
     function _ensurePercentages() internal view {
         uint256 totalSchemas = uint256(type(Schema).max) + 1;
@@ -608,19 +612,6 @@ contract ProtocolShareReserve is
             unchecked {
                 ++schemaValue;
             }
-        }
-    }
-
-    /**
-     * @dev Returns the underlying asset address for the vToken
-     * @param vToken vToken address
-     * @return asset address of asset
-     */
-    function _getUnderlying(address vToken) internal view returns (address) {
-        if (vToken == vBNB) {
-            return WBNB;
-        } else {
-            return IVToken(vToken).underlying();
         }
     }
 }
