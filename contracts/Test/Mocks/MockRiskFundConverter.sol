@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
-import { RiskFundConverter } from "../../TokenConverter/RiskFundConverter.sol";
+import { RiskFundConverter } from "../../legacy/TokenConverter/RiskFundConverter.sol";
 
 contract MockRiskFundConverter is RiskFundConverter {
     constructor(
