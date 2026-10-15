@@ -8,8 +8,8 @@ import { Test } from "forge-std/Test.sol";
 
 import { MockACM } from "../../contracts/Test/Mocks/MockACM.sol";
 import { MockToken } from "../../contracts/Test/Mocks/MockToken.sol";
-import { IAbstractTokenConverter } from "../../contracts/TokenConverter/IAbstractTokenConverter.sol";
-import { SingleTokenConverter } from "../../contracts/TokenConverter/SingleTokenConverter.sol";
+import { IAbstractTokenConverter } from "../../contracts/legacy/TokenConverter/IAbstractTokenConverter.sol";
+import { SingleTokenConverter } from "../../contracts/legacy/TokenConverter/SingleTokenConverter.sol";
 
 /// @notice The converter sells tokenOut from its own balance for the base asset, at the oracle
 ///  price plus an incentive paid to the user. The quotes must never let a user take more than that.
