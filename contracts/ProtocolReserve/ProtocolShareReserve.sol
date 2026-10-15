@@ -10,7 +10,6 @@ import { ensureNonzeroAddress } from "@venusprotocol/solidity-utilities/contract
 import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
 import { IComptroller } from "../Interfaces/IComptroller.sol";
 import { IPoolRegistry } from "../Interfaces/IPoolRegistry.sol";
-import { IVToken } from "../Interfaces/IVToken.sol";
 import { IIncomeDestination } from "../Interfaces/IIncomeDestination.sol";
 
 error InvalidAddress();
@@ -19,6 +18,8 @@ error InvalidTotalPercentage();
 error InvalidMaxLoopsLimit();
 error PoolRegistryAlreadyAdded();
 error PoolRegistryNotFound();
+error DistributionConfigNotFound();
+error NonZeroPercentage();
 
 contract ProtocolShareReserve is
     AccessControlledV8,
@@ -28,9 +29,11 @@ contract ProtocolShareReserve is
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    /// @notice protocol income is categorized into two schemas.
-    /// The first schema is for spread income
-    /// The second schema is for liquidation income
+    /// @notice protocol income is categorized into two schemas, see `_getSchema`.
+    /// PROTOCOL_RESERVES takes `IncomeType.SPREAD` only.
+    /// ADDITIONAL_REVENUE takes every other income type, not just liquidation: `LIQUIDATION`,
+    /// `ERC4626_WRAPPER_REWARDS`, `FLASHLOAN`, `INSTITUTIONAL_VAULT_PROTOCOL_FEE` and
+    /// `INSTITUTIONAL_VAULT_LIQUIDATION` all distribute under its percentages.
     enum Schema {
         PROTOCOL_RESERVES,
         ADDITIONAL_REVENUE
@@ -38,7 +41,7 @@ contract ProtocolShareReserve is
 
     struct DistributionConfig {
         Schema schema;
-        /// @dev percenatge is represented without any scale
+        /// @dev share of the schema's income in basis points, where `MAX_PERCENT` (1e4) is 100%
         uint16 percentage;
         address destination;
     }
@@ -51,10 +54,12 @@ contract ProtocolShareReserve is
     address public immutable CORE_POOL_COMPTROLLER;
 
     /// @notice address of WBNB contract
+    /// @dev Not used by this contract. Kept so the constructor and the public getter stay unchanged
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable WBNB;
 
     /// @notice address of vBNB contract
+    /// @dev Not used by this contract. Kept so the constructor and the public getter stay unchanged
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable vBNB;
 
@@ -163,6 +168,21 @@ contract ProtocolShareReserve is
     }
 
     /**
+     * @dev Raises the cap on loop length. Without this the cap can only be written by `initialize`, so a
+     *      chain that runs out of room for distribution targets needs an implementation upgrade to add one.
+     *      `_setMaxLoopsLimit` only accepts a value above the current cap, so the existing targets can never
+     *      be stranded above it.
+     * @param limit New cap on loop length
+     * @custom:event MaxLoopsLimitUpdated emits on success
+     * @custom:error InvalidMaxLoopsLimit is thrown when the cap is large enough to be no cap at all
+     * @custom:access Only Governance
+     */
+    function setMaxLoopsLimit(uint256 limit) external onlyOwner {
+        if (limit >= type(uint128).max) revert InvalidMaxLoopsLimit();
+        _setMaxLoopsLimit(limit);
+    }
+
+    /**
      * @dev Pool registry setter.
      * @param _poolRegistry Address of the pool registry
      * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
@@ -200,7 +220,11 @@ contract ProtocolShareReserve is
     }
 
     /**
-     * @dev Removes a pool registry. Pools known only to it can no longer report income.
+     * @dev Removes a pool registry. Markets that no other registry lists stop working, they do not merely
+     *      stop reporting income: `updateAssetsState` reverts for them, and vTokens call it both on the
+     *      protocol seize during liquidation and from `accrueInterest` once `reduceReservesBlockDelta`
+     *      passes. Supply, withdraw, borrow, repay and liquidate all revert from that point. Adding the
+     *      registry back restores them.
      * @param _poolRegistry Address of the pool registry to remove
      * @custom:event PoolRegistryRemoved emits on success
      * @custom:error PoolRegistryNotFound is thrown when the address is not in `additionalPoolRegistries`
@@ -228,7 +252,12 @@ contract ProtocolShareReserve is
     }
 
     /**
-     * @dev Add or update destination targets based on destination address
+     * @dev Add or update destination targets based on destination address. Income already booked in
+     *      `assetsReserves` but not yet released is split under whatever configuration is in force when
+     *      `releaseFunds` runs, not the one that was in force when it was earned, so call `releaseFunds`
+     *      for the affected pools and assets before changing a percentage. Each schema's targets must total
+     *      100% or 0%. A schema at 0% still books income, and `releaseFunds` leaves that income in
+     *      `assetsReserves` until targets totalling 100% are added to the schema again.
      * @param configs configurations of the destinations.
      */
     function addOrUpdateDistributionConfigs(DistributionConfig[] calldata configs) external nonReentrant {
@@ -278,17 +307,19 @@ contract ProtocolShareReserve is
      * @dev Remove destionation target if percentage is 0
      * @param schema schema of the configuration
      * @param destination destination address of the configuration
+     * @custom:event DistributionConfigRemoved emits on success
+     * @custom:error DistributionConfigNotFound is thrown when no target matches the schema and destination
+     * @custom:error NonZeroPercentage is thrown when the target still holds a share of the schema. Zero it
+     *      out with `addOrUpdateDistributionConfigs` first, so the remaining targets keep summing to 100%
      */
     function removeDistributionConfig(Schema schema, address destination) external {
         _checkAccessAllowed("removeDistributionConfig(Schema,address)");
 
-        uint256 distributionIndex;
-        bool found = false;
+        uint256 distributionIndex = type(uint256).max;
         for (uint256 i = 0; i < distributionTargets.length; ) {
             DistributionConfig storage config = distributionTargets[i];
 
-            if (schema == config.schema && destination == config.destination && config.percentage == 0) {
-                found = true;
+            if (schema == config.schema && destination == config.destination) {
                 distributionIndex = i;
                 break;
             }
@@ -298,16 +329,15 @@ contract ProtocolShareReserve is
             }
         }
 
-        if (found) {
-            emit DistributionConfigRemoved(
-                distributionTargets[distributionIndex].destination,
-                distributionTargets[distributionIndex].percentage,
-                distributionTargets[distributionIndex].schema
-            );
+        if (distributionIndex == type(uint256).max) revert DistributionConfigNotFound();
 
-            distributionTargets[distributionIndex] = distributionTargets[distributionTargets.length - 1];
-            distributionTargets.pop();
-        }
+        DistributionConfig storage target = distributionTargets[distributionIndex];
+        if (target.percentage != 0) revert NonZeroPercentage();
+
+        emit DistributionConfigRemoved(target.destination, target.percentage, target.schema);
+
+        distributionTargets[distributionIndex] = distributionTargets[distributionTargets.length - 1];
+        distributionTargets.pop();
 
         _ensurePercentages();
     }
@@ -417,7 +447,8 @@ contract ProtocolShareReserve is
 
     /**
      * @dev Whether any known pool registry lists a market for the asset in the given pool. The core
-     *      pool has no registry entry, so this is false for it.
+     *      pool has no registry entry, so this is false for it. `updateAssetsState` skips this check for
+     *      `CORE_POOL_COMPTROLLER`, so the core pool still reports income.
      * @param comptroller Comptroller address (pool)
      * @param asset Asset address
      * @return True when a registry resolves the pair to a vToken
@@ -559,7 +590,7 @@ contract ProtocolShareReserve is
     }
 
     /**
-     * @dev This ensures that the total percentage of all the distribution targets is 100% or 0%
+     * @dev Ensures that the targets of each schema total either 100% or 0%
      */
     function _ensurePercentages() internal view {
         uint256 totalSchemas = uint256(type(Schema).max) + 1;
@@ -581,19 +612,6 @@ contract ProtocolShareReserve is
             unchecked {
                 ++schemaValue;
             }
-        }
-    }
-
-    /**
-     * @dev Returns the underlying asset address for the vToken
-     * @param vToken vToken address
-     * @return asset address of asset
-     */
-    function _getUnderlying(address vToken) internal view returns (address) {
-        if (vToken == vBNB) {
-            return WBNB;
-        } else {
-            return IVToken(vToken).underlying();
         }
     }
 }

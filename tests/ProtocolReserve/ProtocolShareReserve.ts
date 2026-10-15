@@ -285,6 +285,23 @@ describe("ProtocolShareReserve: Tests", function () {
     expect(config.percentage).to.equal(0);
   });
 
+  it("remove configuration reverts when no target matches", async () => {
+    const protocolShareReserve = setup.protocolShareReserve;
+    const ONE_ADDRESS = "0x0000000000000000000000000000000000000001";
+
+    await expect(
+      protocolShareReserve.removeDistributionConfig(SCHEMA_PROTOCOL_RESERVE, ONE_ADDRESS),
+    ).to.be.revertedWithCustomError(protocolShareReserve, "DistributionConfigNotFound");
+  });
+
+  it("remove configuration reverts when the target still holds a percentage", async () => {
+    const protocolShareReserve = setup.protocolShareReserve;
+
+    await expect(
+      protocolShareReserve.removeDistributionConfig(SCHEMA_PROTOCOL_RESERVE, setup.riskFundSwapper.address),
+    ).to.be.revertedWithCustomError(protocolShareReserve, "NonZeroPercentage");
+  });
+
   it("collect and distribute of income", async () => {
     const mockDAI = setup.mockDAI;
     const protocolShareReserve = setup.protocolShareReserve;
@@ -523,6 +540,64 @@ describe("ProtocolShareReserve: multiple pool registries", function () {
       await expect(bounded.addPoolRegistry(another.address))
         .to.be.revertedWithCustomError(bounded, "MaxLoopsLimitExceeded")
         .withArgs(1, 2);
+    });
+  });
+
+  describe("setMaxLoopsLimit", () => {
+    it("reverts for a non-owner", async () => {
+      await expect(protocolShareReserve.connect(signers[1]).setMaxLoopsLimit(50)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
+    });
+
+    it("reverts for a cap large enough to be no cap at all", async () => {
+      await expect(
+        protocolShareReserve.setMaxLoopsLimit(ethers.BigNumber.from(2).pow(128).sub(1)),
+      ).to.be.revertedWithCustomError(protocolShareReserve, "InvalidMaxLoopsLimit");
+    });
+
+    it("reverts when the cap is not raised", async () => {
+      const current = await protocolShareReserve.maxLoopsLimit();
+      await expect(protocolShareReserve.setMaxLoopsLimit(current)).to.be.revertedWith(
+        "Comptroller: Invalid maxLoopsLimit",
+      );
+      await expect(protocolShareReserve.setMaxLoopsLimit(current.sub(1))).to.be.revertedWith(
+        "Comptroller: Invalid maxLoopsLimit",
+      );
+    });
+
+    it("raises the cap and emits", async () => {
+      const current = await protocolShareReserve.maxLoopsLimit();
+      const raised = current.add(10);
+
+      await expect(protocolShareReserve.setMaxLoopsLimit(raised))
+        .to.emit(protocolShareReserve, "MaxLoopsLimitUpdated")
+        .withArgs(current, raised);
+
+      expect(await protocolShareReserve.maxLoopsLimit()).to.equal(raised);
+    });
+
+    it("lets a registry be added once the cap that blocked it is raised", async () => {
+      // A proxy deployed with a cap of one, so the second registry is refused until the cap moves.
+      const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
+      const accessControl = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
+      accessControl.isAllowedToCall.returns(true);
+      const bounded = await upgrades.deployProxy(ProtocolShareReserve, [accessControl.address, 1], {
+        constructorArgs: [setup.corePoolComptroller.address, ONE_ADDRESS, ONE_ADDRESS],
+      });
+
+      await bounded.addPoolRegistry(spokePoolRegistry.address);
+
+      const another = await smock.fake<IPoolRegistry>("IPoolRegistry");
+      await expect(bounded.addPoolRegistry(another.address)).to.be.revertedWithCustomError(
+        bounded,
+        "MaxLoopsLimitExceeded",
+      );
+
+      await bounded.setMaxLoopsLimit(2);
+      await bounded.addPoolRegistry(another.address);
+
+      expect(await bounded.totalAdditionalPoolRegistries()).to.equal(2);
     });
   });
 
