@@ -6205,7 +6205,7 @@
       ]
     },
     "ProtocolShareReserve_Implementation": {
-      "address": "0x248Ea902F2f50cb232799196530bCDaDcF2659E9",
+      "address": "0xADdE8c59097955B5A3b0677AF7a7a4255dC92930",
       "abi": [
         {
           "inputs": [
@@ -6230,7 +6230,17 @@
         },
         {
           "inputs": [],
+          "name": "DistributionConfigNotFound",
+          "type": "error"
+        },
+        {
+          "inputs": [],
           "name": "InvalidAddress",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidMaxLoopsLimit",
           "type": "error"
         },
         {
@@ -6252,6 +6262,11 @@
             }
           ],
           "name": "MaxLoopsLimitExceeded",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "NonZeroPercentage",
           "type": "error"
         },
         {
@@ -7044,6 +7059,19 @@
             }
           ],
           "name": "setAccessControlManager",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "limit",
+              "type": "uint256"
+            }
+          ],
+          "name": "setMaxLoopsLimit",
           "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function"
