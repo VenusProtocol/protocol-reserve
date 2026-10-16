@@ -5,7 +5,7 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
 
-import { AbstractTokenConverter } from "../../TokenConverter/AbstractTokenConverter.sol";
+import { AbstractTokenConverter } from "../../legacy/TokenConverter/AbstractTokenConverter.sol";
 import { IRiskFundGetters } from "../../Interfaces/IRiskFund.sol";
 
 contract MockConverter is AbstractTokenConverter {
