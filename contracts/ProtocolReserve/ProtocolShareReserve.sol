@@ -10,13 +10,16 @@ import { ensureNonzeroAddress } from "@venusprotocol/solidity-utilities/contract
 import { IProtocolShareReserve } from "../Interfaces/IProtocolShareReserve.sol";
 import { IComptroller } from "../Interfaces/IComptroller.sol";
 import { IPoolRegistry } from "../Interfaces/IPoolRegistry.sol";
-import { IVToken } from "../Interfaces/IVToken.sol";
 import { IIncomeDestination } from "../Interfaces/IIncomeDestination.sol";
 
 error InvalidAddress();
 error UnsupportedAsset();
 error InvalidTotalPercentage();
 error InvalidMaxLoopsLimit();
+error PoolRegistryAlreadyAdded();
+error PoolRegistryNotFound();
+error DistributionConfigNotFound();
+error NonZeroPercentage();
 
 contract ProtocolShareReserve is
     AccessControlledV8,
@@ -26,9 +29,11 @@ contract ProtocolShareReserve is
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    /// @notice protocol income is categorized into two schemas.
-    /// The first schema is for spread income
-    /// The second schema is for liquidation income
+    /// @notice protocol income is categorized into two schemas, see `_getSchema`.
+    /// PROTOCOL_RESERVES takes `IncomeType.SPREAD` only.
+    /// ADDITIONAL_REVENUE takes every other income type, not just liquidation: `LIQUIDATION`,
+    /// `ERC4626_WRAPPER_REWARDS`, `FLASHLOAN`, `INSTITUTIONAL_VAULT_PROTOCOL_FEE` and
+    /// `INSTITUTIONAL_VAULT_LIQUIDATION` all distribute under its percentages.
     enum Schema {
         PROTOCOL_RESERVES,
         ADDITIONAL_REVENUE
@@ -36,27 +41,30 @@ contract ProtocolShareReserve is
 
     struct DistributionConfig {
         Schema schema;
-        /// @dev percenatge is represented without any scale
+        /// @dev share of the schema's income in basis points, where `MAX_PERCENT` (1e4) is 100%
         uint16 percentage;
         address destination;
     }
+
+    /// @notice Denominator for distribution percentages, 100% expressed in basis points
+    uint16 public constant MAX_PERCENT = 1e4;
 
     /// @notice address of core pool comptroller contract
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable CORE_POOL_COMPTROLLER;
 
     /// @notice address of WBNB contract
+    /// @dev Not used by this contract. Kept so the constructor and the public getter stay unchanged
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable WBNB;
 
     /// @notice address of vBNB contract
+    /// @dev Not used by this contract. Kept so the constructor and the public getter stay unchanged
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable vBNB;
 
     /// @notice address of pool registry contract
     address public poolRegistry;
-
-    uint16 public constant MAX_PERCENT = 1e4;
 
     /// @notice comptroller => asset => schema => balance
     mapping(address => mapping(address => mapping(Schema => uint256))) public assetsReserves;
@@ -67,8 +75,20 @@ contract ProtocolShareReserve is
     /// @notice configuration for different income distribution targets
     DistributionConfig[] public distributionTargets;
 
+    /// @notice Pool registries consulted after `poolRegistry` when resolving a market
+    address[] public additionalPoolRegistries;
+
+    /// @notice Whether an address is present in `additionalPoolRegistries`
+    mapping(address => bool) public isAdditionalPoolRegistry;
+
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
+
+    /// @notice Emitted when a pool registry is added to `additionalPoolRegistries`
+    event PoolRegistryAdded(address indexed poolRegistry);
+
+    /// @notice Emitted when a pool registry is removed from `additionalPoolRegistries`
+    event PoolRegistryRemoved(address indexed poolRegistry);
 
     /// @notice Event emitted after updating of the assets reserves.
     event AssetsReservesUpdated(
@@ -148,18 +168,96 @@ contract ProtocolShareReserve is
     }
 
     /**
+     * @dev Raises the cap on loop length. Without this the cap can only be written by `initialize`, so a
+     *      chain that runs out of room for distribution targets needs an implementation upgrade to add one.
+     *      `_setMaxLoopsLimit` only accepts a value above the current cap, so the existing targets can never
+     *      be stranded above it.
+     * @param limit New cap on loop length
+     * @custom:event MaxLoopsLimitUpdated emits on success
+     * @custom:error InvalidMaxLoopsLimit is thrown when the cap is large enough to be no cap at all
+     * @custom:access Only Governance
+     */
+    function setMaxLoopsLimit(uint256 limit) external onlyOwner {
+        if (limit >= type(uint128).max) revert InvalidMaxLoopsLimit();
+        _setMaxLoopsLimit(limit);
+    }
+
+    /**
      * @dev Pool registry setter.
      * @param _poolRegistry Address of the pool registry
      * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
      */
     function setPoolRegistry(address _poolRegistry) external onlyOwner {
         ensureNonzeroAddress(_poolRegistry);
+        // A registry must have a single entry; remove it from the additional set before promoting it.
+        if (isAdditionalPoolRegistry[_poolRegistry]) revert PoolRegistryAlreadyAdded();
         emit PoolRegistryUpdated(poolRegistry, _poolRegistry);
         poolRegistry = _poolRegistry;
     }
 
     /**
-     * @dev Add or update destination targets based on destination address
+     * @dev Registers an extra pool registry. Use this rather than `setPoolRegistry` when pools of
+     *      both registries must keep reporting income: repointing `poolRegistry` instead makes every
+     *      pool of the old registry fail `updateAssetsState`, which vTokens call both when reducing
+     *      reserves and when seizing the protocol's share of liquidated collateral.
+     * @param _poolRegistry Address of the pool registry to add
+     * @custom:event PoolRegistryAdded emits on success
+     * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
+     * @custom:error PoolRegistryAlreadyAdded is thrown when the address is the primary registry or already added
+     * @custom:access Only Governance
+     */
+    function addPoolRegistry(address _poolRegistry) external onlyOwner {
+        ensureNonzeroAddress(_poolRegistry);
+        if (_poolRegistry == poolRegistry || isAdditionalPoolRegistry[_poolRegistry]) {
+            revert PoolRegistryAlreadyAdded();
+        }
+
+        isAdditionalPoolRegistry[_poolRegistry] = true;
+        additionalPoolRegistries.push(_poolRegistry);
+        _ensureMaxLoops(additionalPoolRegistries.length);
+
+        emit PoolRegistryAdded(_poolRegistry);
+    }
+
+    /**
+     * @dev Removes a pool registry. Markets that no other registry lists stop working, they do not merely
+     *      stop reporting income: `updateAssetsState` reverts for them, and vTokens call it both on the
+     *      protocol seize during liquidation and from `accrueInterest` once `reduceReservesBlockDelta`
+     *      passes. Supply, withdraw, borrow, repay and liquidate all revert from that point. Adding the
+     *      registry back restores them.
+     * @param _poolRegistry Address of the pool registry to remove
+     * @custom:event PoolRegistryRemoved emits on success
+     * @custom:error PoolRegistryNotFound is thrown when the address is not in `additionalPoolRegistries`
+     * @custom:access Only Governance
+     */
+    function removePoolRegistry(address _poolRegistry) external onlyOwner {
+        if (!isAdditionalPoolRegistry[_poolRegistry]) revert PoolRegistryNotFound();
+
+        uint256 length = additionalPoolRegistries.length;
+        for (uint256 i; i < length; ) {
+            if (additionalPoolRegistries[i] == _poolRegistry) {
+                additionalPoolRegistries[i] = additionalPoolRegistries[length - 1];
+                additionalPoolRegistries.pop();
+                break;
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        delete isAdditionalPoolRegistry[_poolRegistry];
+
+        emit PoolRegistryRemoved(_poolRegistry);
+    }
+
+    /**
+     * @dev Add or update destination targets based on destination address. Income already booked in
+     *      `assetsReserves` but not yet released is split under whatever configuration is in force when
+     *      `releaseFunds` runs, not the one that was in force when it was earned, so call `releaseFunds`
+     *      for the affected pools and assets before changing a percentage. Each schema's targets must total
+     *      100% or 0%. A schema at 0% still books income, and `releaseFunds` leaves that income in
+     *      `assetsReserves` until targets totalling 100% are added to the schema again.
      * @param configs configurations of the destinations.
      */
     function addOrUpdateDistributionConfigs(DistributionConfig[] calldata configs) external nonReentrant {
@@ -209,17 +307,19 @@ contract ProtocolShareReserve is
      * @dev Remove destionation target if percentage is 0
      * @param schema schema of the configuration
      * @param destination destination address of the configuration
+     * @custom:event DistributionConfigRemoved emits on success
+     * @custom:error DistributionConfigNotFound is thrown when no target matches the schema and destination
+     * @custom:error NonZeroPercentage is thrown when the target still holds a share of the schema. Zero it
+     *      out with `addOrUpdateDistributionConfigs` first, so the remaining targets keep summing to 100%
      */
     function removeDistributionConfig(Schema schema, address destination) external {
         _checkAccessAllowed("removeDistributionConfig(Schema,address)");
 
-        uint256 distributionIndex;
-        bool found = false;
+        uint256 distributionIndex = type(uint256).max;
         for (uint256 i = 0; i < distributionTargets.length; ) {
             DistributionConfig storage config = distributionTargets[i];
 
-            if (schema == config.schema && destination == config.destination && config.percentage == 0) {
-                found = true;
+            if (schema == config.schema && destination == config.destination) {
                 distributionIndex = i;
                 break;
             }
@@ -229,16 +329,15 @@ contract ProtocolShareReserve is
             }
         }
 
-        if (found) {
-            emit DistributionConfigRemoved(
-                distributionTargets[distributionIndex].destination,
-                distributionTargets[distributionIndex].percentage,
-                distributionTargets[distributionIndex].schema
-            );
+        if (distributionIndex == type(uint256).max) revert DistributionConfigNotFound();
 
-            distributionTargets[distributionIndex] = distributionTargets[distributionTargets.length - 1];
-            distributionTargets.pop();
-        }
+        DistributionConfig storage target = distributionTargets[distributionIndex];
+        if (target.percentage != 0) revert NonZeroPercentage();
+
+        emit DistributionConfigRemoved(target.destination, target.percentage, target.schema);
+
+        distributionTargets[distributionIndex] = distributionTargets[distributionTargets.length - 1];
+        distributionTargets.pop();
 
         _ensurePercentages();
     }
@@ -314,6 +413,51 @@ contract ProtocolShareReserve is
     }
 
     /**
+     * @dev Returns every pool registry this contract resolves markets through, primary first.
+     * @return registries Addresses of the pool registries
+     */
+    function getPoolRegistries() external view returns (address[] memory registries) {
+        address primary = poolRegistry;
+        uint256 additionalLength = additionalPoolRegistries.length;
+        bool hasPrimary = primary != address(0);
+
+        registries = new address[](additionalLength + (hasPrimary ? 1 : 0));
+
+        uint256 offset;
+        if (hasPrimary) {
+            registries[0] = primary;
+            offset = 1;
+        }
+
+        for (uint256 i; i < additionalLength; ) {
+            registries[i + offset] = additionalPoolRegistries[i];
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /**
+     * @dev Returns the number of registries in `additionalPoolRegistries`
+     */
+    function totalAdditionalPoolRegistries() external view returns (uint256) {
+        return additionalPoolRegistries.length;
+    }
+
+    /**
+     * @dev Whether any known pool registry lists a market for the asset in the given pool. The core
+     *      pool has no registry entry, so this is false for it. `updateAssetsState` skips this check for
+     *      `CORE_POOL_COMPTROLLER`, so the core pool still reports income.
+     * @param comptroller Comptroller address (pool)
+     * @param asset Asset address
+     * @return True when a registry resolves the pair to a vToken
+     */
+    function isMarketRegistered(address comptroller, address asset) external view returns (bool) {
+        return _isMarketRegistered(comptroller, asset);
+    }
+
+    /**
      * @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
      * @param comptroller Comptroller address (pool)
      * @param asset Asset address.
@@ -327,10 +471,7 @@ contract ProtocolShareReserve is
         if (!IComptroller(comptroller).isComptroller()) revert InvalidAddress();
         ensureNonzeroAddress(asset);
 
-        if (
-            comptroller != CORE_POOL_COMPTROLLER &&
-            IPoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) == address(0)
-        ) revert InvalidAddress();
+        if (comptroller != CORE_POOL_COMPTROLLER && !_isMarketRegistered(comptroller, asset)) revert InvalidAddress();
 
         Schema schema = _getSchema(incomeType);
         uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
@@ -410,6 +551,32 @@ contract ProtocolShareReserve is
     }
 
     /**
+     * @dev Resolves a pool's market through the known pool registries, `poolRegistry` first.
+     * @param comptroller Comptroller address (pool)
+     * @param asset Asset address
+     * @return True when a registry resolves the pair to a vToken
+     */
+    function _isMarketRegistered(address comptroller, address asset) internal view returns (bool) {
+        address primary = poolRegistry;
+        if (primary != address(0) && IPoolRegistry(primary).getVTokenForAsset(comptroller, asset) != address(0)) {
+            return true;
+        }
+
+        uint256 length = additionalPoolRegistries.length;
+        for (uint256 i; i < length; ) {
+            if (IPoolRegistry(additionalPoolRegistries[i]).getVTokenForAsset(comptroller, asset) != address(0)) {
+                return true;
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @dev Returns the schema based on income type
      * @param incomeType type of income
      * @return schema schema for distribution
@@ -423,7 +590,7 @@ contract ProtocolShareReserve is
     }
 
     /**
-     * @dev This ensures that the total percentage of all the distribution targets is 100% or 0%
+     * @dev Ensures that the targets of each schema total either 100% or 0%
      */
     function _ensurePercentages() internal view {
         uint256 totalSchemas = uint256(type(Schema).max) + 1;
@@ -445,19 +612,6 @@ contract ProtocolShareReserve is
             unchecked {
                 ++schemaValue;
             }
-        }
-    }
-
-    /**
-     * @dev Returns the underlying asset address for the vToken
-     * @param vToken vToken address
-     * @return asset address of asset
-     */
-    function _getUnderlying(address vToken) internal view returns (address) {
-        if (vToken == vBNB) {
-            return WBNB;
-        } else {
-            return IVToken(vToken).underlying();
         }
     }
 }

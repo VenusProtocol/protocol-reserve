@@ -7,10 +7,10 @@ import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle
 import { ensureNonzeroAddress, ensureNonzeroValue } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 
 import { AbstractTokenConverter } from "./AbstractTokenConverter.sol";
-import { IPoolRegistry } from "../Interfaces/IPoolRegistry.sol";
-import { IComptroller } from "../Interfaces/IComptroller.sol";
-import { IRiskFundGetters } from "../Interfaces/IRiskFund.sol";
-import { IVToken } from "../Interfaces/IVToken.sol";
+import { IPoolRegistry } from "../../Interfaces/IPoolRegistry.sol";
+import { IComptroller } from "../../Interfaces/IComptroller.sol";
+import { IRiskFundGetters } from "../../Interfaces/IRiskFund.sol";
+import { IVToken } from "../../Interfaces/IVToken.sol";
 
 /// @dev Local interface retained so the deprecated RiskFundConverter still compiles
 ///      after `updatePoolState` was removed from IRiskFund. New deployments do not
