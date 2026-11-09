@@ -190,9 +190,9 @@ jobs:
         # The token enters only this step. Hooks are disabled so nothing installed above runs here.
         env:
           GH_TOKEN: ${{ github.token }}
-          HEAD_REF: ${{ github.head_ref }}
+          TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
-          git add deployments/*.json
+          git add -- 'deployments/*.json'
           if git diff --cached --quiet; then
             echo "No deployment changes to commit"
             exit 0
@@ -202,4 +202,4 @@ jobs:
             -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -m "feat: updating deployment files"
           git -c core.hooksPath=/dev/null push \
-            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${HEAD_REF}"
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${TARGET_BRANCH}"
