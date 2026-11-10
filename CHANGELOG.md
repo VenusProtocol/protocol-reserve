@@ -1,3 +1,15 @@
+## 3.5.0-dev.14 (2026-11-10)
+
+* Merge branch 'develop' into ci/release-environment ([30f29bc](https://github.com/VenusProtocol/protocol-reserve/commit/30f29bc))
+* Merge pull request #174 from VenusProtocol/fix/ci-export-token-hardening ([bda2a64](https://github.com/VenusProtocol/protocol-reserve/commit/bda2a64)), closes [#174](https://github.com/VenusProtocol/protocol-reserve/issues/174)
+* Merge pull request #175 from VenusProtocol/ci/release-environment ([066e9fd](https://github.com/VenusProtocol/protocol-reserve/commit/066e9fd)), closes [#175](https://github.com/VenusProtocol/protocol-reserve/issues/175)
+* feat: updating deployment files ([26adf4d](https://github.com/VenusProtocol/protocol-reserve/commit/26adf4d))
+* test(ci): verify deployment export writeback ([0a70dca](https://github.com/VenusProtocol/protocol-reserve/commit/0a70dca))
+* ci: commit the same deployment paths as the previous action ([f389b26](https://github.com/VenusProtocol/protocol-reserve/commit/f389b26))
+* ci: keep VENUS_TOOLS_TOKEN out of pull request jobs ([ac4e7f0](https://github.com/VenusProtocol/protocol-reserve/commit/ac4e7f0))
+* ci: leave the release job unchanged in this PR ([9e01699](https://github.com/VenusProtocol/protocol-reserve/commit/9e01699))
+* ci: read VENUS_TOOLS_TOKEN from the release environment ([c62913f](https://github.com/VenusProtocol/protocol-reserve/commit/c62913f))
+
 ## 3.5.0-dev.13 (2026-10-16)
 
 * Merge pull request #168 from VenusProtocol/feat/psr-multi-pool-registry ([6f41e02](https://github.com/VenusProtocol/protocol-reserve/commit/6f41e02)), closes [#168](https://github.com/VenusProtocol/protocol-reserve/issues/168)
