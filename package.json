@@ -106,6 +106,25 @@
     "typescript": "^4.6.3",
     "zksync-ethers": "^5.9.1"
   },
+  "resolutions": {
+    "axios@^0.21.1": "0.34.0",
+    "axios@^0.21.2": "0.34.0",
+    "adm-zip@^0.4.16": "0.6.1",
+    "tar-fs@~2.0.1": "2.1.5",
+    "elliptic@6.5.4": "6.6.1",
+    "elliptic@^6.5.2": "6.6.1",
+    "ws@7.4.6": "7.5.13",
+    "cookie@^0.4.1": "0.7.2",
+    "tmp@0.0.33": "0.2.7",
+    "tmp@^0.0.33": "0.2.7",
+    "nanoid@3.3.3": "3.3.20",
+    "serialize-javascript@6.0.0": "6.0.2",
+    "minimatch@5.0.1": "5.1.9",
+    "js-yaml@4.1.0": "4.3.2",
+    "diff@5.0.0": "5.2.2",
+    "bn.js@4.11.6": "4.12.5",
+    "minimist@0.0.8": "0.2.4"
+  },
   "_moduleAliases": {
     "@nomiclabs/hardhat-ethers": "node_modules/hardhat-deploy-ethers"
   }
